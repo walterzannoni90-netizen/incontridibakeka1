@@ -1,32 +1,27 @@
 -- ============================================================
--- INCONTRI DI BAKEKA — Supabase Schema
--- Esegui questo SQL nel SQL Editor di Supabase
+-- INCONTRI DI BAKEKA — Esegui questo SQL nel Supabase Editor
+-- 1. Vai su https://supabase.com/dashboard/project/rdqsmfgpbuswzilgbjyr
+-- 2. SQL Editor
+-- 3. Incolla e premi CTRL+ENTER o CMD+ENTER
 -- ============================================================
 
--- 1. CATEGORIES
+-- TABELLE
 CREATE TABLE IF NOT EXISTS categories (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  slug TEXT UNIQUE NOT NULL,
+  slug TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   icon TEXT DEFAULT '',
   class TEXT DEFAULT '',
   description TEXT DEFAULT '',
   color TEXT DEFAULT '#8b5cf6',
-  sort_order INT DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  sort_order INT DEFAULT 0
 );
 
--- 2. CITIES
 CREATE TABLE IF NOT EXISTS cities (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL,
+  name TEXT PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,
-  region TEXT DEFAULT '',
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  region TEXT DEFAULT ''
 );
 
--- 3. PROFILES (utenti)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   name TEXT NOT NULL,
@@ -38,19 +33,16 @@ CREATE TABLE IF NOT EXISTS profiles (
   avatar_url TEXT DEFAULT '',
   is_verified BOOLEAN DEFAULT false,
   is_premium BOOLEAN DEFAULT false,
-  is_admin BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. ADS (annunci)
 CREATE TABLE IF NOT EXISTS ads (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
-  slug TEXT,
-  category_slug TEXT REFERENCES categories(slug) ON DELETE SET NULL,
-  city TEXT NOT NULL,
+  category TEXT DEFAULT '',
+  city TEXT DEFAULT '',
   age INT DEFAULT 0,
   gender TEXT DEFAULT '',
   looking_for TEXT DEFAULT '',
@@ -72,62 +64,42 @@ CREATE TABLE IF NOT EXISTS ads (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. SPONSORSHIPS (storico sponsorizzazioni)
-CREATE TABLE IF NOT EXISTS sponsorships (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  ad_id UUID REFERENCES ads(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  plan TEXT NOT NULL, -- '1day','3days','7days','30days'
-  amount DECIMAL(10,2) NOT NULL,
-  duration_days INT NOT NULL,
-  starts_at TIMESTAMPTZ DEFAULT NOW(),
-  expires_at TIMESTAMPTZ NOT NULL,
-  payment_method TEXT DEFAULT '',
-  payment_status TEXT DEFAULT 'completed', -- pending, completed, refunded
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- DATI INIZIALI
+INSERT INTO categories (slug, name, icon, class, description, color, sort_order) VALUES
+  ('donna-cerca-uomo', 'Donna Cerca Uomo', 'fa-female', 'womenseekmen', 'Sfoglia annunci di donne in cerca di uomini.', '#ff2d55', 1),
+  ('uomo-cerca-donna', 'Uomo Cerca Donna', 'fa-male', 'menseekwomen', 'Uomini in cerca di donne. Profili verificati.', '#007aff', 2),
+  ('uomo-cerca-uomo', 'Uomo Cerca Uomo', 'fa-venus-mars', 'menseekmen', 'Incontri gay. Annunci escort maschi.', '#ff9500', 3),
+  ('donna-cerca-donna', 'Donna Cerca Donna', 'fa-venus', 'womenseekwomen', 'Donne che amano altre donne.', '#ff3b30', 4),
+  ('coppie', 'Coppie', 'fa-heart', 'couples', 'Coppie per esperienze swinger.', '#af52de', 5),
+  ('cerco-amici', 'Cerco Amici', 'fa-handshake', 'seekfriends', 'Amicizie nella tua città.', '#34c759', 6),
+  ('anima-gemella', 'Cerco Anima Gemella', 'fa-dove', 'seeksoulmate', 'Trova l''altra metà.', '#ff6482', 7),
+  ('trans', 'Trans', 'fa-transgender', 'trans', 'Incontri trans.', '#e84393', 8)
+ON CONFLICT (slug) DO NOTHING;
 
--- 6. Indexes
-CREATE INDEX IF NOT EXISTS idx_ads_category ON ads(category_slug);
-CREATE INDEX IF NOT EXISTS idx_ads_city ON ads(city);
-CREATE INDEX IF NOT EXISTS idx_ads_premium ON ads(is_premium);
-CREATE INDEX IF NOT EXISTS idx_ads_sponsored ON ads(is_sponsored);
-CREATE INDEX IF NOT EXISTS idx_ads_user ON ads(user_id);
-CREATE INDEX IF NOT EXISTS idx_ads_active ON ads(is_active);
-CREATE INDEX IF NOT EXISTS idx_sponsorships_expires ON sponsorships(expires_at);
-CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(id);
+INSERT INTO cities (name, slug, region) VALUES
+  ('Napoli','napoli','Campania'),('Roma','roma','Lazio'),('Milano','milano','Lombardia'),
+  ('Torino','torino','Piemonte'),('Firenze','firenze','Toscana'),('Bologna','bologna','Emilia-Romagna'),
+  ('Venezia','venezia','Veneto'),('Palermo','palermo','Sicilia'),('Genova','genova','Liguria'),
+  ('Bari','bari','Puglia'),('Catania','catania','Sicilia'),('Verona','verona','Veneto'),
+  ('Pisa','pisa','Toscana'),('Lecce','lecce','Puglia'),('Brescia','brescia','Lombardia'),
+  ('Parma','parma','Emilia-Romagna'),('Modena','modena','Emilia-Romagna'),('Salerno','salerno','Campania'),
+  ('Bergamo','bergamo','Lombardia'),('Cagliari','cagliari','Sardegna')
+ON CONFLICT (name) DO NOTHING;
 
--- 7. Enable Row Level Security
+-- RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sponsorships ENABLE ROW LEVEL SECURITY;
 
--- 8. RLS Policies
--- Profiles: users can read all profiles, update only own
-CREATE POLICY "Profili pubblici in lettura" ON profiles FOR SELECT USING (true);
-CREATE POLICY "Proprio profilo in modifica" ON profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Proprio profilo in inserimento" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Profili pubblici" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Proprio profilo insert" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Proprio profilo update" ON profiles FOR UPDATE USING (auth.uid() = id);
 
--- Ads: anyone can read active ads, only owner can modify
-CREATE POLICY "Annunci pubblici in lettura" ON ads FOR SELECT USING (is_active = true OR auth.uid() = user_id);
-CREATE POLICY "Propri annunci in modifica" ON ads FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Propri annunci in inserimento" ON ads FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Propri annunci in eliminazione" ON ads FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Annunci pubblici" ON ads FOR SELECT USING (is_active = true OR auth.uid() = user_id);
+CREATE POLICY "Propri annunci insert" ON ads FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Propri annunci update" ON ads FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Propri annunci delete" ON ads FOR DELETE USING (auth.uid() = user_id);
 
--- Sponsorships: users can read own, admins can read all
-CREATE POLICY "Proprie sponsorizzazioni" ON sponsorships FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Inserimento sponsorizzazioni" ON sponsorships FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- 9. Funzione auto-update updated_at
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_ads_updated_at BEFORE UPDATE ON ads
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+-- Index
+CREATE INDEX IF NOT EXISTS idx_ads_category ON ads(category);
+CREATE INDEX IF NOT EXISTS idx_ads_city ON ads(city);
+CREATE INDEX IF NOT EXISTS idx_ads_premium ON ads(is_premium);
