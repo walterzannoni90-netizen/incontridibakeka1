@@ -123,11 +123,16 @@ function initParticles() {
 }
 
 // ============================================================
-// CATEGORIES
+// CATEGORIES — CON FOTO REALI DAGLI ANNUNCI
 // ============================================================
 function initCategories() {
   const grid = document.getElementById('categoriesGrid');
   if (!grid) return;
+  
+  // Prima mostra skeleton loading
+  grid.innerHTML = '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">' +
+    Array(8).fill('<div class="category-card skeleton" style="height:220px;background:rgba(255,255,255,0.03);border-radius:16px;animation:pulse 1.5s infinite"></div>').join('') + '</div>';
+  
   const cats = [
     { id: 'donna-cerca-uomo', name: 'Donna Cerca Uomo', icon: 'fa-female', color: '#ff2d55', desc: 'Escort e ragazze squillo' },
     { id: 'uomo-cerca-donna', name: 'Uomo Cerca Donna', icon: 'fa-male', color: '#007aff', desc: 'Accompagnatori per donne' },
@@ -138,14 +143,44 @@ function initCategories() {
     { id: 'anima-gemella', name: 'Cerco Anima Gemella', icon: 'fa-dove', color: '#ff6482', desc: 'Trova l\'altra metà' },
     { id: 'trans', name: 'Trans', icon: 'fa-transgender', color: '#e84393', desc: 'Incontri trans e travestiti' }
   ];
-  cats.forEach(cat => {
-    const card = document.createElement('div');
-    card.className = 'category-card';
-    card.style.setProperty('--cat-color', cat.color);
-    card.setAttribute('data-aos', 'fade-up');
-    card.innerHTML = `<div class="category-icon"><i class="fas ${cat.icon}"></i></div><h3>${cat.name}</h3><p>${cat.desc}</p>`;
-    card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
-    grid.appendChild(card);
+
+  // Recupera una foto reale per ogni categoria
+  sbGet('ads', 'select=image,category&is_active=eq.true&not.is.image:eq.&order=created_at.desc&limit=50').then(ads => {
+    const catPhotos = {};
+    (ads || []).forEach(ad => {
+      const cat = ad.category;
+      if (!catPhotos[cat] && ad.image) catPhotos[cat] = ad.image;
+    });
+    
+    grid.innerHTML = '';
+    cats.forEach(cat => {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      card.style.setProperty('--cat-color', cat.color);
+      card.setAttribute('data-aos', 'fade-up');
+      
+      const img = catPhotos[cat.id];
+      card.innerHTML = `<div class="category-card-bg"${img ? ` style="background-image:url('${img}')"` : ''}>
+          <div class="category-card-overlay"></div>
+        </div>
+        <div class="category-icon"><i class="fas ${cat.icon}"></i></div>
+        <h3>${cat.name}</h3>
+        <p>${cat.desc}</p>`;
+      
+      card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
+      grid.appendChild(card);
+    });
+  }).catch(() => {
+    // Fallback senza foto
+    grid.innerHTML = '';
+    cats.forEach(cat => {
+      const card = document.createElement('div');
+      card.className = 'category-card';
+      card.style.setProperty('--cat-color', cat.color);
+      card.innerHTML = `<div class="category-icon"><i class="fas ${cat.icon}"></i></div><h3>${cat.name}</h3><p>${cat.desc}</p>`;
+      card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
+      grid.appendChild(card);
+    });
   });
 }
 
