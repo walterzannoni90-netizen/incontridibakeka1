@@ -147,14 +147,14 @@ function initCategories() {
   // Recupera UNA foto reale per ogni categoria dagli annunci esistenti
   // Se non ci sono annunci, usa immagini rappresentative di bakecaincontrii.com
   const fallbackImages = {
-    'donna-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/c1/15/c1159dd0393b4e7897947243c7c18ff9.jpg?listing=top&v=i7bt2au7',
-    'uomo-cerca-donna': 'https://www.bakecaincontrii.com/image/post/0b/7a/0b7aefca9dac486da3f1cea31f4e70fa.jpg?listing=top&v=i7bt2au7',
-    'uomo-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/69/e3/69e36f9806764a5f9e74cabd3895093c.jpg?listing=top&v=i7bt2au7',
-    'donna-cerca-donna': 'https://www.bakecaincontrii.com/image/post/8b/22/8b22bd396cc349af9a24f6afbc7a75cb.jpg?listing=top&v=i7bt2au7',
-    'coppie': 'https://www.bakecaincontrii.com/image/post/aa/0b/aa0b748c7ffe42b0a5bcb8fe3ed3c8e0.jpg?listing=top&v=i7bt2au7',
-    'cerco-amici': 'https://www.bakecaincontrii.com/image/post/d2/72/d2723e532b094c88bdb22b26ace8a7a6.jpg?listing=top&v=i7bt2au7',
-    'anima-gemella': 'https://www.bakecaincontrii.com/image/post/0f/a0/0fa0a37a4d0846b5a6b4d04e63e5c407.jpg?listing=supertop&v=i7bt2au7',
-    'trans': 'https://www.bakecaincontrii.com/image/post/b0/28/b028b928118d4109bc2439600fe83e07.jpg?listing=top&v=i7bt2au7'
+    'donna-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/c1/15/c1159dd0393b4e7897947243c7c18ff9.jpg',
+    'uomo-cerca-donna': 'https://www.bakecaincontrii.com/image/post/02/a7/02a70dc19a144ebd95b8498888c9e5f1.jpg',
+    'uomo-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/20/aa/20aa777a87c54de28f7029a3d4b68e64.jpg',
+    'donna-cerca-donna': 'https://www.bakecaincontrii.com/image/post/b4/7d/b47d4593fa364b658a8b7cfb9feca455.jpg',
+    'coppie': 'https://www.bakecaincontrii.com/image/post/70/6c/706c486f51e74f989b31f27b054f0d56.jpg',
+    'cerco-amici': 'https://www.bakecaincontrii.com/image/post/49/25/49258831e9114e03bddedca633830089.jpg',
+    'anima-gemella': 'https://www.bakecaincontrii.com/image/post/e3/d9/e3d98a5ff6e746cf935728958ea1515d.jpg',
+    'trans': 'https://www.bakecaincontrii.com/image/post/37/a1/37a17bf35c0e4006a334fe3d2ff225a2.jpg'
   };
   
   sbGet('ads', 'select=image,category&is_active=eq.true&not.is.image.eq.&order=created_at.desc&limit=100').then(ads => {
