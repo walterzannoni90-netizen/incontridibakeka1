@@ -410,9 +410,10 @@ async function initAuth() {
       const prof = p?.[0] || {};
       currentUser = {
         id: data.id, name: prof.name || data.user_metadata?.name || '',
-        surname: prof.surname || '', email: data.email,
+        surname: prof.surname || '', email: data.email || prof.email || '',
         city: prof.city || '', credits: prof.credits || 0,
-        isVerified: !!prof.is_verified, isPremium: !!prof.is_premium
+        isVerified: !!prof.is_verified, isPremium: !!prof.is_premium,
+        isAdmin: isAdmin(data.email || prof.email || '')
       };
       updateUIForLoggedUser();
       loadSavedContacts();
@@ -576,15 +577,17 @@ async function handleRegister(e) {
       }, data.access_token);
     }
     
+    const userEmail = email;
+    const userIsAdmin = isAdmin(userEmail);
     currentUser = { 
       id: data.user?.id || '', 
       name, 
-      email, 
+      email: userEmail,
       city: city || '', 
-      credits: isAdmin(email) ? 999 : 20, 
+      credits: userIsAdmin ? 999 : 20, 
       isVerified: false, 
-      isPremium: isAdmin(email),
-      isAdmin: isAdmin(email)
+      isPremium: userIsAdmin,
+      isAdmin: userIsAdmin
     };
     
     if (data.access_token) localStorage.setItem('authToken', data.access_token);
@@ -652,16 +655,17 @@ function userAction(action) {
     case 'contacts': navigateTo('/?page=contacts'); break;
     case 'credits': openShop(); break;
     case 'vetrina':
-      document.getElementById('vetrina')?.scrollIntoView({ behavior: 'smooth' });
-      document.getElementById('navbarMenu')?.classList.remove('active');
+      backToHome();
+      setTimeout(() => document.getElementById('vetrina')?.scrollIntoView({ behavior: 'smooth' }), 300);
       break;
-    case 'settings': showToast('Impostazioni in arrivo!', 'success'); break;
+    case 'settings': 
+      navigateTo('/?page=settings'); 
+      break;
     case 'support': openSupport(); break;
     case 'admin':
       if (isAdmin(currentUser?.email)) navigateTo('/?page=admin');
       else showToast('Accesso negato', 'error');
       break;
-    case 'support': openSupport(); break;
   }
 }
 
@@ -1317,6 +1321,9 @@ function initRouter() {
     showContactsPage();
   } else if (page === 'admin') {
     showAdminPage();
+  } else if (page === 'settings') {
+    if (currentUser) showSettingsPage();
+    else { showToast('Accedi prima', 'warning'); navigateTo('/'); }
   }
 }
 
@@ -2307,6 +2314,58 @@ function loadAdminTransactions(container, token) {
 }
 
 // ============================================================
+// ============================================================
+// SETTINGS PAGE
+// ============================================================
+function showSettingsPage() {
+  document.querySelectorAll('.home-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('section.page-section').forEach(s => s.style.display = 'none');
+  
+  // Get or create settings container
+  let settingsPage = document.getElementById('settingsPage');
+  if (!settingsPage) {
+    const section = document.createElement('section');
+    section.className = 'section page-section';
+    section.id = 'settingsPage';
+    section.style.cssText = 'display:block;padding-top:120px';
+    section.innerHTML = `<div class="container"><div style="margin-bottom:24px"><button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button></div><h1 class="section-title gradient-text"><i class="fas fa-cog"></i> Impostazioni</h1><div id="settingsContent" style="margin-top:24px"></div></div>`;
+    document.querySelector('.navbar')?.after(section);
+    settingsPage = section;
+  }
+  settingsPage.style.display = 'block';
+  
+  const content = document.getElementById('settingsContent');
+  if (!content) return;
+  if (!currentUser) { content.innerHTML = '<div class="empty-state"><p>Accedi per vedere le impostazioni</p></div>'; return; }
+  
+  content.innerHTML = `
+    <div class="admin-settings-grid">
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-user"></i> Profilo</h4>
+        <p><strong>Nome:</strong> ${currentUser.name || '—'}</p>
+        <p><strong>Email:</strong> ${currentUser.email || '—'}</p>
+        <p><strong>Città:</strong> ${currentUser.city || '—'}</p>
+        <p><strong>Crediti:</strong> ${currentUser.credits || 0}</p>
+        <button class="btn btn-sm btn-outline" onclick="showToast('Modifica profilo in arrivo!', 'success')"><i class="fas fa-edit"></i> Modifica</button>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-bell"></i> Notifiche</h4>
+        <p style="color:var(--text-secondary);font-size:0.85rem">Le notifiche via email arriveranno a ${currentUser.email || '—'}</p>
+        <span class="mini-stat">✅ Annunci scaduti</span>
+        <span class="mini-stat">✅ Messaggi</span>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-shield-alt"></i> Sicurezza</h4>
+        <p style="color:var(--text-secondary);font-size:0.85rem">La tua password è protetta. Puoi modificarla tramite la schermata di login.</p>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-trash"></i> Elimina account</h4>
+        <p style="color:#ef4444;font-size:0.85rem">Questa azione è irreversibile. Per eliminare l'account contatta l'amministratore.</p>
+      </div>
+    </div>
+  `;
+}
+
 // POPSTATE
 // ============================================================
 window.addEventListener('popstate', () => initRouter());
