@@ -1,14 +1,8 @@
 // ============================================================
 // SUPABASE SEED — Popola il database con dati iniziali
-// Uso: node supabase-seed.js
+// Uso: node supabase-seed.js [--yes]
 // ============================================================
 const supabase = require('./supabase');
-const readline = require('readline');
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
 
 async function seed() {
   console.log('\n🌱  Seeding Supabase Database...\n');
@@ -21,7 +15,7 @@ async function seed() {
     { slug: 'donna-cerca-donna', name: 'Donna Cerca Donna', icon: 'fa-venus', class: 'womenseekwomen', description: 'Donne che amano altre donne.', color: '#ff3b30', sort_order: 4 },
     { slug: 'coppie', name: 'Coppie', icon: 'fa-heart', class: 'couples', description: 'Coppie per esperienze swinger.', color: '#af52de', sort_order: 5 },
     { slug: 'cerco-amici', name: 'Cerco Amici', icon: 'fa-handshake', class: 'seekfriends', description: 'Amicizie vere nella tua città.', color: '#34c759', sort_order: 6 },
-    { slug: 'anima-gemella', name: 'Cerco Anima Gemella', icon: 'fa-dove', class: 'seeksoulmate', description: 'Trova l\'altra metà.', color: '#ff6482', sort_order: 7 },
+    { slug: 'anima-gemella', name: 'Cerco Anima Gemella', icon: 'fa-dove', class: 'seeksoulmate', description: "Trova l'altra metà.", color: '#ff6482', sort_order: 7 },
     { slug: 'trans', name: 'Trans', icon: 'fa-transgender', class: 'trans', description: 'Incontri trans e travestiti.', color: '#e84393', sort_order: 8 }
   ];
 
@@ -46,17 +40,23 @@ async function seed() {
   }
 
   console.log('\n✅  Seed completato!\n');
-  console.log('Ora crea un utente da Supabase Auth > Users > Add User');
-  console.log('Poi usa il suo UUID per inserire annunci di esempio dal pannello.\n');
 }
 
-// Check if Supabase is configured
-rl.question('Questo script popolerà il database Supabase. Continuare? (s/N) ', async (answer) => {
-  if (answer.toLowerCase() === 's') {
+async function main() {
+  const autoConfirm = process.argv.includes('--yes') || process.env.CI === 'true';
+  if (autoConfirm) {
     await seed();
+    process.exit(0);
   } else {
-    console.log('Operazione annullata.');
+    const readline = require('readline');
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question('Questo script popolerà il database Supabase. Continuare? (s/N) ', async (answer) => {
+      if (answer.toLowerCase() === 's') await seed();
+      else console.log('Operazione annullata.');
+      rl.close();
+      process.exit(0);
+    });
   }
-  rl.close();
-  process.exit(0);
-});
+}
+
+main().catch(e => { console.error(e); process.exit(1); });

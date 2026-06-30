@@ -29,19 +29,20 @@ jobs:
           node-version: '20'
 
       - name: Installa dipendenze
-        run: npm ci --only=production || npm install --only=production
+        run: npm ci || npm install
 
       - name: Fix database Supabase
         env:
           SUPABASE_ADMIN_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node apply-fixes.js || echo "⚠️ Fix non applicate (manca token), deploy continuato"
-
-      - name: Seed dati iniziali
-        env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E' }}
-        run: node supabase-seed.js || echo "⚠️ Seed saltato, esegui manualmente"
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          echo "=== Fix Database ==="
+          node apply-fixes.js || echo "⚠️ Fix saltate (Admin Token mancante)"
+          echo ""
+          echo "=== Seed Dati ==="
+          node supabase-seed.js --yes || echo "⚠️ Seed saltato"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

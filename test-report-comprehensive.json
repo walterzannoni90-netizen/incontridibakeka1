@@ -1,0 +1,278 @@
+{
+  "timestamp": "2026-06-30T23:12:26.571Z",
+  "duration": "4.4s",
+  "summary": {
+    "passed": 32,
+    "failed": 3,
+    "total": 35,
+    "successRate": 91
+  },
+  "byCategory": {
+    "API": {
+      "passed": 5,
+      "total": 6,
+      "percentage": 83
+    },
+    "AUTH": {
+      "passed": 4,
+      "total": 4,
+      "percentage": 100
+    },
+    "ADS": {
+      "passed": 0,
+      "total": 1,
+      "percentage": 0
+    },
+    "ADMIN": {
+      "passed": 7,
+      "total": 7,
+      "percentage": 100
+    },
+    "SEARCH": {
+      "passed": 6,
+      "total": 6,
+      "percentage": 100
+    },
+    "RLS": {
+      "passed": 3,
+      "total": 3,
+      "percentage": 100
+    },
+    "STRESS": {
+      "passed": 3,
+      "total": 3,
+      "percentage": 100
+    },
+    "EDGE": {
+      "passed": 4,
+      "total": 5,
+      "percentage": 80
+    }
+  },
+  "errors": [
+    {
+      "name": "[API] GET /stats",
+      "details": "supabase.rpc(...).catch is not a function"
+    },
+    {
+      "name": "[ADS] CREATE annuncio",
+      "details": "Could not find the 'images' column of 'ads' in the schema cache"
+    },
+    {
+      "name": "[EDGE] SQL Injection search",
+      "details": "Parametrizzato correttamente"
+    }
+  ],
+  "details": [
+    {
+      "category": "API",
+      "name": "[API] GET /categories",
+      "success": true,
+      "details": "8 categorie"
+    },
+    {
+      "category": "API",
+      "name": "[API] GET /cities",
+      "success": true,
+      "details": "20 città"
+    },
+    {
+      "category": "API",
+      "name": "[API] GET /stats",
+      "success": false,
+      "details": "supabase.rpc(...).catch is not a function"
+    },
+    {
+      "category": "API",
+      "name": "[API] GET /ads",
+      "success": true,
+      "details": "0 annunci"
+    },
+    {
+      "category": "API",
+      "name": "[API] GET /ads/featured",
+      "success": true,
+      "details": "0 featured"
+    },
+    {
+      "category": "API",
+      "name": "[API] GET /addons",
+      "success": true,
+      "details": "7 addons"
+    },
+    {
+      "category": "AUTH",
+      "name": "[AUTH] Profilo Alessandro",
+      "success": true,
+      "details": "OK"
+    },
+    {
+      "category": "AUTH",
+      "name": "[AUTH] Profilo Martina",
+      "success": true,
+      "details": "OK"
+    },
+    {
+      "category": "AUTH",
+      "name": "[AUTH] Profilo Sofia",
+      "success": true,
+      "details": "OK"
+    },
+    {
+      "category": "AUTH",
+      "name": "[AUTH] Registrazione (DB direct)",
+      "success": true,
+      "details": "Profilo creato"
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] CREATE annuncio",
+      "success": false,
+      "details": "Could not find the 'images' column of 'ads' in the schema cache"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] Lista utenti",
+      "success": true,
+      "details": "4 utenti"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] Lista tutti annunci",
+      "success": true,
+      "details": "0 annunci"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] Gestione categorie",
+      "success": true,
+      "details": "8 categorie"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] Gestione città",
+      "success": true,
+      "details": "20 città"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] Messaggi supporto",
+      "success": true,
+      "details": "0 messaggi"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] CREATE categoria",
+      "success": true,
+      "details": "Slug: test-categoria-1782861143747"
+    },
+    {
+      "category": "ADMIN",
+      "name": "[ADMIN] CREATE città",
+      "success": true,
+      "details": "Nome: Test City 1782861143880"
+    },
+    {
+      "category": "SEARCH",
+      "name": "[SEARCH] Filtro categoria",
+      "success": true,
+      "details": "3 risultati"
+    },
+    {
+      "category": "SEARCH",
+      "name": "[SEARCH] Filtro città",
+      "success": true,
+      "details": "2 risultati"
+    },
+    {
+      "category": "SEARCH",
+      "name": "[SEARCH] Ricerca testuale",
+      "success": true,
+      "details": "6 risultati"
+    },
+    {
+      "category": "SEARCH",
+      "name": "[SEARCH] Solo premium",
+      "success": true,
+      "details": "3 risultati"
+    },
+    {
+      "category": "SEARCH",
+      "name": "[SEARCH] Solo verificati",
+      "success": true,
+      "details": "6 risultati"
+    },
+    {
+      "category": "SEARCH",
+      "name": "[SEARCH] Ordinamento corretto",
+      "success": true,
+      "details": "6 risultati"
+    },
+    {
+      "category": "RLS",
+      "name": "[RLS] Setup utenti test",
+      "success": true,
+      "details": ""
+    },
+    {
+      "category": "RLS",
+      "name": "[RLS] User1 CREATE own ad",
+      "success": true,
+      "details": ""
+    },
+    {
+      "category": "RLS",
+      "name": "[RLS] Cross-user UPDATE (anon key)",
+      "success": true,
+      "details": "Note: requires user token for true RLS test"
+    },
+    {
+      "category": "STRESS",
+      "name": "[STRESS] 20 Letture concorrenti",
+      "success": true,
+      "details": "20/20 riuscite"
+    },
+    {
+      "category": "STRESS",
+      "name": "[STRESS] 10 Scritture concorrenti",
+      "success": true,
+      "details": "10/10 riuscite"
+    },
+    {
+      "category": "STRESS",
+      "name": "[STRESS] Operazioni miste concorrenti",
+      "success": true,
+      "details": "5/5 riuscite"
+    },
+    {
+      "category": "EDGE",
+      "name": "[EDGE] UUID non valido",
+      "success": true,
+      "details": "invalid input syntax for type uuid: \"invalid-uuid\""
+    },
+    {
+      "category": "EDGE",
+      "name": "[EDGE] Record inesistente",
+      "success": true,
+      "details": "Restituisce array vuoto"
+    },
+    {
+      "category": "EDGE",
+      "name": "[EDGE] SQL Injection search",
+      "success": false,
+      "details": "Parametrizzato correttamente"
+    },
+    {
+      "category": "EDGE",
+      "name": "[EDGE] Payload grande (10k chars)",
+      "success": true,
+      "details": "Accettato"
+    },
+    {
+      "category": "EDGE",
+      "name": "[EDGE] Delete concorrente stesso record",
+      "success": true,
+      "details": "3/3 riusciti (idempotente)"
+    }
+  ]
+}
