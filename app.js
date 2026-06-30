@@ -794,7 +794,7 @@ async function loadSponsorAds() {
       };
       list.appendChild(item);
     });
-  } catch(e) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Usa annunci di esempio per la demo</div>'; }
+  } catch(e) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Nessun annuncio disponibile</div>'; }
 }
 
 function showSponsorStep(step) {

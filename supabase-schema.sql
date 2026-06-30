@@ -1,11 +1,16 @@
 -- ============================================================
--- INCONTRI DI BAKEKA — Esegui questo SQL nel Supabase Editor
--- 1. Vai su https://supabase.com/dashboard/project/rdqsmfgpbuswzilgbjyr
--- 2. SQL Editor
--- 3. Incolla e premi CTRL+ENTER o CMD+ENTER
+-- INCONTRI DI BAKEKA — RESET COMPLETO DEL DATABASE
+-- Esegui questo SQL nel Supabase SQL Editor per pulire tutto
+-- e ripartire da zero con soli dati reali.
 -- ============================================================
 
--- TABELLE
+-- 1. Pulisci i dati esistenti (annunci fake, profili di test)
+TRUNCATE TABLE ads CASCADE;
+TRUNCATE TABLE profiles CASCADE;
+DELETE FROM categories;
+DELETE FROM cities;
+
+-- 2. TABELLE
 CREATE TABLE IF NOT EXISTS categories (
   slug TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -64,11 +69,11 @@ CREATE TABLE IF NOT EXISTS ads (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- DATI INIZIALI
+-- 3. DATI INIZIALI (solo categorie e città — niente annunci fake!)
 INSERT INTO categories (slug, name, icon, class, description, color, sort_order) VALUES
-  ('donna-cerca-uomo', 'Donna Cerca Uomo', 'fa-female', 'womenseekmen', 'Sfoglia annunci di donne in cerca di uomini.', '#ff2d55', 1),
+  ('donna-cerca-uomo', 'Donna Cerca Uomo', 'fa-female', 'womenseekmen', 'Sfoglia annunci reali di donne in cerca di uomini.', '#ff2d55', 1),
   ('uomo-cerca-donna', 'Uomo Cerca Donna', 'fa-male', 'menseekwomen', 'Uomini in cerca di donne. Profili verificati.', '#007aff', 2),
-  ('uomo-cerca-uomo', 'Uomo Cerca Uomo', 'fa-venus-mars', 'menseekmen', 'Incontri gay. Annunci escort maschi.', '#ff9500', 3),
+  ('uomo-cerca-uomo', 'Uomo Cerca Uomo', 'fa-venus-mars', 'menseekmen', 'Incontri gay. Annunci di escort maschi.', '#ff9500', 3),
   ('donna-cerca-donna', 'Donna Cerca Donna', 'fa-venus', 'womenseekwomen', 'Donne che amano altre donne.', '#ff3b30', 4),
   ('coppie', 'Coppie', 'fa-heart', 'couples', 'Coppie per esperienze swinger.', '#af52de', 5),
   ('cerco-amici', 'Cerco Amici', 'fa-handshake', 'seekfriends', 'Amicizie nella tua città.', '#34c759', 6),
@@ -86,9 +91,18 @@ INSERT INTO cities (name, slug, region) VALUES
   ('Bergamo','bergamo','Lombardia'),('Cagliari','cagliari','Sardegna')
 ON CONFLICT (name) DO NOTHING;
 
--- RLS
+-- 4. RLS (Row Level Security)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ads ENABLE ROW LEVEL SECURITY;
+
+-- Rimuovi policy vecchie e ricreale
+DROP POLICY IF EXISTS "Profili pubblici" ON profiles CASCADE;
+DROP POLICY IF EXISTS "Proprio profilo insert" ON profiles CASCADE;
+DROP POLICY IF EXISTS "Proprio profilo update" ON profiles CASCADE;
+DROP POLICY IF EXISTS "Annunci pubblici" ON ads CASCADE;
+DROP POLICY IF EXISTS "Propri annunci insert" ON ads CASCADE;
+DROP POLICY IF EXISTS "Propri annunci update" ON ads CASCADE;
+DROP POLICY IF EXISTS "Propri annunci delete" ON ads CASCADE;
 
 CREATE POLICY "Profili pubblici" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Proprio profilo insert" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
@@ -99,7 +113,13 @@ CREATE POLICY "Propri annunci insert" ON ads FOR INSERT WITH CHECK (auth.uid() =
 CREATE POLICY "Propri annunci update" ON ads FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Propri annunci delete" ON ads FOR DELETE USING (auth.uid() = user_id);
 
--- Index
+-- 5. Index
 CREATE INDEX IF NOT EXISTS idx_ads_category ON ads(category);
 CREATE INDEX IF NOT EXISTS idx_ads_city ON ads(city);
 CREATE INDEX IF NOT EXISTS idx_ads_premium ON ads(is_premium);
+CREATE INDEX IF NOT EXISTS idx_ads_active ON ads(is_active);
+CREATE INDEX IF NOT EXISTS idx_ads_created ON ads(created_at DESC);
+
+-- 6. Storage bucket per foto (se non esiste già)
+-- Vai su https://supabase.com/dashboard/project/rdqsmfgpbuswzilgbjyr/storage/buckets
+-- e crea un bucket pubblico chiamato "ad-photos"
