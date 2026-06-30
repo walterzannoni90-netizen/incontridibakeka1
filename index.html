@@ -84,9 +84,16 @@
                   <span id="dropdownUserEmail">email@example.com</span>
                 </div>
                 <div class="dropdown-body">
+                  <div class="dropdown-credits" onclick="userAction('credits')">
+                    <i class="fas fa-coins" style="color:var(--accent)"></i>
+                    <span id="userCredits">0 crediti</span>
+                  </div>
+                  <div class="dropdown-divider"></div>
                   <a href="#" onclick="userAction('profile')"><i class="fas fa-id-card"></i> Il mio profilo</a>
-                  <a href="#" onclick="userAction('ads')"><i class="fas fa-list"></i> I miei annunci</a>
-                  <a href="#" onclick="userAction('vetrina')"><i class="fas fa-crown"></i> Sponsorizza</a>
+                  <a href="#" onclick="userAction('myads')"><i class="fas fa-list"></i> I miei annunci</a>
+                  <a href="#" onclick="userAction('contacts')"><i class="fas fa-bookmark"></i> Rubrica contatti</a>
+                  <a href="#" onclick="userAction('credits')"><i class="fas fa-shopping-cart"></i> Negozio addons</a>
+                  <a href="#" onclick="userAction('vetrina')"><i class="fas fa-crown"></i> Vetrina</a>
                   <a href="#" onclick="userAction('settings')"><i class="fas fa-cog"></i> Impostazioni</a>
                   <div class="dropdown-divider"></div>
                   <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Esci</a>
@@ -546,6 +553,37 @@
   </div>
 
   <!-- ============================================================
+  SHOP MODAL — CREDITI E ADDONS
+  ============================================================ -->
+  <div class="modal-overlay" id="shopModal">
+    <div class="modal-content shop-modal-content">
+      <button class="modal-close" onclick="closeShop()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-shopping-bag"></i>
+      </div>
+      <h2 class="modal-title">Negozio</h2>
+      <p class="modal-subtitle">Acquista crediti e potenzia i tuoi annunci</p>
+      <div id="shopContent" style="margin-top:24px">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  ADDON PURCHASE MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="addonPurchaseModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeAddonPurchase()">&times;</button>
+      <h2 class="modal-title">Scegli l'annuncio</h2>
+      <p class="modal-subtitle">Su quale annuncio vuoi applicare questo addon?</p>
+      <div id="addonAdsList" style="margin-top:16px">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
   HERO SECTION
   ============================================================ -->
   <section class="hero" id="home">
@@ -932,7 +970,7 @@
   <!-- ============================================================
   CTA SECTION
   ============================================================ -->
-  <section class="cta-section">
+  <section class="cta-section home-section">
     <div class="container">
       <div class="cta-card" data-aos="fade-up">
         <div class="cta-content">
@@ -954,7 +992,7 @@
   <!-- ============================================================
   CATEGORY PAGE
   ============================================================ -->
-  <section class="section" id="categoryPage" style="display:none;padding-top:120px">
+  <section class="section page-section" id="categoryPage" style="display:none;padding-top:120px">
     <div class="container">
       <div style="margin-bottom:24px">
         <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
@@ -967,7 +1005,7 @@
   <!-- ============================================================
   AD DETAIL PAGE
   ============================================================ -->
-  <section class="section" id="adDetailPage" style="display:none;padding-top:120px">
+  <section class="section page-section" id="adDetailPage" style="display:none;padding-top:120px">
     <div class="container">
       <div style="margin-bottom:24px">
         <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Indietro</button>
@@ -979,7 +1017,7 @@
   <!-- ============================================================
   PROFILE PAGE
   ============================================================ -->
-  <section class="section" id="profilePage" style="display:none;padding-top:120px">
+  <section class="section page-section" id="profilePage" style="display:none;padding-top:120px">
     <div class="container">
       <div style="margin-bottom:24px">
         <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
@@ -992,7 +1030,7 @@
   <!-- ============================================================
   MY ADS PAGE
   ============================================================ -->
-  <section class="section" id="myAdsPage" style="display:none;padding-top:120px">
+  <section class="section page-section" id="myAdsPage" style="display:none;padding-top:120px">
     <div class="container">
       <div style="margin-bottom:24px">
         <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
@@ -1000,6 +1038,19 @@
       </div>
       <h1 class="section-title gradient-text">I Miei Annunci</h1>
       <div class="ads-grid" id="myAdsContent" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  CONTACTS PAGE (Rubrica)
+  ============================================================ -->
+  <section class="section page-section" id="contactsPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text">Rubrica Contatti</h1>
+      <div class="ads-grid" id="contactsContent" style="margin-top:24px"></div>
     </div>
   </section>
 
