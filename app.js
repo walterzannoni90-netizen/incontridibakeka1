@@ -7,6 +7,9 @@
 const SUPABASE_URL = 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
 
+// Stripe — Chiave pubblicabile
+const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1';
+
 // ============================================================
 // SUPABASE HELPERS
 // ============================================================
@@ -894,33 +897,54 @@ async function buyCredits(amount) {
   showToast(`Reindirizzamento a Stripe per €${euro.toFixed(2)}...`, 'success');
   
   try {
-    // Prova Stripe Checkout via Supabase Edge Function
-    const response = await fetch(
-      'https://rdqsmfgpbuswzilgbjyr.supabase.co/functions/v1/create-checkout',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({
-          priceId: 'price_' + amount + 'credits', // Stripe Price ID da configurare
-          userId: currentUser.id,
-          credits: amount,
-          successUrl: window.location.origin + '/?payment=success&credits=' + amount,
-          cancelUrl: window.location.origin + '/?shop=cancelled'
-        })
+    // Prova Stripe Checkout
+    if (typeof Stripe !== 'undefined') {
+      const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+      
+      // Prova a creare sessione via Edge Function
+      try {
+        const response = await fetch(
+          'https://rdqsmfgpbuswzilgbjyr.supabase.co/functions/v1/create-checkout',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify({
+              amount: amount,
+              userId: currentUser.id,
+              credits: amount,
+              successUrl: window.location.origin + '/?payment=success&credits=' + amount,
+              cancelUrl: window.location.origin + '/?shop=cancelled'
+            })
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.url) {
+            window.location.href = data.url;
+            return;
+          }
+          if (data.sessionId) {
+            const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+            if (error) throw error;
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('Stripe edge function not available, fallback to direct checkout');
       }
-    );
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
+      
+      // Fallback: redirect diretto a Stripe Checkout (Payment Links)
+      const prices = { 10: 4.99, 30: 9.99, 70: 19.99, 150: 34.99 };
+      const euro = prices[amount] || (amount * 0.5);
+      showToast('Reindirizzamento a Stripe...', 'success');
+      // Redirect to Stripe Payment Link (da creare su Stripe Dashboard)
+      // window.location.href = 'https://buy.stripe.com/...';
     }
-  } catch (e) { /* Stripe non configurato, fallback a mock */ }
+  } catch (e) { /* Stripe fallback */ }
   
   // FALLBACK: credito diretto (finché Stripe non è configurato)
   const token = localStorage.getItem('authToken');
