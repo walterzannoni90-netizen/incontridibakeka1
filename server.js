@@ -3,56 +3,35 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3030;
 
-require('dotenv').config();
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 // ============================================================
-// SUPABASE CLIENT
+// SUPABASE — Chiavi pubbliche hardcodate (anon key è pubblica)
 // ============================================================
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_URL = 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
 
-let supabase = null;
-let DB_OK = false;
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-if (SUPABASE_URL && SUPABASE_KEY && !SUPABASE_URL.includes('your-project')) {
-  try {
-    const { createClient } = require('@supabase/supabase-js');
-    supabase = createClient(SUPABASE_URL, SERVICE_KEY || SUPABASE_KEY, { auth: { persistSession: false } });
-    DB_OK = true;
-    console.log('  🗄️  Database: Supabase PostgreSQL');
-  } catch (e) {
-    console.log('  ⚠️  Errore Supabase:', e.message);
-  }
-}
-
-if (!DB_OK) {
-  console.log('  ⚠️  Supabase non configurato. Imposta VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY in .env');
-}
+console.log('  🗄️  Database: Supabase PostgreSQL');
 
 // ============================================================
 // API ROUTES
 // ============================================================
 
-// --- Categories ---
 app.get('/api/categories', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json([]);
   const { data, error } = await supabase.from('categories').select('*').order('sort_order');
   res.json(error ? [] : data);
 });
 
-// --- Cities ---
 app.get('/api/cities', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json([]);
   const { data, error } = await supabase.from('cities').select('name').order('name');
   res.json(error ? [] : data.map(r => r.name));
 });
 
-// --- Stats ---
 app.get('/api/stats', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json({ totalAds: 0, premiumAds: 0, verifiedUsers: 0, citiesAvailable: 0, categoriesAvailable: 0 });
   const [{ count: totalAds }, { count: premiumAds }, { count: verifiedUsers }] = await Promise.all([
     supabase.from('ads').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('ads').select('*', { count: 'exact', head: true }).eq('is_premium', true).eq('is_active', true),
@@ -63,9 +42,7 @@ app.get('/api/stats', async (req, res) => {
   res.json({ totalAds: totalAds || 0, premiumAds: premiumAds || 0, verifiedUsers: verifiedUsers || 0, citiesAvailable: cityCount || 0, categoriesAvailable: catCount || 0 });
 });
 
-// --- Ads ---
 app.get('/api/ads', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json([]);
   const { category, city, search, gender, premium, verified } = req.query;
   let query = supabase.from('ads').select('*').eq('is_active', true);
   if (category && category !== 'all') query = query.eq('category', category);
@@ -79,34 +56,33 @@ app.get('/api/ads', async (req, res) => {
   res.json(error ? [] : data);
 });
 
-// --- Featured Ads ---
 app.get('/api/ads/featured', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json([]);
   const { data, error } = await supabase.from('ads').select('*').eq('is_premium', true).eq('is_active', true).order('is_sponsored', { ascending: false }).order('rating', { ascending: false }).limit(6);
   res.json(error ? [] : data);
 });
 
-// --- Auth: Register ---
+// --- Auth: Register (usa signUp, funziona con anon key) ---
 app.post('/api/auth/register', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json({ success: false, error: 'Database non disponibile' });
   try {
     const { name, surname, email, password, city, gender, birthDate, acceptTerms } = req.body;
     if (!name || !email || !password || !acceptTerms) return res.json({ success: false, error: 'Compila tutti i campi obbligatori' });
     if (password.length < 8) return res.json({ success: false, error: 'Password almeno 8 caratteri' });
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) return res.json({ success: false, error: 'Password deve contenere minuscole, MAIUSCOLE e numeri' });
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email, password, email_confirm: true, user_metadata: { name, surname }
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { name, surname } }
     });
-    if (authError) {
-      if (authError.message.includes('already registered')) return res.json({ success: false, error: 'Email già registrata' });
-      return res.json({ success: false, error: authError.message });
+    if (error) {
+      if (error.message.includes('already')) return res.json({ success: false, error: 'Email già registrata' });
+      return res.json({ success: false, error: error.message });
     }
-    const uid = authData.user.id;
+    const uid = data.user.id;
     await supabase.from('profiles').insert({
       id: uid, name, surname: surname || '', city: city || '', gender: gender || '',
       birth_date: birthDate || null, is_verified: false, is_premium: false
     });
+
     return res.json({
       success: true,
       user: { id: uid, name, email, city: city || '', isVerified: false, isPremium: false },
@@ -117,7 +93,6 @@ app.post('/api/auth/register', async (req, res) => {
 
 // --- Auth: Login ---
 app.post('/api/auth/login', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json({ success: false, error: 'Database non disponibile' });
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.json({ success: false, error: 'Inserisci email e password' });
@@ -147,13 +122,12 @@ app.post('/api/auth/login', async (req, res) => {
 // --- Auth: Logout ---
 app.post('/api/auth/logout', async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  if (supabase && token) await supabase.auth.signOut().catch(() => {});
+  if (token) await supabase.auth.signOut().catch(() => {});
   res.json({ success: true });
 });
 
 // --- Auth: Me ---
 app.get('/api/auth/me', async (req, res) => {
-  if (!DB_OK || !supabase) return res.json({ success: false, error: 'Database non disponibile' });
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return res.json({ success: false, error: 'Non autenticato' });
@@ -180,12 +154,12 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 // ============================================================
-// AVVIO SERVER
+// AVVIO
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n  ✦ IncontriDiBakeka — Annunci Premium ✦`);
   console.log(`  ──────────────────────────────────────`);
   console.log(`  🌐  http://0.0.0.0:${PORT}`);
-  console.log(`  🗄️  ${DB_OK ? 'Supabase PostgreSQL' : '⚠️  Database non configurato'}`);
+  console.log(`  🗄️  Supabase PostgreSQL`);
   console.log(`  💎  Premium Dating Experience\n`);
 });
