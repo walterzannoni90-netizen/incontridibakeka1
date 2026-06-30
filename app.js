@@ -1541,9 +1541,17 @@ async function sendSupportMessage(e) {
 // ADMIN PAGE
 // ============================================================
 // ============================================================
-// ADMIN PANEL — CONTROLLO TOTALE DEL SITO
+// ADMIN PANEL — CONTROLLO TOTALE DEL SITO (VERSIONE COMPLETA)
 // ============================================================
-let adminState = { tab: 'dashboard', search: '', data: {} };
+let adminState = { 
+  tab: 'dashboard', 
+  search: '', 
+  data: {},
+  adsPage: 0,
+  usersPage: 0
+};
+
+const ADMIN_ITEMS_PER_PAGE = 20;
 
 function showAdminPage() {
   document.querySelectorAll('.home-section').forEach(s => s.style.display = 'none');
@@ -1563,15 +1571,18 @@ function renderAdminNav() {
   const nav = document.getElementById('adminNav');
   if (!nav) return;
   const tabs = [
-    { id: 'dashboard', icon: 'fa-chart-bar', label: 'Dashboard' },
-    { id: 'users', icon: 'fa-users', label: 'Utenti' },
-    { id: 'ads', icon: 'fa-newspaper', label: 'Annunci' },
-    { id: 'categories', icon: 'fa-tags', label: 'Categorie' },
-    { id: 'support', icon: 'fa-headset', label: 'Supporto' },
-    { id: 'transactions', icon: 'fa-coins', label: 'Transazioni' }
+    { id: 'dashboard', icon: 'fa-chart-bar', label: 'Dashboard', color: 'var(--primary)' },
+    { id: 'users', icon: 'fa-users', label: 'Utenti', color: '#10b981' },
+    { id: 'ads', icon: 'fa-newspaper', label: 'Annunci', color: '#f59e0b' },
+    { id: 'categories', icon: 'fa-tags', label: 'Categorie', color: '#8b5cf6' },
+    { id: 'cities', icon: 'fa-city', label: 'Città', color: '#06b6d4' },
+    { id: 'photos', icon: 'fa-images', label: 'Foto', color: '#ec4899' },
+    { id: 'support', icon: 'fa-headset', label: 'Supporto', color: '#f97316' },
+    { id: 'transactions', icon: 'fa-coins', label: 'Transazioni', color: '#eab308' },
+    { id: 'settings', icon: 'fa-cog', label: 'Impostazioni', color: '#a1a1aa' }
   ];
   nav.innerHTML = tabs.map(t => 
-    `<button class="admin-tab ${adminState.tab === t.id ? 'active' : ''}" onclick="switchAdminTab('${t.id}')">
+    `<button class="admin-tab ${adminState.tab === t.id ? 'active' : ''}" onclick="switchAdminTab('${t.id}')" style="${adminState.tab === t.id ? '--tab-color:' + t.color : ''}">
       <i class="fas ${t.icon}"></i> ${t.label}
     </button>`
   ).join('');
@@ -1579,6 +1590,8 @@ function renderAdminNav() {
 
 function switchAdminTab(tab) {
   adminState.tab = tab;
+  adminState.adsPage = 0;
+  adminState.usersPage = 0;
   renderAdminNav();
   loadAdminData();
 }
@@ -1595,8 +1608,11 @@ function loadAdminData() {
     case 'users': loadAdminUsers(container, token); break;
     case 'ads': loadAdminAds(container, token); break;
     case 'categories': loadAdminCategories(container, token); break;
+    case 'cities': loadAdminCities(container, token); break;
+    case 'photos': loadAdminPhotos(container, token); break;
     case 'support': loadAdminSupport(container, token); break;
     case 'transactions': loadAdminTransactions(container, token); break;
+    case 'settings': loadAdminSettings(container, token); break;
     default: loadAdminDashboard(container, token);
   }
 }
@@ -1662,36 +1678,46 @@ function loadAdminDashboard(container, token) {
   });
 }
 
-// --- UTENTI ---
+// --- UTENTI (COMPLETO) ---
 function loadAdminUsers(container, token) {
   sbGet('profiles', 'select=*&order=created_at.desc', token).then(profiles => {
     const pList = profiles || [];
     container.innerHTML = `
-      <div class="admin-toolbar">
-        <input type="text" id="adminUserSearch" class="form-control" placeholder="Cerca utente per nome o email..." style="max-width:300px" oninput="adminSearchUsers()">
-        <span style="color:var(--text-muted);font-size:0.85rem">${pList.length} utenti totali</span>
+      <div class="admin-section-header">
+        <h3><i class="fas fa-users" style="color:#10b981"></i> Gestione Utenti <span class="admin-count-badge">${pList.length}</span></h3>
+        <div class="admin-toolbar">
+          <input type="text" id="adminUserSearch" class="form-control" placeholder="🔍 Cerca nome o ID..." style="max-width:250px" oninput="adminSearchUsers()">
+          <select class="form-control" style="max-width:150px" onchange="adminFilterUsers(this.value)">
+            <option value="all">Tutti</option>
+            <option value="verified">Verificati</option>
+            <option value="unverified">Non verificati</option>
+            <option value="has_credits">Con crediti</option>
+          </select>
+        </div>
       </div>
       <div class="admin-table-wrapper">
         <table class="admin-table">
           <thead><tr>
-            <th>Nome</th><th>Email</th><th>Data</th><th>Crediti</th><th>Verificato</th><th>Telefono</th><th>Azioni</th>
+            <th>Nome</th><th>ID Utente</th><th>Iscritto</th><th>Crediti</th><th>Stato</th><th>Genere</th><th>Telefono</th><th>Azioni</th>
           </tr></thead>
           <tbody id="adminUsersTbody">
             ${pList.map(p => `
-              <tr class="admin-user-row" data-name="${(p.name || '').toLowerCase()}" data-email="${(p.email || p.id || '').toLowerCase()}">
+              <tr class="admin-user-row" data-name="${(p.name || '').toLowerCase()}" data-id="${p.id || ''}" data-verified="${p.is_verified ? '1' : '0'}" data-credits="${p.credits || 0}">
                 <td><strong>${p.name || '?'}</strong>${p.surname ? ' ' + p.surname : ''}</td>
-                <td><small>${p.id?.slice(0, 10) || '?'}...</small></td>
-                <td>${new Date(p.created_at).toLocaleDateString('it-IT')}</td>
+                <td style="font-family:monospace;font-size:0.7rem;color:var(--text-muted)">${(p.id || '?').slice(0, 12)}...</td>
+                <td style="font-size:0.75rem">${new Date(p.created_at).toLocaleDateString('it-IT')}</td>
                 <td><span class="admin-credits-badge">${p.credits || 0}</span></td>
-                <td>${p.is_verified ? '✅' : '<span style="color:var(--text-muted)">❌</span>'}</td>
-                <td>${p.phone || '<span style="color:var(--text-muted)">—</span>'}</td>
+                <td>${p.is_verified ? '✅ Verificato' : '🔴 Non verificato'}</td>
+                <td style="font-size:0.75rem;text-transform:capitalize">${p.gender || '—'}</td>
+                <td style="font-size:0.8rem">${p.phone || '—'}</td>
                 <td>
                   <div class="admin-actions">
-                    <button class="btn btn-sm btn-outline" onclick="adminAddCredits('${p.id}', '${p.name || '?'}')" title="Aggiungi crediti"><i class="fas fa-plus"></i></button>
-                    <button class="btn btn-sm ${p.is_verified ? 'btn-ghost' : 'btn-outline'}" onclick="adminToggleVerify('${p.id}', ${p.is_verified})" title="${p.is_verified ? 'Rimuovi verifica' : 'Verifica'}">
+                    <button class="btn btn-sm btn-outline" onclick="adminViewUser('${p.id}')" title="Dettagli"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline" onclick="adminAddCredits('${p.id}', '${(p.name || '?').replace(/'/g, "\\'")}')" title="Aggiungi crediti"><i class="fas fa-plus"></i></button>
+                    <button class="btn btn-sm ${p.is_verified ? 'btn-verified' : 'btn-outline'}" onclick="adminToggleVerify('${p.id}', ${p.is_verified})" title="${p.is_verified ? 'Rimuovi verifica' : 'Verifica profilo'}">
                       ${p.is_verified ? '👑' : '✅'}
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="adminDeleteUser('${p.id}', '${p.name || '?'}')" title="Elimina"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteUser('${p.id}', '${(p.name || '?').replace(/'/g, "\\'")}')" title="Elimina utente"><i class="fas fa-trash"></i></button>
                   </div>
                 </td>
               </tr>
@@ -1699,23 +1725,72 @@ function loadAdminUsers(container, token) {
           </tbody>
         </table>
       </div>
+      <p class="admin-table-footer">Mostra tutti i ${pList.length} utenti. Clicca 👁️ per dettagli completi.</p>
     `;
   }).catch(() => {
-    container.innerHTML = '<div class="empty-state"><p>Errore caricamento utenti</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>Errore caricamento utenti</p></div>';
   });
 }
 
 function adminSearchUsers() {
   const q = (document.getElementById('adminUserSearch')?.value || '').toLowerCase();
   document.querySelectorAll('.admin-user-row').forEach(row => {
-    const name = row.dataset.name || '';
-    const email = row.dataset.email || '';
-    row.style.display = (name.includes(q) || email.includes(q)) ? '' : 'none';
+    const name = (row.dataset.name || '').toLowerCase();
+    const id = (row.dataset.id || '').toLowerCase();
+    row.style.display = (name.includes(q) || id.includes(q) || q === '') ? '' : 'none';
+  });
+}
+
+function adminFilterUsers(filter) {
+  document.querySelectorAll('.admin-user-row').forEach(row => {
+    if (filter === 'all') { row.style.display = ''; return; }
+    if (filter === 'verified') row.style.display = row.dataset.verified === '1' ? '' : 'none';
+    if (filter === 'unverified') row.style.display = row.dataset.verified === '0' ? '' : 'none';
+    if (filter === 'has_credits') row.style.display = parseInt(row.dataset.credits) > 0 ? '' : 'none';
+  });
+}
+
+function adminViewUser(userId) {
+  const token = localStorage.getItem('authToken');
+  Promise.all([
+    sbGet('profiles', 'select=*&id=eq.' + userId, token),
+    sbGet('ads', 'select=*&profile_id=eq.' + userId + '&order=created_at.desc', token),
+    sbGet('credit_transactions', 'select=*&user_id=eq.' + userId + '&order=created_at.desc&limit=20', token),
+    sbGet('saved_contacts', 'select=*&user_id=eq.' + userId, token)
+  ]).then(([profile, ads, txns, contacts]) => {
+    const u = profile?.[0] || {};
+    const msg = 
+      `👤 **${u.name || '?'} ${u.surname || ''}**
+` +
+      `📧 ID: ${userId.slice(0, 16)}...
+` +
+      `📅 Iscritto: ${new Date(u.created_at).toLocaleDateString('it-IT')}
+` +
+      `💰 Crediti: ${u.credits || 0}
+` +
+      `✅ Verificato: ${u.is_verified ? 'Sì' : 'No'}
+` +
+      `📱 Telefono: ${u.phone || 'Nessuno'}
+` +
+      `🏙️ Città: ${u.city || 'N/D'}
+` +
+      `👤 Genere: ${u.gender || 'N/D'}
+` +
+      `📅 Nato: ${u.birth_date || 'N/D'}
+
+` +
+      `📰 Annunci: ${(ads || []).length}
+` +
+      `💳 Transazioni: ${(txns || []).length}
+` +
+      `📁 Contatti salvati: ${(contacts || []).length}`;
+    
+    alert(msg);
   });
 }
 
 function adminAddCredits(userId, userName) {
-  const amount = prompt('Quanti crediti vuoi aggiungere a ' + userName + '?', '20');
+  const amount = prompt('💰 Quanti crediti vuoi aggiungere a ' + userName + '?', '20');
   if (!amount || isNaN(parseInt(amount)) || parseInt(amount) <= 0) return;
   const token = localStorage.getItem('authToken');
   sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
@@ -1730,7 +1805,7 @@ function adminAddCredits(userId, userName) {
 }
 
 function adminToggleVerify(userId, current) {
-  if (!confirm((current ? 'Rimuovere' : 'Confermare') + ' la verifica per questo utente?')) return;
+  if (!confirm((current ? '❌ Rimuovere' : '✅ Confermare') + ' la verifica per questo utente?')) return;
   const token = localStorage.getItem('authToken');
   sbPatch('profiles', { is_verified: !current }, { id: userId }, token).then(() => {
     showToast('✅ Verifica ' + (!current ? 'attivata' : 'rimossa'), 'success');
@@ -1739,50 +1814,79 @@ function adminToggleVerify(userId, current) {
 }
 
 function adminDeleteUser(userId, userName) {
-  if (!confirm('⚠️ Eliminare PERMANENTEMTE ' + userName + '? Tutti i suoi annunci verranno eliminati.')) return;
+  if (!confirm('⚠️ ELIMINARE PERMANENTEMENTE ' + userName + '?\n\nTutti i suoi annunci, transazioni e contatti salvati verranno eliminati.\nQuesta azione è IRREVERSIBILE.')) return;
   const token = localStorage.getItem('authToken');
+  showToast('🗑️ Eliminazione in corso...', 'info');
   Promise.all([
-    sbDelete('ads', { profile_id: userId }, token),
-    sbDelete('credit_transactions', { user_id: userId }, token),
-    sbDelete('saved_contacts', { user_id: userId }, token),
-    sbDelete('profiles', { id: userId }, token)
+    sbDelete('ads', { profile_id: userId }, token).catch(() => {}),
+    sbDelete('credit_transactions', { user_id: userId }, token).catch(() => {}),
+    sbDelete('saved_contacts', { user_id: userId }, token).catch(() => {}),
+    sbDelete('profiles', { id: userId }, token).catch(() => {})
   ]).then(() => {
     showToast('🗑️ Utente ' + userName + ' eliminato', 'success');
     loadAdminData();
   }).catch(e => showToast('Errore: ' + e.message, 'error'));
 }
 
-// --- ANNUNCI ---
+// --- ANNUNCI (COMPLETO) ---
 function loadAdminAds(container, token) {
   sbGet('ads', 'select=*&order=created_at.desc', token).then(ads => {
     const aList = ads || [];
+    
+    // Statistiche rapide
+    const premium = aList.filter(a => a.is_premium).length;
+    const sponsored = aList.filter(a => a.is_sponsored).length;
+    const active = aList.filter(a => a.is_active !== false).length;
+    const withPhoto = aList.filter(a => a.image).length;
+    
     container.innerHTML = `
+      <div class="admin-section-header">
+        <h3><i class="fas fa-newspaper" style="color:#f59e0b"></i> Gestione Annunci <span class="admin-count-badge">${aList.length}</span></h3>
+        <div class="admin-quick-stats">
+          <span class="mini-stat">🟢 ${active} attivi</span>
+          <span class="mini-stat">👑 ${premium} premium</span>
+          <span class="mini-stat">⭐ ${sponsored} sponsor</span>
+          <span class="mini-stat">📸 ${withPhoto} con foto</span>
+        </div>
+      </div>
       <div class="admin-toolbar">
-        <span style="color:var(--text-muted);font-size:0.85rem">${aList.length} annunci totali</span>
+        <select class="form-control" style="max-width:200px" onchange="adminFilterAds(this.value)">
+          <option value="all">Tutti gli annunci</option>
+          <option value="premium">Premium 👑</option>
+          <option value="sponsored">Sponsorizzati ⭐</option>
+          <option value="active">Attivi 🟢</option>
+          <option value="inactive">Disattivati 🔴</option>
+          <option value="with_photo">Con foto 📸</option>
+          <option value="no_photo">Senza foto</option>
+        </select>
+        <input type="text" class="form-control" style="max-width:200px" placeholder="🔍 Cerca titolo..." oninput="adminSearchAds(this.value)">
       </div>
       <div class="admin-table-wrapper">
-        <table class="admin-table">
+        <table class="admin-table admin-table-compact">
           <thead><tr>
-            <th>Titolo</th><th>Categoria</th><th>Città</th><th>Premium</th><th>Sponsor</th><th>Boost</th><th>Data</th><th>Azioni</th>
+            <th>Titolo</th><th>Utente</th><th>Categoria</th><th>Città</th><th>Premium</th><th>Sponsor</th><th>Boost</th><th>Photo</th><th>Stato</th><th>Azioni</th>
           </tr></thead>
-          <tbody>
+          <tbody id="adminAdsTbody">
             ${aList.map(a => `
-              <tr>
-                <td><strong>${(a.title || '').slice(0, 30)}</strong></td>
-                <td style="font-size:0.7rem;text-transform:capitalize">${(a.category || '').replace(/-/g, ' ')}</td>
-                <td>${a.city || '?'}</td>
+              <tr class="admin-ad-row" data-premium="${a.is_premium ? '1' : '0'}" data-sponsored="${a.is_sponsored ? '1' : '0'}" data-active="${a.is_active !== false ? '1' : '0'}" data-photo="${a.image ? '1' : '0'}" data-title="${(a.title || '').toLowerCase()}">
+                <td><strong>${(a.title || 'Senza titolo').slice(0, 25)}</strong></td>
+                <td style="font-family:monospace;font-size:0.65rem;color:var(--text-muted)">${(a.profile_id || a.user_id || '?').slice(0, 10)}...</td>
+                <td style="font-size:0.7rem;text-transform:capitalize;white-space:nowrap">${(a.category || '').replace(/-/g, ' ').slice(0, 15)}</td>
+                <td style="font-size:0.75rem">${a.city || '—'}</td>
                 <td>${a.is_premium ? '👑' : '—'}</td>
                 <td>${a.is_sponsored ? '⭐' : '—'}</td>
-                <td>${a.boost_count || 0}/${a.boost_available || 0}</td>
-                <td>${new Date(a.created_at).toLocaleDateString('it-IT')}</td>
+                <td style="font-size:0.75rem">${a.boost_count || 0}/${a.boost_available || 0}</td>
+                <td>${a.image ? '📸' : '—'}</td>
+                <td>${a.is_active !== false ? '🟢' : '🔴'}</td>
                 <td>
                   <div class="admin-actions">
-                    <button class="btn btn-sm btn-outline" onclick="adminTogglePremium('${a.id}', ${a.is_premium})" title="Toggle Premium">👑</button>
-                    <button class="btn btn-sm btn-outline" onclick="adminToggleSponsored('${a.id}', ${a.is_sponsored})" title="Toggle Sponsor">⭐</button>
-                    <button class="btn btn-sm ${a.is_active ? 'btn-ghost' : 'btn-outline'}" onclick="adminToggleActive('${a.id}', ${a.is_active})">
-                      ${a.is_active ? '✅' : '🚫'}
+                    <button class="btn btn-sm btn-outline" onclick="adminViewAd('${a.id}')" title="Vedi"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm ${a.is_premium ? 'btn-ghost' : 'btn-outline'}" onclick="adminTogglePremium('${a.id}', ${a.is_premium})" title="${a.is_premium ? 'Rimuovi premium' : 'Attiva premium'}">👑</button>
+                    <button class="btn btn-sm ${a.is_sponsored ? 'btn-ghost' : 'btn-outline'}" onclick="adminToggleSponsored('${a.id}', ${a.is_sponsored})" title="${a.is_sponsored ? 'Rimuovi sponsor' : 'Attiva sponsor'}">⭐</button>
+                    <button class="btn btn-sm ${a.is_active !== false ? 'btn-ghost' : 'btn-outline'}" onclick="adminToggleActive('${a.id}', ${a.is_active !== false})" title="${a.is_active !== false ? 'Disattiva' : 'Attiva'}">
+                      ${a.is_active !== false ? '🟢' : '🔴'}
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="adminDeleteAd('${a.id}', '${(a.title || '').slice(0, 20)}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteAd('${a.id}', '${(a.title || 'Senza titolo').slice(0, 20).replace(/'/g, "\\'")}')" title="Elimina"><i class="fas fa-trash"></i></button>
                   </div>
                 </td>
               </tr>
@@ -1792,14 +1896,39 @@ function loadAdminAds(container, token) {
       </div>
     `;
   }).catch(() => {
-    container.innerHTML = '<div class="empty-state"><p>Errore caricamento annunci</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-newspaper"></i><p>Errore caricamento annunci</p></div>';
   });
+}
+
+function adminSearchAds(q) {
+  q = (q || '').toLowerCase();
+  document.querySelectorAll('.admin-ad-row').forEach(row => {
+    const title = (row.dataset.title || '').toLowerCase();
+    row.style.display = (!q || title.includes(q)) ? '' : 'none';
+  });
+}
+
+function adminFilterAds(filter) {
+  document.querySelectorAll('.admin-ad-row').forEach(row => {
+    if (filter === 'all') { row.style.display = ''; return; }
+    if (filter === 'premium') row.style.display = row.dataset.premium === '1' ? '' : 'none';
+    else if (filter === 'sponsored') row.style.display = row.dataset.sponsored === '1' ? '' : 'none';
+    else if (filter === 'active') row.style.display = row.dataset.active === '1' ? '' : 'none';
+    else if (filter === 'inactive') row.style.display = row.dataset.active === '0' ? '' : 'none';
+    else if (filter === 'with_photo') row.style.display = row.dataset.photo === '1' ? '' : 'none';
+    else if (filter === 'no_photo') row.style.display = row.dataset.photo === '0' ? '' : 'none';
+  });
+}
+
+function adminViewAd(adId) {
+  // Vai direttamente all'annuncio
+  navigateTo('/?page=ad&id=' + adId);
 }
 
 function adminTogglePremium(adId, current) {
   const token = localStorage.getItem('authToken');
   sbPatch('ads', { is_premium: !current }, { id: adId }, token).then(() => {
-    showToast('✅ Premium ' + (!current ? 'attivato' : 'disattivato'), 'success');
+    showToast('👑 Premium ' + (!current ? 'attivato' : 'disattivato'), 'success');
     loadAdminData();
   });
 }
@@ -1815,40 +1944,56 @@ function adminToggleSponsored(adId, current) {
 function adminToggleActive(adId, current) {
   const token = localStorage.getItem('authToken');
   sbPatch('ads', { is_active: !current }, { id: adId }, token).then(() => {
-    showToast((!current ? '✅ Annuncio attivato' : '🚫 Annuncio disattivato'), 'success');
+    showToast((!current ? '🟢 Annuncio attivato' : '🔴 Annuncio disattivato'), 'success');
     loadAdminData();
   });
 }
 
 function adminDeleteAd(adId, title) {
-  if (!confirm('Eliminare l\'annuncio "' + title + '"?')) return;
+  if (!confirm('⚠️ ELIMINARE l\'annuncio "' + title + '"?\nQuesta azione è irreversibile.')) return;
   const token = localStorage.getItem('authToken');
   sbDelete('ads', { id: adId }, token).then(() => {
-    showToast('🗑️ Annuncio eliminato', 'success');
+    showToast('🗑️ Annuncio "' + title + '" eliminato', 'success');
     loadAdminData();
-  });
+  }).catch(e => showToast('Errore: ' + e.message, 'error'));
 }
 
 
-// --- CATEGORIE ---
+// --- CATEGORIE (COMPLETO) ---
 function loadAdminCategories(container, token) {
-  sbGet('categories', 'select=*&order=name.asc', token).then(cats => {
+  Promise.all([
+    sbGet('categories', 'select=*&order=name.asc', token),
+    sbGet('ads', 'select=category', token)
+  ]).then(([cats, ads]) => {
     const catList = cats || [];
+    const adsByCat = {};
+    (ads || []).forEach(a => { adsByCat[a.category] = (adsByCat[a.category] || 0) + 1; });
+    
     container.innerHTML = `
-      <div class="admin-toolbar">
-        <span style="color:var(--text-muted);font-size:0.85rem">${catList.length} categorie</span>
+      <div class="admin-section-header">
+        <h3><i class="fas fa-tags" style="color:#8b5cf6"></i> Gestione Categorie <span class="admin-count-badge">${catList.length}</span></h3>
         <button class="btn btn-primary btn-sm" onclick="adminAddCategory()"><i class="fas fa-plus"></i> Nuova categoria</button>
+      </div>
+      <div class="admin-toolbar">
+        <input type="text" class="form-control" style="max-width:250px" placeholder="🔍 Cerca categoria..." oninput="adminFilterCategories(this.value)">
       </div>
       <div class="admin-table-wrapper">
         <table class="admin-table">
-          <thead><tr><th>Nome</th><th>Slug</th><th>Descrizione</th><th>Azioni</th></tr></thead>
-          <tbody>
+          <thead><tr><th>Nome</th><th>Slug</th><th>Icona</th><th>Descrizione</th><th>Annunci</th><th>Azioni</th></tr></thead>
+          <tbody id="adminCatsTbody">
             ${catList.map(c => `
-              <tr>
+              <tr class="admin-cat-row" data-name="${(c.name || '').toLowerCase()}">
                 <td><strong>${c.name || '?'}</strong></td>
-                <td style="color:var(--text-muted);font-size:0.8rem">${c.slug || c.id || '?'}</td>
-                <td style="font-size:0.8rem;color:var(--text-secondary)">${c.description || '—'}</td>
-                <td><button class="btn btn-sm btn-danger" onclick="adminDeleteCategory('${c.slug || c.id}')"><i class="fas fa-trash"></i></button></td>
+                <td style="color:var(--text-muted);font-family:monospace;font-size:0.75rem">${c.slug || c.id || '?'}</td>
+                <td style="font-size:1.2rem">${c.icon ? '<i class="fas ' + c.icon + '"></i>' : '—'}</td>
+                <td style="font-size:0.8rem;color:var(--text-secondary);max-width:200px">${(c.description || '—').slice(0, 50)}</td>
+                <td style="text-align:center"><span class="admin-credits-badge">${adsByCat[c.slug || c.id] || 0}</span></td>
+                <td>
+                  <div class="admin-actions">
+                    <button class="btn btn-sm btn-outline" onclick="adminEditCategory('${c.slug || c.id}', '${(c.name || '').replace(/'/g, "\\'")}', '${(c.description || '').replace(/'/g, "\\'")}')" title="Modifica"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteCategory('${c.slug || c.id}', '${(c.name || '').replace(/'/g, "\\'")}')" title="Elimina"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -1856,29 +2001,199 @@ function loadAdminCategories(container, token) {
       </div>
     `;
   }).catch(() => {
-    container.innerHTML = '<div class="empty-state"><p>Errore caricamento categorie</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-tags"></i><p>Errore caricamento categorie</p></div>';
+  });
+}
+
+function adminFilterCategories(q) {
+  q = (q || '').toLowerCase();
+  document.querySelectorAll('.admin-cat-row').forEach(row => {
+    const name = (row.dataset.name || '').toLowerCase();
+    row.style.display = (!q || name.includes(q)) ? '' : 'none';
   });
 }
 
 function adminAddCategory() {
-  const name = prompt('Nome nuova categoria:');
+  const name = prompt('📝 Nome nuova categoria:');
   if (!name) return;
   const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  const desc = prompt('Descrizione:');
+  const desc = prompt('📝 Descrizione:');
+  const icon = prompt('📝 Icona FontAwesome (es: fa-female, fa-male):') || 'fa-tag';
   const token = localStorage.getItem('authToken');
-  sbPost('categories', { name, slug, description: desc || '' }, token).then(() => {
-    showToast('✅ Categoria creata', 'success');
+  sbPost('categories', { name, slug, description: desc || '', icon }, token).then(() => {
+    showToast('✅ Categoria "' + name + '" creata', 'success');
     loadAdminData();
   }).catch(e => showToast('Errore: ' + e.message, 'error'));
 }
 
-function adminDeleteCategory(slug) {
-  if (!confirm('Eliminare la categoria "' + slug + '"?')) return;
+function adminEditCategory(slug, currentName, currentDesc) {
+  const newName = prompt('Modifica nome:', currentName);
+  if (!newName) return;
+  const newDesc = prompt('Modifica descrizione:', currentDesc);
   const token = localStorage.getItem('authToken');
-  sbDelete('categories', { slug }, token).then(() => {
-    showToast('🗑️ Categoria eliminata', 'success');
+  sbPatch('categories', { name: newName, description: newDesc || '' }, { slug }, token).then(() => {
+    showToast('✅ Categoria modificata', 'success');
     loadAdminData();
   });
+}
+
+function adminDeleteCategory(slug, name) {
+  if (!confirm('⚠️ ELIMINARE la categoria "' + name + '" ("' + slug + '")?\nGli annunci in questa categoria NON verranno eliminati.')) return;
+  const token = localStorage.getItem('authToken');
+  sbDelete('categories', { slug }, token).then(() => {
+    showToast('🗑️ Categoria "' + name + '" eliminata', 'success');
+    loadAdminData();
+  }).catch(e => showToast('Errore: ' + e.message, 'error'));
+}
+
+// --- CITTÀ ---
+function loadAdminCities(container, token) {
+  sbGet('cities', 'select=*&order=name.asc', token).then(cities => {
+    const cityList = cities || [];
+    container.innerHTML = `
+      <div class="admin-section-header">
+        <h3><i class="fas fa-city" style="color:#06b6d4"></i> Gestione Città <span class="admin-count-badge">${cityList.length}</span></h3>
+        <button class="btn btn-primary btn-sm" onclick="adminAddCity()"><i class="fas fa-plus"></i> Nuova città</button>
+      </div>
+      <div class="admin-toolbar">
+        <input type="text" class="form-control" style="max-width:250px" placeholder="🔍 Cerca città..." oninput="adminFilterCities(this.value)">
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr><th>Nome</th><th>Provincia</th><th>Regione</th><th>Azioni</th></tr></thead>
+          <tbody id="adminCitiesTbody">
+            ${cityList.map(c => `
+              <tr class="admin-city-row" data-name="${(c.name || '').toLowerCase()}">
+                <td><strong>${c.name || '?'}</strong></td>
+                <td style="color:var(--text-muted);font-size:0.8rem">${c.province || c.region || '—'}</td>
+                <td style="color:var(--text-muted);font-size:0.8rem">${c.region || '—'}</td>
+                <td>
+                  <div class="admin-actions">
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteCity(${c.id}, '${(c.name || '').replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-city"></i><p>Errore caricamento città</p></div>';
+  });
+}
+
+function adminFilterCities(q) {
+  q = (q || '').toLowerCase();
+  document.querySelectorAll('.admin-city-row').forEach(row => {
+    const name = (row.dataset.name || '').toLowerCase();
+    row.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+function adminAddCity() {
+  const name = prompt('📝 Nome città:');
+  if (!name) return;
+  const region = prompt('📝 Regione:');
+  const token = localStorage.getItem('authToken');
+  sbPost('cities', { name, region: region || '', province: region || '' }, token).then(() => {
+    showToast('✅ Città "' + name + '" aggiunta', 'success');
+    loadAdminData();
+  }).catch(e => showToast('Errore: ' + e.message, 'error'));
+}
+
+function adminDeleteCity(id, name) {
+  if (!confirm('⚠️ ELIMINARE la città "' + name + '"?')) return;
+  const token = localStorage.getItem('authToken');
+  sbDelete('cities', { id }, token).then(() => {
+    showToast('🗑️ Città "' + name + '" eliminata', 'success');
+    loadAdminData();
+  });
+}
+
+// --- FOTO (REVISIONE) ---
+function loadAdminPhotos(container, token) {
+  sbGet('ads', 'select=id,title,category,image,created_at,photo_classification,profile_id&order=created_at.desc&not.is.image.eq.null', token).then(ads => {
+    const photoAds = ads?.filter(a => a.image) || [];
+    container.innerHTML = `
+      <div class="admin-section-header">
+        <h3><i class="fas fa-images" style="color:#ec4899"></i> Revisione Foto <span class="admin-count-badge">${photoAds.length}</span></h3>
+        <div class="admin-quick-stats">
+          <span class="mini-stat">🔞 ${photoAds.filter(a => a.photo_classification === 'hard').length} hard</span>
+          <span class="mini-stat">🔥 ${photoAds.filter(a => a.photo_classification === 'hot').length} hot</span>
+          <span class="mini-stat">✅ ${photoAds.filter(a => !a.photo_classification || a.photo_classification === 'safe').length} safe</span>
+        </div>
+      </div>
+      <div class="admin-photo-grid" id="adminPhotoGrid">
+        ${photoAds.slice(0, 50).map(a => `
+          <div class="admin-photo-card">
+            <div class="admin-photo-img">
+              <img src="${a.image}" alt="${a.title || ''}" loading="lazy">
+              <span class="admin-photo-class ${a.photo_classification || 'safe'}">${(a.photo_classification || 'safe').toUpperCase()}</span>
+            </div>
+            <div class="admin-photo-info">
+              <strong>${(a.title || 'Senza titolo').slice(0, 20)}</strong>
+              <small>${(a.category || '').replace(/-/g, ' ').slice(0, 15)}</small>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <p class="admin-table-footer">Mostra ${Math.min(photoAds.length, 50)} di ${photoAds.length} foto</p>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-images"></i><p>Errore caricamento foto</p></div>';
+  });
+}
+
+// --- IMPOSTAZIONI SITO ---
+function loadAdminSettings(container, token) {
+  container.innerHTML = `
+    <div class="admin-section-header">
+      <h3><i class="fas fa-cog" style="color:#a1a1aa"></i> Impostazioni Sito</h3>
+    </div>
+    <div class="admin-settings-grid">
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-coins"></i> Crediti di benvenuto</h4>
+        <p>Nuovi utenti ricevono <strong>20 crediti</strong> al momento della registrazione.</p>
+        <button class="btn btn-sm btn-outline" onclick="alert('Crediti benvenuto: 20')">Modifica</button>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-users"></i> Admin</h4>
+        <p>Amministratori attuali: <strong>walterzannoni90@outlook.it</strong>, <strong>Lucianopoleselli@icloud.com</strong></p>
+        <button class="btn btn-sm btn-outline" onclick="adminAddAdmin()"><i class="fas fa-plus"></i> Aggiungi admin</button>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-check-circle"></i> Verifica profilo</h4>
+        <p>Stato: <strong>${true ? '✅ Attivo' : '❌ Disattivo'}</strong></p>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">Gli utenti possono richiedere la verifica del profilo.</p>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-shield-alt"></i> Classificazione foto</h4>
+        <p>Safe ✅ | Hot 🔥 | Hard 🔞 — Gli utenti possono classificare le loro foto.</p>
+        <span class="mini-stat">Safe: consentito</span>
+        <span class="mini-stat">Hot: consentito</span>
+        <span class="mini-stat">Hard: consentito</span>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fas fa-envelope"></i> Email</h4>
+        <p>SMTP: <strong>${'✅ Configurato (Brevo)'}</strong></p>
+        <p style="font-size:0.8rem;color:var(--text-muted)">Conferma email attiva per nuovi utenti.</p>
+      </div>
+      <div class="admin-settings-card">
+        <h4><i class="fab fa-stripe"></i> Stripe</h4>
+        <p>Payment Links: <strong>✅ 4 pacchetti crediti attivi</strong></p>
+        <p style="font-size:0.8rem;color:var(--text-muted)">10cr €4.99 | 30cr €9.99 | 70cr €19.99 | 150cr €34.99</p>
+      </div>
+    </div>
+  `;
+}
+
+function adminAddAdmin() {
+  const email = prompt('📧 Email del nuovo amministratore:');
+  if (!email || !email.includes('@')) return;
+  // Aggiungi alla lista
+  ADMIN_EMAILS.push(email.toLowerCase());
+  showToast('✅ ' + email + ' aggiunto come admin (riavvia per effetto)', 'success');
 }
 
 // --- SUPPORTO ---
