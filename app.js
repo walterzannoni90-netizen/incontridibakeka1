@@ -158,7 +158,7 @@ function initCategories() {
     card.style.setProperty('--cat-color', cat.color);
     card.setAttribute('data-aos', 'fade-up');
     card.innerHTML = `<div class="category-icon"><i class="fas ${cat.icon}"></i></div><h3 class="category-name">${cat.name}</h3><p class="category-desc">${cat.desc}</p>`;
-    card.addEventListener('click', () => filterByCategory(cat.id));
+    card.addEventListener('click', () => navigateTo('/?page=category&slug=' + cat.id));
     grid.appendChild(card);
   });
 }
@@ -228,7 +228,7 @@ async function initCities() {
       pill.className = 'city-pill';
       pill.textContent = c.name;
       pill.setAttribute('data-aos', 'fade-up');
-      pill.addEventListener('click', () => quickSearch(c.name));
+      pill.addEventListener('click', () => navigateTo('/?page=category&slug=donna-cerca-uomo&city=' + encodeURIComponent(c.name)));
       grid.appendChild(pill);
     });
   } catch (e) {
@@ -236,7 +236,7 @@ async function initCities() {
       const pill = document.createElement('span');
       pill.className = 'city-pill';
       pill.textContent = city;
-      pill.addEventListener('click', () => quickSearch(city));
+      pill.addEventListener('click', () => navigateTo('/?page=category&slug=donna-cerca-uomo&city=' + encodeURIComponent(city)));
       grid.appendChild(pill);
     });
   }
@@ -690,8 +690,8 @@ function userAction(action) {
   document.getElementById('userDropdown')?.classList.remove('show');
   document.querySelector('.user-dropdown-toggle')?.classList.remove('active');
   switch(action) {
-    case 'profile': showToast('Profilo in arrivo!', 'success'); break;
-    case 'ads': showToast('I tuoi annunci — in sviluppo!', 'success'); break;
+    case 'profile': navigateTo('/?page=profile'); break;
+    case 'ads': navigateTo('/?page=myads'); break;
     case 'vetrina': closeSponsor(); document.getElementById('vetrina')?.scrollIntoView({ behavior: 'smooth' }); break;
     case 'settings': showToast('Impostazioni in arrivo!', 'success'); break;
   }
@@ -829,3 +829,188 @@ setTimeout(() => {
   const vl = document.querySelector('.nav-link[data-section="vetrina"]');
   if (vl) vl.addEventListener('click', () => { document.getElementById('vetrina').scrollIntoView({ behavior: 'smooth' }); });
 }, 500);
+
+// ============================================================
+// ROUTER — Gestione pagine categoria e dettaglio annuncio
+// ============================================================
+
+function initRouter() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  
+  if (page === 'category') {
+    const cat = params.get('slug') || 'donna-cerca-uomo';
+    const city = params.get('city') || '';
+    showCategoryPage(cat, city);
+  } else if (page === 'ad') {
+    const id = params.get('id');
+    if (id) showAdDetail(id);
+  } else if (page === 'profile') {
+    showProfilePage();
+  } else if (page === 'myads') {
+    showMyAdsPage();
+  }
+}
+
+// Navigazione
+function navigateTo(path) {
+  const base = window.location.origin + window.location.pathname.replace(/\/+$/, '');
+  window.history.pushState({}, '', base + path);
+  initRouter();
+}
+
+// ============================================================
+// CATEGORY PAGE
+// ============================================================
+
+function showCategoryPage(category, city) {
+  // Nascondi sezioni home, mostra pagina categoria
+  document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+  document.getElementById('pageTitle').textContent = category.replace(/-/g,' ').replace(/\b\w/g, l => l.toUpperCase()) + (city ? ' a ' + city : '');
+  document.getElementById('categoryPage').style.display = 'block';
+  
+  const grid = document.getElementById('categoryAdsGrid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Caricamento...</div>';
+  
+  let query = 'select=*&is_active=eq.true&order=is_sponsored.desc.nullslast,is_premium.desc.nullslast,created_at.desc.nullslast';
+  if (category) query += '&category=eq.' + category;
+  if (city) query += '&city=ilike.' + city;
+  
+  supabaseGet('ads', query).then(ads => {
+    grid.innerHTML = '';
+    if (!ads || ads.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px"><i class="fas fa-search" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem"></i><h3 style="color:var(--text-secondary)">Nessun annuncio</h3></div>';
+      return;
+    }
+    ads.forEach(ad => {
+      const card = createAdCard(ad);
+      card.onclick = () => navigateTo('/?page=ad&id=' + ad.id);
+      grid.appendChild(card);
+    });
+  }).catch(() => {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">Errore caricamento</div>';
+  });
+}
+
+function backToHome() {
+  window.history.pushState({}, '', window.location.pathname.replace(/\/+$/, ''));
+  document.querySelectorAll('section').forEach(s => s.style.display = '');
+  document.getElementById('categoryPage').style.display = 'none';
+  document.getElementById('adDetailPage').style.display = 'none';
+  document.getElementById('profilePage').style.display = 'none';
+  document.getElementById('myAdsPage').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// AD DETAIL PAGE
+// ============================================================
+
+async function showAdDetail(adId) {
+  document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+  document.getElementById('adDetailPage').style.display = 'block';
+  
+  const container = document.getElementById('adDetailContent');
+  container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted)"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
+  
+  try {
+    const ads = await supabaseGet('ads', 'select=*&id=eq.' + adId);
+    if (!ads || ads.length === 0) { container.innerHTML = '<h2>Annuncio non trovato</h2>'; return; }
+    
+    const ad = ads[0];
+    const images = ad.images || (ad.image ? [ad.image] : []);
+    
+    container.innerHTML = `
+      <div class="ad-detail-layout">
+        <div class="ad-detail-gallery">
+          <div class="ad-detail-main-img">
+            <img src="${images[0] || 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600'}" alt="${ad.title}">
+          </div>
+          ${images.length > 1 ? '<div class="ad-detail-thumbs">' + images.map((img,i) => '<img src="' + img + '" onclick="this.parentElement.previousElementSibling.querySelector(\'img\').src=this.src" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;' + (i===0?'border:2px solid var(--primary)':'') + '">').join('') + '</div>' : ''}
+        </div>
+        <div class="ad-detail-info">
+          <div class="ad-detail-badges">
+            ${ad.is_premium ? '<span class="ad-badge premium"><i class="fas fa-crown"></i> Premium</span>' : ''}
+            ${ad.is_verified ? '<span class="ad-badge verified"><i class="fas fa-check-circle"></i> Verificato</span>' : ''}
+          </div>
+          <h1 class="ad-detail-title">${ad.title}</h1>
+          <div class="ad-detail-meta">
+            <span><i class="fas fa-map-marker-alt"></i> ${ad.city || 'N/D'}</span>
+            <span><i class="fas fa-user"></i> ${ad.age || '?'} anni</span>
+            ${ad.price ? '<span class="ad-detail-price"><i class="fas fa-tag"></i> ' + ad.price + '</span>' : ''}
+          </div>
+          <div class="ad-detail-rating">
+            ${'<i class="fas fa-star" style="color:#f59e0b"></i>'.repeat(Math.round(ad.rating || 0))}
+            <span style="margin-left:8px;color:var(--text-muted)">${ad.rating || '0'} (${ad.review_count || 0} recensioni)</span>
+          </div>
+          <div class="ad-detail-desc">
+            <p>${(ad.description || '').replace(/\n/g, '<br>')}</p>
+          </div>
+          
+          <!-- Azioni -->
+          <div class="ad-detail-actions">
+            ${currentUser ? '<button class="btn btn-primary" onclick="showToast(\'Messaggio inviato!\', \'success\')"><i class="fas fa-envelope"></i> Contatta</button>' : '<button class="btn btn-primary" onclick="openLogin()"><i class="fas fa-lock"></i> Accedi per contattare</button>'}
+            <button class="btn btn-outline" onclick="showToast(\'Segnalazione inviata\', \'success\')"><i class="fas fa-flag"></i> Segnala</button>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    container.innerHTML = '<h2>Errore caricamento annuncio</h2>';
+  }
+}
+
+// ============================================================
+// PROFILE & MY ADS PAGES
+// ============================================================
+function showProfilePage() {
+  document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+  document.getElementById('profilePage').style.display = 'block';
+  if (!currentUser) {
+    document.getElementById('profileContent').innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-muted)">Devi effettuare il login</p>';
+    return;
+  }
+  document.getElementById('profileContent').innerHTML = `
+    <div class="profile-header">
+      <div class="profile-avatar"><i class="fas fa-user-circle" style="font-size:5rem;color:var(--primary)"></i></div>
+      <h2>${currentUser.name} ${currentUser.surname || ''}</h2>
+      <p style="color:var(--text-muted)">${currentUser.email}</p>
+      <p><i class="fas fa-map-marker-alt"></i> ${currentUser.city || 'N/D'}</p>
+    </div>
+  `;
+}
+
+function showMyAdsPage() {
+  document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+  document.getElementById('myAdsPage').style.display = 'block';
+  const container = document.getElementById('myAdsContent');
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Caricamento...</div>';
+  
+  if (!currentUser) {
+    container.innerHTML = '<p style="text-align:center;padding:40px">Devi effettuare il login</p>';
+    return;
+  }
+  
+  const token = localStorage.getItem('authToken');
+  supabaseGet('ads', 'select=*&user_id=eq.' + currentUser.id + '&order=created_at.desc', token).then(ads => {
+    container.innerHTML = '';
+    if (!ads || ads.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fas fa-inbox" style="font-size:3rem;margin-bottom:1rem;display:block"></i>Nessun annuncio pubblicato</div>';
+      return;
+    }
+    ads.forEach(ad => container.appendChild(createAdCard(ad)));
+  }).catch(() => {
+    container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-muted)">Errore caricamento</p>';
+  });
+}
+
+// ============================================================
+// INIT ROUTER ON LOAD
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Router dopo init
+  setTimeout(initRouter, 100);
+});
+
+// Handle back/forward browser buttons
+window.addEventListener('popstate', () => initRouter());

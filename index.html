@@ -952,6 +952,58 @@
   </section>
 
   <!-- ============================================================
+  CATEGORY PAGE
+  ============================================================ -->
+  <section class="section" id="categoryPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text" id="pageTitle"></h1>
+      <div class="ads-grid" id="categoryAdsGrid" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  AD DETAIL PAGE
+  ============================================================ -->
+  <section class="section" id="adDetailPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Indietro</button>
+      </div>
+      <div id="adDetailContent"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  PROFILE PAGE
+  ============================================================ -->
+  <section class="section" id="profilePage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text">Il Mio Profilo</h1>
+      <div id="profileContent" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  MY ADS PAGE
+  ============================================================ -->
+  <section class="section" id="myAdsPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+        <button class="btn btn-primary" onclick="openPublish()" style="float:right"><i class="fas fa-plus"></i> Nuovo annuncio</button>
+      </div>
+      <h1 class="section-title gradient-text">I Miei Annunci</h1>
+      <div class="ads-grid" id="myAdsContent" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
   FOOTER
   ============================================================ -->
   <footer class="footer">
