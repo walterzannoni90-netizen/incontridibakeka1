@@ -144,12 +144,24 @@ function initCategories() {
     { id: 'trans', name: 'Trans', icon: 'fa-transgender', color: '#e84393', desc: 'Incontri trans e travestiti' }
   ];
 
-  // Recupera una foto reale per ogni categoria
-  sbGet('ads', 'select=image,category&is_active=eq.true&not.is.image:eq.&order=created_at.desc&limit=50').then(ads => {
+  // Recupera UNA foto reale per ogni categoria dagli annunci esistenti
+  // Se non ci sono annunci, usa immagini rappresentative di bakecaincontrii.com
+  const fallbackImages = {
+    'donna-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/c1/15/c1159dd0393b4e7897947243c7c18ff9.jpg?listing=top&v=i7bt2au7',
+    'uomo-cerca-donna': 'https://www.bakecaincontrii.com/image/post/0b/7a/0b7aefca9dac486da3f1cea31f4e70fa.jpg?listing=top&v=i7bt2au7',
+    'uomo-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/69/e3/69e36f9806764a5f9e74cabd3895093c.jpg?listing=top&v=i7bt2au7',
+    'donna-cerca-donna': 'https://www.bakecaincontrii.com/image/post/8b/22/8b22bd396cc349af9a24f6afbc7a75cb.jpg?listing=top&v=i7bt2au7',
+    'coppie': 'https://www.bakecaincontrii.com/image/post/aa/0b/aa0b748c7ffe42b0a5bcb8fe3ed3c8e0.jpg?listing=top&v=i7bt2au7',
+    'cerco-amici': 'https://www.bakecaincontrii.com/image/post/d2/72/d2723e532b094c88bdb22b26ace8a7a6.jpg?listing=top&v=i7bt2au7',
+    'anima-gemella': 'https://www.bakecaincontrii.com/image/post/0f/a0/0fa0a37a4d0846b5a6b4d04e63e5c407.jpg?listing=supertop&v=i7bt2au7',
+    'trans': 'https://www.bakecaincontrii.com/image/post/b0/28/b028b928118d4109bc2439600fe83e07.jpg?listing=top&v=i7bt2au7'
+  };
+  
+  sbGet('ads', 'select=image,category&is_active=eq.true&not.is.image.eq.&order=created_at.desc&limit=100').then(ads => {
     const catPhotos = {};
     (ads || []).forEach(ad => {
       const cat = ad.category;
-      if (!catPhotos[cat] && ad.image) catPhotos[cat] = ad.image;
+      if (!catPhotos[cat] && ad.image && ad.image.startsWith('http')) catPhotos[cat] = ad.image;
     });
     
     grid.innerHTML = '';
@@ -159,7 +171,7 @@ function initCategories() {
       card.style.setProperty('--cat-color', cat.color);
       card.setAttribute('data-aos', 'fade-up');
       
-      const img = catPhotos[cat.id];
+      const img = catPhotos[cat.id] || fallbackImages[cat.id];
       card.innerHTML = `<div class="category-card-bg"${img ? ` style="background-image:url('${img}')"` : ''}>
           <div class="category-card-overlay"></div>
         </div>
@@ -171,13 +183,20 @@ function initCategories() {
       grid.appendChild(card);
     });
   }).catch(() => {
-    // Fallback senza foto
+    // Fallback con foto reali da bakecaincontrii
     grid.innerHTML = '';
     cats.forEach(cat => {
       const card = document.createElement('div');
       card.className = 'category-card';
       card.style.setProperty('--cat-color', cat.color);
-      card.innerHTML = `<div class="category-icon"><i class="fas ${cat.icon}"></i></div><h3>${cat.name}</h3><p>${cat.desc}</p>`;
+      card.setAttribute('data-aos', 'fade-up');
+      const img = fallbackImages[cat.id];
+      card.innerHTML = `<div class="category-card-bg"${img ? ` style="background-image:url('${img}')"` : ''}>
+          <div class="category-card-overlay"></div>
+        </div>
+        <div class="category-icon"><i class="fas ${cat.icon}"></i></div>
+        <h3>${cat.name}</h3>
+        <p>${cat.desc}</p>`;
       card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
       grid.appendChild(card);
     });
@@ -463,7 +482,8 @@ async function handleLogin(e) {
     if (data.error) throw new Error(data.error_description || data.error);
     const p = await sbGet('profiles', `select=*&id=eq.${data.user.id}`, data.access_token);
     const prof = p?.[0] || {};
-    currentUser = { id: data.user.id, name: prof.name || '', surname: prof.surname || '', email: data.user.email, city: prof.city || '', credits: prof.credits || 0, isVerified: !!prof.is_verified, isPremium: !!prof.is_premium };
+    const userEmail = data.user.email || prof.email || '';
+    currentUser = { id: data.user.id, name: prof.name || '', surname: prof.surname || '', email: userEmail, city: prof.city || '', credits: prof.credits || 0, isVerified: !!prof.is_verified, isPremium: !!prof.is_premium, isAdmin: isAdmin(userEmail) };
     localStorage.setItem('authToken', data.access_token);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeLogin();
@@ -536,6 +556,7 @@ async function handleRegister(e) {
         id: data.user.id,
         name,
         surname: surname || '',
+        email: email,
         city: city || '',
         gender: gender || '',
         birth_date: birthDate,
