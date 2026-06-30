@@ -3318,26 +3318,84 @@ textarea.form-control {
    ADMIN PANEL
    ============================================================ */
 
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.admin-tab {
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-tab:hover {
+  border-color: var(--primary);
+  color: var(--text-primary);
+  background: rgba(139,92,246,0.08);
+}
+
+.admin-tab.active {
+  background: var(--gradient-primary);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+}
+
+.admin-tab i {
+  font-size: 1rem;
+}
+
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
 .admin-stat-card {
   background: var(--bg-card);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px 20px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-primary);
 }
 
 .admin-stat-card i {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   color: var(--primary-light);
   margin-bottom: 8px;
 }
 
 .admin-stat-card strong {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   color: var(--text-primary);
   font-family: var(--font-display);
 }
@@ -3345,6 +3403,70 @@ textarea.form-control {
 .admin-stat-card span {
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.admin-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) { .admin-charts-row { grid-template-columns: 1fr; } }
+
+.admin-chart-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.admin-chart-card h4 {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-credits-badge {
+  display: inline-flex;
+  padding: 2px 10px;
+  background: rgba(245,158,11,0.15);
+  color: var(--accent);
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.admin-actions .btn-sm {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  min-width: unset;
+}
+
+.admin-type-badge {
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .admin-table-wrapper {
@@ -3379,6 +3501,22 @@ textarea.form-control {
 
 .admin-table tr:hover td {
   background: rgba(139,92,246,0.04);
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  min-width: unset;
+}
+
+.btn-danger {
+  background: rgba(239,68,68,0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+
+.btn-danger:hover {
+  background: rgba(239,68,68,0.3);
 }
 
 /* ============================================================

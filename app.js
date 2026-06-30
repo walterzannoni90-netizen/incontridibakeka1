@@ -1540,71 +1540,433 @@ async function sendSupportMessage(e) {
 // ============================================================
 // ADMIN PAGE
 // ============================================================
+// ============================================================
+// ADMIN PANEL — CONTROLLO TOTALE DEL SITO
+// ============================================================
+let adminState = { tab: 'dashboard', search: '', data: {} };
+
 function showAdminPage() {
   document.querySelectorAll('.home-section').forEach(s => s.style.display = 'none');
   document.querySelectorAll('section.page-section').forEach(s => s.style.display = 'none');
   document.getElementById('adminPage').style.display = 'block';
-  const container = document.getElementById('adminContent');
-  if (!container) return;
   
   if (!currentUser || !isAdmin(currentUser.email)) {
-    container.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Accesso negato</h3></div>';
+    document.getElementById('adminContent').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Accesso negato</h3></div>';
     return;
   }
   
-  container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+  renderAdminNav();
+  loadAdminData();
+}
+
+function renderAdminNav() {
+  const nav = document.getElementById('adminNav');
+  if (!nav) return;
+  const tabs = [
+    { id: 'dashboard', icon: 'fa-chart-bar', label: 'Dashboard' },
+    { id: 'users', icon: 'fa-users', label: 'Utenti' },
+    { id: 'ads', icon: 'fa-newspaper', label: 'Annunci' },
+    { id: 'categories', icon: 'fa-tags', label: 'Categorie' },
+    { id: 'support', icon: 'fa-headset', label: 'Supporto' },
+    { id: 'transactions', icon: 'fa-coins', label: 'Transazioni' }
+  ];
+  nav.innerHTML = tabs.map(t => 
+    `<button class="admin-tab ${adminState.tab === t.id ? 'active' : ''}" onclick="switchAdminTab('${t.id}')">
+      <i class="fas ${t.icon}"></i> ${t.label}
+    </button>`
+  ).join('');
+}
+
+function switchAdminTab(tab) {
+  adminState.tab = tab;
+  renderAdminNav();
+  loadAdminData();
+}
+
+function loadAdminData() {
+  const container = document.getElementById('adminContent');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Caricamento...</div>';
   
   const token = localStorage.getItem('authToken');
   
+  switch(adminState.tab) {
+    case 'dashboard': loadAdminDashboard(container, token); break;
+    case 'users': loadAdminUsers(container, token); break;
+    case 'ads': loadAdminAds(container, token); break;
+    case 'categories': loadAdminCategories(container, token); break;
+    case 'support': loadAdminSupport(container, token); break;
+    case 'transactions': loadAdminTransactions(container, token); break;
+    default: loadAdminDashboard(container, token);
+  }
+}
+
+// --- DASHBOARD ---
+function loadAdminDashboard(container, token) {
   Promise.all([
-    sbGet('profiles', 'select=*&order=created_at.desc&limit=50', token),
-    sbGet('ads', 'select=*&order=created_at.desc&limit=50', token),
-    sbGet('credit_transactions', 'select=*&order=created_at.desc&limit=50', token)
-  ]).then(([profiles, ads, transactions]) => {
+    sbGet('profiles', 'select=*&order=created_at.desc', token),
+    sbGet('ads', 'select=*&order=created_at.desc', token),
+    sbGet('credit_transactions', 'select=*&order=created_at.desc', token),
+    sbGet('support_messages', 'select=*&order=created_at.desc', token)
+  ]).then(([profiles, ads, transactions, messages]) => {
     const totalUsers = profiles?.length || 0;
     const totalAds = ads?.length || 0;
-    const totalCreditsPurchased = transactions?.filter(t => t.type === 'purchase').reduce((s, t) => s + Math.abs(t.amount), 0) || 0;
+    const totalVerified = profiles?.filter(p => p.is_verified).length || 0;
+    const totalPending = messages?.filter(m => !m.is_read).length || 0;
+    const totalCreditsSold = transactions?.filter(t => t.type === 'purchase').reduce((s, t) => s + Math.abs(t.amount), 0) || 0;
+    const totalRevenue = (totalCreditsSold * 0.5).toFixed(0);
+    
+    // Categorie con conteggio annunci
+    const catCount = {};
+    (ads || []).forEach(a => {
+      catCount[a.category] = (catCount[a.category] || 0) + 1;
+    });
+    const topCats = Object.entries(catCount).sort((a,b) => b[1] - a[1]).slice(0, 5);
     
     container.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
-        <div class="admin-stat-card"><i class="fas fa-users"></i><strong>${totalUsers}</strong><span>Utenti</span></div>
-        <div class="admin-stat-card"><i class="fas fa-newspaper"></i><strong>${totalAds}</strong><span>Annunci</span></div>
-        <div class="admin-stat-card"><i class="fas fa-coins" style="color:var(--accent)"></i><strong>€${(totalCreditsPurchased * 0.5).toFixed(0)}</strong><span>Vendite crediti</span></div>
-        <div class="admin-stat-card"><i class="fas fa-check-circle" style="color:#10b981"></i><strong>${profiles?.filter(p => p.is_verified).length || 0}</strong><span>Verificati</span></div>
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card premium"><i class="fas fa-users"></i><strong>${totalUsers}</strong><span>Utenti registrati</span></div>
+        <div class="admin-stat-card" style="border-color:var(--primary)"><i class="fas fa-newspaper"></i><strong>${totalAds}</strong><span>Annunci attivi</span></div>
+        <div class="admin-stat-card" style="border-color:#10b981"><i class="fas fa-check-circle"></i><strong>${totalVerified}</strong><span>Profili verificati</span></div>
+        <div class="admin-stat-card" style="border-color:var(--accent)"><i class="fas fa-coins"></i><strong>€${totalRevenue}</strong><span>Vendite crediti</span></div>
+        <div class="admin-stat-card" style="border-color:#f59e0b"><i class="fas fa-headset"></i><strong>${totalPending}</strong><span>Messaggi in sospeso</span></div>
+        <div class="admin-stat-card" style="border-color:#ef4444"><i class="fas fa-chart-line"></i><strong>${totalCreditsSold}</strong><span>Crediti acquistati</span></div>
       </div>
       
-      <h3 style="margin-bottom:12px;color:var(--text-primary)"><i class="fas fa-users"></i> Ultimi utenti</h3>
-      <div class="admin-table-wrapper">
-        <table class="admin-table">
-          <thead><tr><th>Nome</th><th>Email</th><th>Data</th><th>Crediti</th><th>Verificato</th></tr></thead>
-          <tbody>${(profiles || []).slice(0, 10).map(p => `
-            <tr>
-              <td>${p.name || '?'}</td>
-              <td><small>${p.id?.slice(0, 8) || '?'}...</small></td>
-              <td>${new Date(p.created_at).toLocaleDateString('it-IT')}</td>
-              <td>${p.credits || 0}</td>
-              <td>${p.is_verified ? '✅' : '❌'}</td>
-            </tr>`).join('')}</tbody>
-        </table>
+      <div class="admin-charts-row">
+        <div class="admin-chart-card">
+          <h4><i class="fas fa-tags"></i> Annunci per categoria</h4>
+          <div style="margin-top:12px">${topCats.map(([cat, count]) => 
+            `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.85rem">
+              <span style="color:var(--text-secondary);text-transform:capitalize">${cat.replace(/-/g, ' ')}</span>
+              <span style="color:var(--text-primary);font-weight:600">${count}</span>
+            </div>`
+          ).join('')}</div>
+        </div>
+        <div class="admin-chart-card">
+          <h4><i class="fas fa-clock"></i> Ultimi messaggi supporto</h4>
+          <div style="margin-top:12px">${(messages || []).slice(0, 5).map(m => 
+            `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.8rem">
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:var(--text-muted)">${m.email || 'Anonimo'}</span>
+                <span style="color:${m.is_read ? 'var(--text-muted)' : '#f59e0b'};font-size:0.65rem">${m.is_read ? 'Letto' : 'Nuovo!'}</span>
+              </div>
+              <p style="margin:4px 0 0;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(m.message || '').slice(0, 80)}</p>
+            </div>`
+          ).join('') || '<p style="color:var(--text-muted);font-size:0.85rem">Nessun messaggio</p>'}</div>
+        </div>
       </div>
-      
-      <h3 style="margin:24px 0 12px;color:var(--text-primary)"><i class="fas fa-newspaper"></i> Ultimi annunci</h3>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento dashboard</p></div>';
+  });
+}
+
+// --- UTENTI ---
+function loadAdminUsers(container, token) {
+  sbGet('profiles', 'select=*&order=created_at.desc', token).then(profiles => {
+    const pList = profiles || [];
+    container.innerHTML = `
+      <div class="admin-toolbar">
+        <input type="text" id="adminUserSearch" class="form-control" placeholder="Cerca utente per nome o email..." style="max-width:300px" oninput="adminSearchUsers()">
+        <span style="color:var(--text-muted);font-size:0.85rem">${pList.length} utenti totali</span>
+      </div>
       <div class="admin-table-wrapper">
         <table class="admin-table">
-          <thead><tr><th>Titolo</th><th>Categoria</th><th>Città</th><th>Premium</th><th>Data</th></tr></thead>
-          <tbody>${(ads || []).slice(0, 10).map(a => `
-            <tr>
-              <td>${(a.title || '').slice(0, 30)}</td>
-              <td style="font-size:0.75rem">${(a.category || '').replace(/-/g, ' ')}</td>
-              <td>${a.city || '?'}</td>
-              <td>${a.is_premium ? '👑' : (a.is_sponsored ? '⭐' : '-')}</td>
-              <td>${new Date(a.created_at).toLocaleDateString('it-IT')}</td>
-            </tr>`).join('')}</tbody>
+          <thead><tr>
+            <th>Nome</th><th>Email</th><th>Data</th><th>Crediti</th><th>Verificato</th><th>Telefono</th><th>Azioni</th>
+          </tr></thead>
+          <tbody id="adminUsersTbody">
+            ${pList.map(p => `
+              <tr class="admin-user-row" data-name="${(p.name || '').toLowerCase()}" data-email="${(p.email || p.id || '').toLowerCase()}">
+                <td><strong>${p.name || '?'}</strong>${p.surname ? ' ' + p.surname : ''}</td>
+                <td><small>${p.id?.slice(0, 10) || '?'}...</small></td>
+                <td>${new Date(p.created_at).toLocaleDateString('it-IT')}</td>
+                <td><span class="admin-credits-badge">${p.credits || 0}</span></td>
+                <td>${p.is_verified ? '✅' : '<span style="color:var(--text-muted)">❌</span>'}</td>
+                <td>${p.phone || '<span style="color:var(--text-muted)">—</span>'}</td>
+                <td>
+                  <div class="admin-actions">
+                    <button class="btn btn-sm btn-outline" onclick="adminAddCredits('${p.id}', '${p.name || '?'}')" title="Aggiungi crediti"><i class="fas fa-plus"></i></button>
+                    <button class="btn btn-sm ${p.is_verified ? 'btn-ghost' : 'btn-outline'}" onclick="adminToggleVerify('${p.id}', ${p.is_verified})" title="${p.is_verified ? 'Rimuovi verifica' : 'Verifica'}">
+                      ${p.is_verified ? '👑' : '✅'}
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteUser('${p.id}', '${p.name || '?'}')" title="Elimina"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
         </table>
       </div>
     `;
   }).catch(() => {
-    container.innerHTML = '<div class="empty-state"><p>Errore caricamento dati</p></div>';
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento utenti</p></div>';
+  });
+}
+
+function adminSearchUsers() {
+  const q = (document.getElementById('adminUserSearch')?.value || '').toLowerCase();
+  document.querySelectorAll('.admin-user-row').forEach(row => {
+    const name = row.dataset.name || '';
+    const email = row.dataset.email || '';
+    row.style.display = (name.includes(q) || email.includes(q)) ? '' : 'none';
+  });
+}
+
+function adminAddCredits(userId, userName) {
+  const amount = prompt('Quanti crediti vuoi aggiungere a ' + userName + '?', '20');
+  if (!amount || isNaN(parseInt(amount)) || parseInt(amount) <= 0) return;
+  const token = localStorage.getItem('authToken');
+  sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
+    const cur = (profiles?.[0]?.credits || 0);
+    const newCredits = cur + parseInt(amount);
+    sbPatch('profiles', { credits: newCredits }, { id: userId }, token).then(() => {
+      sbPost('credit_transactions', { user_id: userId, amount: parseInt(amount), type: 'admin', description: 'Admin: aggiunti ' + amount + ' crediti' }, token);
+      showToast('✅ ' + amount + ' crediti aggiunti a ' + userName, 'success');
+      loadAdminData();
+    });
+  });
+}
+
+function adminToggleVerify(userId, current) {
+  if (!confirm((current ? 'Rimuovere' : 'Confermare') + ' la verifica per questo utente?')) return;
+  const token = localStorage.getItem('authToken');
+  sbPatch('profiles', { is_verified: !current }, { id: userId }, token).then(() => {
+    showToast('✅ Verifica ' + (!current ? 'attivata' : 'rimossa'), 'success');
+    loadAdminData();
+  });
+}
+
+function adminDeleteUser(userId, userName) {
+  if (!confirm('⚠️ Eliminare PERMANENTEMTE ' + userName + '? Tutti i suoi annunci verranno eliminati.')) return;
+  const token = localStorage.getItem('authToken');
+  Promise.all([
+    sbDelete('ads', { profile_id: userId }, token),
+    sbDelete('credit_transactions', { user_id: userId }, token),
+    sbDelete('saved_contacts', { user_id: userId }, token),
+    sbDelete('profiles', { id: userId }, token)
+  ]).then(() => {
+    showToast('🗑️ Utente ' + userName + ' eliminato', 'success');
+    loadAdminData();
+  }).catch(e => showToast('Errore: ' + e.message, 'error'));
+}
+
+// --- ANNUNCI ---
+function loadAdminAds(container, token) {
+  sbGet('ads', 'select=*&order=created_at.desc', token).then(ads => {
+    const aList = ads || [];
+    container.innerHTML = `
+      <div class="admin-toolbar">
+        <span style="color:var(--text-muted);font-size:0.85rem">${aList.length} annunci totali</span>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr>
+            <th>Titolo</th><th>Categoria</th><th>Città</th><th>Premium</th><th>Sponsor</th><th>Boost</th><th>Data</th><th>Azioni</th>
+          </tr></thead>
+          <tbody>
+            ${aList.map(a => `
+              <tr>
+                <td><strong>${(a.title || '').slice(0, 30)}</strong></td>
+                <td style="font-size:0.7rem;text-transform:capitalize">${(a.category || '').replace(/-/g, ' ')}</td>
+                <td>${a.city || '?'}</td>
+                <td>${a.is_premium ? '👑' : '—'}</td>
+                <td>${a.is_sponsored ? '⭐' : '—'}</td>
+                <td>${a.boost_count || 0}/${a.boost_available || 0}</td>
+                <td>${new Date(a.created_at).toLocaleDateString('it-IT')}</td>
+                <td>
+                  <div class="admin-actions">
+                    <button class="btn btn-sm btn-outline" onclick="adminTogglePremium('${a.id}', ${a.is_premium})" title="Toggle Premium">👑</button>
+                    <button class="btn btn-sm btn-outline" onclick="adminToggleSponsored('${a.id}', ${a.is_sponsored})" title="Toggle Sponsor">⭐</button>
+                    <button class="btn btn-sm ${a.is_active ? 'btn-ghost' : 'btn-outline'}" onclick="adminToggleActive('${a.id}', ${a.is_active})">
+                      ${a.is_active ? '✅' : '🚫'}
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteAd('${a.id}', '${(a.title || '').slice(0, 20)}')"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento annunci</p></div>';
+  });
+}
+
+function adminTogglePremium(adId, current) {
+  const token = localStorage.getItem('authToken');
+  sbPatch('ads', { is_premium: !current }, { id: adId }, token).then(() => {
+    showToast('✅ Premium ' + (!current ? 'attivato' : 'disattivato'), 'success');
+    loadAdminData();
+  });
+}
+
+function adminToggleSponsored(adId, current) {
+  const token = localStorage.getItem('authToken');
+  sbPatch('ads', { is_sponsored: !current }, { id: adId }, token).then(() => {
+    showToast('⭐ Sponsor ' + (!current ? 'attivato' : 'disattivato'), 'success');
+    loadAdminData();
+  });
+}
+
+function adminToggleActive(adId, current) {
+  const token = localStorage.getItem('authToken');
+  sbPatch('ads', { is_active: !current }, { id: adId }, token).then(() => {
+    showToast((!current ? '✅ Annuncio attivato' : '🚫 Annuncio disattivato'), 'success');
+    loadAdminData();
+  });
+}
+
+function adminDeleteAd(adId, title) {
+  if (!confirm('Eliminare l\'annuncio "' + title + '"?')) return;
+  const token = localStorage.getItem('authToken');
+  sbDelete('ads', { id: adId }, token).then(() => {
+    showToast('🗑️ Annuncio eliminato', 'success');
+    loadAdminData();
+  });
+}
+
+
+// --- CATEGORIE ---
+function loadAdminCategories(container, token) {
+  sbGet('categories', 'select=*&order=name.asc', token).then(cats => {
+    const catList = cats || [];
+    container.innerHTML = `
+      <div class="admin-toolbar">
+        <span style="color:var(--text-muted);font-size:0.85rem">${catList.length} categorie</span>
+        <button class="btn btn-primary btn-sm" onclick="adminAddCategory()"><i class="fas fa-plus"></i> Nuova categoria</button>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr><th>Nome</th><th>Slug</th><th>Descrizione</th><th>Azioni</th></tr></thead>
+          <tbody>
+            ${catList.map(c => `
+              <tr>
+                <td><strong>${c.name || '?'}</strong></td>
+                <td style="color:var(--text-muted);font-size:0.8rem">${c.slug || c.id || '?'}</td>
+                <td style="font-size:0.8rem;color:var(--text-secondary)">${c.description || '—'}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="adminDeleteCategory('${c.slug || c.id}')"><i class="fas fa-trash"></i></button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento categorie</p></div>';
+  });
+}
+
+function adminAddCategory() {
+  const name = prompt('Nome nuova categoria:');
+  if (!name) return;
+  const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  const desc = prompt('Descrizione:');
+  const token = localStorage.getItem('authToken');
+  sbPost('categories', { name, slug, description: desc || '' }, token).then(() => {
+    showToast('✅ Categoria creata', 'success');
+    loadAdminData();
+  }).catch(e => showToast('Errore: ' + e.message, 'error'));
+}
+
+function adminDeleteCategory(slug) {
+  if (!confirm('Eliminare la categoria "' + slug + '"?')) return;
+  const token = localStorage.getItem('authToken');
+  sbDelete('categories', { slug }, token).then(() => {
+    showToast('🗑️ Categoria eliminata', 'success');
+    loadAdminData();
+  });
+}
+
+// --- SUPPORTO ---
+function loadAdminSupport(container, token) {
+  sbGet('support_messages', 'select=*&order=created_at.desc', token).then(msgs => {
+    const mList = msgs || [];
+    container.innerHTML = `
+      <div class="admin-toolbar">
+        <span style="color:var(--text-muted);font-size:0.85rem">${mList.length} messaggi</span>
+        <button class="btn btn-sm btn-outline" onclick="adminMarkAllRead()"><i class="fas fa-check-double"></i> Segna tutti letti</button>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr><th>Email</th><th>Messaggio</th><th>Data</th><th>Stato</th><th>Azioni</th></tr></thead>
+          <tbody>
+            ${mList.map(m => `
+              <tr style="${m.is_read ? '' : 'background:rgba(245,158,11,0.05)'}">
+                <td><small>${m.email || 'Anonimo'}</small></td>
+                <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(m.message || '').slice(0, 80)}</td>
+                <td style="font-size:0.75rem">${new Date(m.created_at).toLocaleDateString('it-IT') + ' ' + new Date(m.created_at).toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'})}</td>
+                <td>${m.is_read ? '✅ Letto' : '🆕 Nuovo'}</td>
+                <td>
+                  <div class="admin-actions">
+                    <button class="btn btn-sm btn-outline" onclick="alert('Messaggio: ' + ${JSON.stringify(m.message)})"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-ghost" onclick="adminMarkRead('${m.id}', ${m.is_read})"><i class="fas ${m.is_read ? 'fa-envelope' : 'fa-envelope-open'}"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteMessage('${m.id}')"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nessun messaggio</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento messaggi</p></div>';
+  });
+}
+
+function adminMarkRead(msgId, current) {
+  const token = localStorage.getItem('authToken');
+  sbPatch('support_messages', { is_read: !current }, { id: msgId }, token).then(() => loadAdminData());
+}
+
+function adminMarkAllRead() {
+  const token = localStorage.getItem('authToken');
+  sbGet('support_messages', 'select=id&is_read=eq.false', token).then(msgs => {
+    Promise.all((msgs || []).map(m => sbPatch('support_messages', { is_read: true }, { id: m.id }, token)))
+      .then(() => { showToast('✅ Tutti segnati come letti', 'success'); loadAdminData(); });
+  });
+}
+
+function adminDeleteMessage(msgId) {
+  if (!confirm('Eliminare questo messaggio?')) return;
+  const token = localStorage.getItem('authToken');
+  sbDelete('support_messages', { id: msgId }, token).then(() => {
+    showToast('🗑️ Messaggio eliminato', 'success');
+    loadAdminData();
+  });
+}
+
+// --- TRANSAZIONI ---
+function loadAdminTransactions(container, token) {
+  sbGet('credit_transactions', 'select=*&order=created_at.desc&limit=100', token).then(txns => {
+    const tList = txns || [];
+    container.innerHTML = `
+      <div class="admin-toolbar">
+        <span style="color:var(--text-muted);font-size:0.85rem">${tList.length} transazioni</span>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr><th>Utente</th><th>Importo</th><th>Tipo</th><th>Descrizione</th><th>Data</th></tr></thead>
+          <tbody>
+            ${tList.map(t => `
+              <tr>
+                <td><small>${t.user_id?.slice(0, 10) || '?'}...</small></td>
+                <td style="color:${(t.amount || 0) > 0 ? '#10b981' : '#ef4444'};font-weight:700">${(t.amount || 0) > 0 ? '+' : ''}${t.amount}</td>
+                <td><span class="admin-type-badge" style="background:${t.type === 'purchase' ? 'rgba(16,185,129,0.15)' : t.type === 'admin' ? 'rgba(245,158,11,0.15)' : 'rgba(139,92,246,0.15)'};color:${t.type === 'purchase' ? '#10b981' : t.type === 'admin' ? '#f59e0b' : '#8b5cf6'}">${t.type || '?'}</span></td>
+                <td style="font-size:0.8rem;color:var(--text-secondary)">${t.description || '—'}</td>
+                <td style="font-size:0.75rem">${new Date(t.created_at).toLocaleDateString('it-IT')}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nessuna transazione</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento transazioni</p></div>';
   });
 }
 
