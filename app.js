@@ -894,34 +894,22 @@ async function buyCredits(amount) {
   const prices = { 10: 4.99, 30: 9.99, 70: 19.99, 150: 34.99 };
   const euro = prices[amount] || (amount * 0.5);
   
-  showToast(`Reindirizzamento a Stripe per €${euro.toFixed(2)}...`, 'success');
+  // Stripe Payment Links (funziona senza backend!)
+  const stripeLinks = {
+    10: 'https://buy.stripe.com/7sY3cveZX5Rs7Umg94b7y01',
+    30: 'https://buy.stripe.com/6oU5kD4ljcfQcaC8GCb7y02',
+    70: 'https://buy.stripe.com/fZuaEXeZXgw68YqbSOb7y03',
+    150: 'https://buy.stripe.com/dRm14ncRP6Vw4Ia6yub7y04'
+  };
   
-  // Pagina di checkout Stripe via our backend
-  try {
-    // Tentativo Stripe Checkout via API
-    // Deploy API: https://vercel.com/new (carica cartella api/)
-    const apiUrl = localStorage.getItem('stripeApiUrl') || 'https://incontridibakeka.com/api/create-checkout';
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: amount,
-        credits: amount,
-        userId: currentUser.id,
-        successUrl: window.location.origin + '/?payment=success&credits=' + amount,
-        cancelUrl: window.location.origin + '/?shop=cancelled'
-      })
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-    }
-  } catch (e) {
-    console.log('Stripe backend non disponibile, uso modalità test');
+  const link = stripeLinks[amount];
+  if (link) {
+    showToast(`Reindirizzamento a Stripe...`, 'success');
+    // Salva userId in sessionStorage per il ritorno
+    sessionStorage.setItem('stripeUserId', currentUser.id);
+    sessionStorage.setItem('stripeCredits', amount);
+    window.location.href = link;
+    return;
   }
   
   // FALLBACK: credito diretto (finché Stripe non è configurato)
@@ -1373,3 +1361,55 @@ function initAOS() { if (typeof AOS !== 'undefined') AOS.init({ duration: 800, o
 // POPSTATE
 // ============================================================
 window.addEventListener('popstate', () => initRouter());
+
+// ============================================================
+// STRIPE — Gestione ritorno pagamento
+// ============================================================
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('payment') === 'success') {
+    const credits = parseInt(params.get('credits')) || 0;
+    const userId = sessionStorage.getItem('stripeUserId');
+    
+    if (userId && credits > 0 && currentUser && currentUser.id === userId) {
+      const token = localStorage.getItem('authToken');
+      sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
+        const cur = (profiles?.[0]?.credits || 0);
+        sbPatch('profiles', { credits: cur + credits }, { id: userId }, token).then(() => {
+          sbPost('credit_transactions', { user_id: userId, amount: credits, type: 'purchase', description: 'Stripe: acquisto ' + credits + ' crediti' }, token);
+          currentUser.credits = (currentUser.credits || 0) + credits;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          updateUIForLoggedUser();
+          showToast('✅ Pagamento ricevuto! ' + credits + ' crediti aggiunti.', 'success');
+        });
+      }).catch(() => {});
+      sessionStorage.removeItem('stripeUserId');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+})();
+
+// Se l'utente torna dopo login, riprova
+const _origHandleLogin = handleLogin;
+handleLogin = async function(e) {
+  await _origHandleLogin.call(this, e);
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('payment') === 'success') {
+    const credits = parseInt(params.get('credits')) || 0;
+    const userId = sessionStorage.getItem('stripeUserId');
+    if (userId && credits > 0 && currentUser && currentUser.id === userId) {
+      const token = localStorage.getItem('authToken');
+      sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
+        const cur = (profiles?.[0]?.credits || 0);
+        sbPatch('profiles', { credits: cur + credits }, { id: userId }, token);
+        sbPost('credit_transactions', { user_id: userId, amount: credits, type: 'purchase', description: 'Stripe: acquisto ' + credits + ' crediti' }, token);
+        currentUser.credits = (currentUser.credits || 0) + credits;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUIForLoggedUser();
+        showToast('✅ ' + credits + ' crediti attivati!', 'success');
+        window.history.replaceState({}, '', window.location.pathname);
+        sessionStorage.removeItem('stripeUserId');
+      }).catch(() => {});
+    }
+  }
+};
