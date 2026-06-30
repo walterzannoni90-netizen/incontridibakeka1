@@ -896,55 +896,33 @@ async function buyCredits(amount) {
   
   showToast(`Reindirizzamento a Stripe per €${euro.toFixed(2)}...`, 'success');
   
+  // Pagina di checkout Stripe via our backend
   try {
-    // Prova Stripe Checkout
-    if (typeof Stripe !== 'undefined') {
-      const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-      
-      // Prova a creare sessione via Edge Function
-      try {
-        const response = await fetch(
-          'https://rdqsmfgpbuswzilgbjyr.supabase.co/functions/v1/create-checkout',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-            },
-            body: JSON.stringify({
-              amount: amount,
-              userId: currentUser.id,
-              credits: amount,
-              successUrl: window.location.origin + '/?payment=success&credits=' + amount,
-              cancelUrl: window.location.origin + '/?shop=cancelled'
-            })
-          }
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.url) {
-            window.location.href = data.url;
-            return;
-          }
-          if (data.sessionId) {
-            const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-            if (error) throw error;
-            return;
-          }
-        }
-      } catch (e) {
-        console.log('Stripe edge function not available, fallback to direct checkout');
+    // Tentativo Stripe Checkout via API
+    // Deploy API: https://vercel.com/new (carica cartella api/)
+    const apiUrl = localStorage.getItem('stripeApiUrl') || 'https://incontridibakeka.com/api/create-checkout';
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: amount,
+        credits: amount,
+        userId: currentUser.id,
+        successUrl: window.location.origin + '/?payment=success&credits=' + amount,
+        cancelUrl: window.location.origin + '/?shop=cancelled'
+      })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
       }
-      
-      // Fallback: redirect diretto a Stripe Checkout (Payment Links)
-      const prices = { 10: 4.99, 30: 9.99, 70: 19.99, 150: 34.99 };
-      const euro = prices[amount] || (amount * 0.5);
-      showToast('Reindirizzamento a Stripe...', 'success');
-      // Redirect to Stripe Payment Link (da creare su Stripe Dashboard)
-      // window.location.href = 'https://buy.stripe.com/...';
     }
-  } catch (e) { /* Stripe fallback */ }
+  } catch (e) {
+    console.log('Stripe backend non disponibile, uso modalità test');
+  }
   
   // FALLBACK: credito diretto (finché Stripe non è configurato)
   const token = localStorage.getItem('authToken');
