@@ -7,10 +7,18 @@
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["incontri", "annunci", "dating", "premium"],
+  "keywords": [
+    "incontri",
+    "annunci",
+    "dating",
+    "premium"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "better-sqlite3": "^12.11.1",
+    "dotenv": "^17.4.2",
     "express": "^4.22.2"
   }
 }
