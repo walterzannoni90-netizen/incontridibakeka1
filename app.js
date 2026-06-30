@@ -189,7 +189,7 @@ function createAdCard(ad) {
 
   card.innerHTML = `
     <div class="ad-card-image">
-      <img src="${ad.image || 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=face'}" alt="${ad.title}" loading="lazy">
+      <div class="ad-card-img-wrapper">${ad.image ? `<img src="${ad.image}" alt="${ad.title}" loading="lazy">` : `<div class="no-photo-icon"><i class="fas fa-user"></i></div>`}</div>
       <div class="ad-card-badges">${badges.join('')}</div>
       ${classBadge[photoClass] || ''}
       ${ad.price ? `<div class="ad-card-price">${ad.price}</div>` : ''}
@@ -439,38 +439,116 @@ async function handleLogin(e) {
   finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Accedi'; }
 }
 
+// Admin emails
+const ADMIN_EMAILS = ['walterzannoni90@outlook.it', 'walterzannoni90@gmail.com', 'Lucianopoleselli@icloud.com'];
+
+function isAdmin(email) {
+  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+}
+
 async function handleRegister(e) {
   e.preventDefault();
   const name = document.getElementById('regName')?.value.trim();
+  const surname = document.getElementById('regSurname')?.value.trim();
   const email = document.getElementById('regEmail')?.value.trim();
   const password = document.getElementById('regPassword')?.value;
   const city = document.getElementById('regCity')?.value;
   const gender = document.getElementById('regGender')?.value;
+  const birthDate = document.getElementById('regBirthDate')?.value;
+  const phonePrefix = document.getElementById('regPhonePrefix')?.value || '+39';
+  const phone = document.getElementById('regPhone')?.value.trim();
   const accept = document.getElementById('regAcceptTerms')?.checked;
   const btn = document.getElementById('registerBtn');
   const error = document.getElementById('registerError');
+  
+  // Validazioni
   if (!name) { error.textContent = 'Inserisci il nome'; error.style.color = '#ef4444'; return; }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { error.textContent = 'Email non valida'; error.style.color = '#ef4444'; return; }
   if (password.length < 8) { error.textContent = 'Password almeno 8 caratteri'; error.style.color = '#ef4444'; return; }
+  
+  // Verifica età (18+)
+  if (!birthDate) { error.textContent = 'Inserisci la data di nascita'; error.style.color = '#ef4444'; return; }
+  const birth = new Date(birthDate);
+  const today = new Date();
+  const age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  const realAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate()) ? age - 1 : age;
+  if (realAge < 18) { error.textContent = 'Devi essere maggiorenne per registrarti (18+)'; error.style.color = '#ef4444'; return; }
+  
   if (!accept) { error.textContent = 'Accetta i Termini e Condizioni'; error.style.color = '#ef4444'; return; }
+  
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrazione...';
+  
   try {
-    const data = await sbAuth('signup', { email, password, data: { name } });
+    const fullPhone = phone ? phonePrefix + phone : '';
+    const data = await sbAuth('signup', { 
+      email, 
+      password, 
+      data: { 
+        name, 
+        surname: surname || '',
+        birth_date: birthDate,
+        phone: fullPhone,
+        gender: gender || ''
+      }
+    });
+    
     if (data.error) throw new Error(data.error);
+    
     if (data.user) {
-      await sbPost('profiles', { id: data.user.id, name, city: city || '', gender: gender || '', credits: 20 }, data.access_token);
-      // Bonus 20 crediti per nuovi utenti
-      await sbPost('credit_transactions', { user_id: data.user.id, amount: 20, type: 'bonus', description: 'Bonus benvenuto 20 crediti' }, data.access_token);
+      const userData = {
+        id: data.user.id,
+        name,
+        surname: surname || '',
+        city: city || '',
+        gender: gender || '',
+        birth_date: birthDate,
+        phone: fullPhone,
+        is_verified: false,
+        is_premium: isAdmin(email),
+        credits: isAdmin(email) ? 999 : 20
+      };
+      await sbPost('profiles', userData, data.access_token);
+      
+      // Bonus crediti
+      await sbPost('credit_transactions', { 
+        user_id: data.user.id, 
+        amount: isAdmin(email) ? 999 : 20, 
+        type: 'bonus', 
+        description: isAdmin(email) ? 'Crediti admin' : 'Bonus benvenuto 20 crediti'
+      }, data.access_token);
     }
-    currentUser = { id: data.user?.id || '', name, email, city: city || '', credits: 20, isVerified: false, isPremium: false };
+    
+    currentUser = { 
+      id: data.user?.id || '', 
+      name, 
+      email, 
+      city: city || '', 
+      credits: isAdmin(email) ? 999 : 20, 
+      isVerified: false, 
+      isPremium: isAdmin(email),
+      isAdmin: isAdmin(email)
+    };
+    
     if (data.access_token) localStorage.setItem('authToken', data.access_token);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeRegister();
     updateUIForLoggedUser();
-    showToast(`Benvenuto, ${name}! Ricevi 20 crediti gratis 🎉`, 'success');
-  } catch (e) { error.textContent = e.message.includes('already') ? 'Email già registrata' : 'Errore registrazione'; error.style.color = '#ef4444'; }
-  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-feather-alt"></i> Crea Account'; }
+    
+    if (isAdmin(email)) {
+      showToast('Benvenuto Admin! 👑', 'success');
+    } else {
+      showToast(`Benvenuto, ${name}! Ricevi 20 crediti gratis 🎉 Controlla la tua email per confermare la registrazione.`, 'success');
+    }
+  } catch (e) { 
+    error.textContent = e.message.includes('already') ? 'Email già registrata' : 'Errore registrazione: ' + (e.message || ''); 
+    error.style.color = '#ef4444'; 
+  }
+  finally { 
+    btn.disabled = false; 
+    btn.innerHTML = '<i class="fas fa-feather-alt"></i> Crea Account'; 
+  }
 }
 
 function updateUIForLoggedUser() {
@@ -487,6 +565,16 @@ function updateUIForLoggedUser() {
   if (dEmail) dEmail.textContent = currentUser.email;
   const creditBadge = document.getElementById('userCredits');
   if (creditBadge) creditBadge.textContent = currentUser.credits + ' crediti';
+  
+  // Mostra admin badge se admin
+  if (isAdmin(currentUser.email)) {
+    currentUser.isAdmin = true;
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    const adminBadge = document.getElementById('adminBadge');
+    if (adminBadge) adminBadge.style.display = 'inline-flex';
+    const adminLink = document.querySelector('[data-action="admin"]');
+    if (adminLink) adminLink.style.display = 'flex';
+  }
 }
 
 function toggleUserDropdown() {
@@ -512,6 +600,12 @@ function userAction(action) {
       document.getElementById('navbarMenu')?.classList.remove('active');
       break;
     case 'settings': showToast('Impostazioni in arrivo!', 'success'); break;
+    case 'support': openSupport(); break;
+    case 'admin':
+      if (isAdmin(currentUser?.email)) navigateTo('/?page=admin');
+      else showToast('Accesso negato', 'error');
+      break;
+    case 'support': openSupport(); break;
   }
 }
 
@@ -736,6 +830,11 @@ async function submitAd(e) {
     if (errorEl) { errorEl.textContent = 'Inserisci titolo e descrizione'; errorEl.style.display = 'block'; }
     return;
   }
+  
+  if (selectedPhotos.length === 0 && !editingAdId) {
+    if (errorEl) { errorEl.textContent = 'Aggiungi almeno una foto reale'; errorEl.style.display = 'block'; }
+    return;
+  }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio...';
@@ -956,7 +1055,8 @@ async function loadAddonAds(addon) {
     ads.forEach(ad => {
       const item = document.createElement('div');
       item.className = 'sponsor-ad-item';
-      item.innerHTML = `<img src="${ad.image || 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200'}" alt=""><div class="ad-info"><strong>${ad.title}</strong><span>${ad.city || ''}</span></div><i class="fas fa-check-circle" style="margin-left:auto;color:transparent"></i>`;
+      const imgHtml = ad.image ? `<img src="${ad.image}" alt="">` : '<div class="no-photo-small"><i class="fas fa-user"></i></div>';
+      item.innerHTML = `${imgHtml}<div class="ad-info"><strong>${ad.title}</strong><span>${ad.city || ''}</span></div><i class="fas fa-check-circle" style="margin-left:auto;color:transparent"></i>`;
       item.onclick = async function () {
         if ((currentUser.credits || 0) < addon.price_credits) {
           showToast('Crediti insufficienti!', 'warning');
@@ -1159,6 +1259,8 @@ function initRouter() {
     showMyAdsPage();
   } else if (page === 'contacts') {
     showContactsPage();
+  } else if (page === 'admin') {
+    showAdminPage();
   }
 }
 
@@ -1356,6 +1458,120 @@ function showContactsPage() {
 // AOS
 // ============================================================
 function initAOS() { if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true, offset: 80, easing: 'ease-out-cubic' }); }
+
+// ============================================================
+// ============================================================
+// SUPPORT MODAL
+// ============================================================
+function openSupport() {
+  document.getElementById('supportModal')?.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeSupport() {
+  document.getElementById('supportModal')?.classList.remove('active');
+  document.body.style.overflow = 'visible';
+}
+document.getElementById('supportModal')?.addEventListener('click', function(e) { if (e.target === this) closeSupport(); });
+
+async function sendSupportMessage(e) {
+  e.preventDefault();
+  const msg = document.getElementById('supportMessage')?.value.trim();
+  const email = document.getElementById('supportEmail')?.value.trim() || currentUser?.email || '';
+  const btn = document.getElementById('supportBtn');
+  if (!msg) { showToast('Scrivi un messaggio', 'warning'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Invio...';
+  
+  try {
+    // Per ora salviamo su una tabella support_messages
+    const token = localStorage.getItem('authToken');
+    await sbPost('support_messages', {
+      user_id: currentUser?.id || null,
+      email: email,
+      message: msg,
+      created_at: new Date().toISOString()
+    }, token);
+    showToast('✅ Messaggio inviato! Riceverai risposta via email.', 'success');
+    document.getElementById('supportMessage').value = '';
+    closeSupport();
+  } catch(e) {
+    showToast('Errore invio: ' + (e.message || 'Riprova'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Invia messaggio';
+  }
+}
+
+// ============================================================
+// ADMIN PAGE
+// ============================================================
+function showAdminPage() {
+  document.querySelectorAll('.home-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('section.page-section').forEach(s => s.style.display = 'none');
+  document.getElementById('adminPage').style.display = 'block';
+  const container = document.getElementById('adminContent');
+  if (!container) return;
+  
+  if (!currentUser || !isAdmin(currentUser.email)) {
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Accesso negato</h3></div>';
+    return;
+  }
+  
+  container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+  
+  const token = localStorage.getItem('authToken');
+  
+  Promise.all([
+    sbGet('profiles', 'select=*&order=created_at.desc&limit=50', token),
+    sbGet('ads', 'select=*&order=created_at.desc&limit=50', token),
+    sbGet('credit_transactions', 'select=*&order=created_at.desc&limit=50', token)
+  ]).then(([profiles, ads, transactions]) => {
+    const totalUsers = profiles?.length || 0;
+    const totalAds = ads?.length || 0;
+    const totalCreditsPurchased = transactions?.filter(t => t.type === 'purchase').reduce((s, t) => s + Math.abs(t.amount), 0) || 0;
+    
+    container.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+        <div class="admin-stat-card"><i class="fas fa-users"></i><strong>${totalUsers}</strong><span>Utenti</span></div>
+        <div class="admin-stat-card"><i class="fas fa-newspaper"></i><strong>${totalAds}</strong><span>Annunci</span></div>
+        <div class="admin-stat-card"><i class="fas fa-coins" style="color:var(--accent)"></i><strong>€${(totalCreditsPurchased * 0.5).toFixed(0)}</strong><span>Vendite crediti</span></div>
+        <div class="admin-stat-card"><i class="fas fa-check-circle" style="color:#10b981"></i><strong>${profiles?.filter(p => p.is_verified).length || 0}</strong><span>Verificati</span></div>
+      </div>
+      
+      <h3 style="margin-bottom:12px;color:var(--text-primary)"><i class="fas fa-users"></i> Ultimi utenti</h3>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr><th>Nome</th><th>Email</th><th>Data</th><th>Crediti</th><th>Verificato</th></tr></thead>
+          <tbody>${(profiles || []).slice(0, 10).map(p => `
+            <tr>
+              <td>${p.name || '?'}</td>
+              <td><small>${p.id?.slice(0, 8) || '?'}...</small></td>
+              <td>${new Date(p.created_at).toLocaleDateString('it-IT')}</td>
+              <td>${p.credits || 0}</td>
+              <td>${p.is_verified ? '✅' : '❌'}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>
+      
+      <h3 style="margin:24px 0 12px;color:var(--text-primary)"><i class="fas fa-newspaper"></i> Ultimi annunci</h3>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead><tr><th>Titolo</th><th>Categoria</th><th>Città</th><th>Premium</th><th>Data</th></tr></thead>
+          <tbody>${(ads || []).slice(0, 10).map(a => `
+            <tr>
+              <td>${(a.title || '').slice(0, 30)}</td>
+              <td style="font-size:0.75rem">${(a.category || '').replace(/-/g, ' ')}</td>
+              <td>${a.city || '?'}</td>
+              <td>${a.is_premium ? '👑' : (a.is_sponsored ? '⭐' : '-')}</td>
+              <td>${new Date(a.created_at).toLocaleDateString('it-IT')}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    `;
+  }).catch(() => {
+    container.innerHTML = '<div class="empty-state"><p>Errore caricamento dati</p></div>';
+  });
+}
 
 // ============================================================
 // POPSTATE
