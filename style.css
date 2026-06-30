@@ -3568,3 +3568,224 @@ textarea.form-control {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE — COMPLETA
+   ============================================================ */
+
+/* Forza overflow hidden su body quando menu aperto */
+body.menu-open {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+}
+
+/* Tablet: 768-991 */
+@media (max-width: 991px) {
+  .container { padding: 0 16px; }
+  
+  .admin-tabs { 
+    overflow-x: auto; 
+    flex-wrap: nowrap; 
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .admin-tabs::-webkit-scrollbar { display: none; }
+  
+  .admin-tab { 
+    white-space: nowrap; 
+    flex-shrink: 0; 
+    font-size: 0.75rem;
+    padding: 8px 14px;
+  }
+  
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .admin-stat-card { padding: 16px 12px; }
+  .admin-stat-card strong { font-size: 1.3rem; }
+  .admin-stat-card i { font-size: 1.3rem; }
+  
+  .admin-charts-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .admin-table { font-size: 0.75rem; }
+  .admin-table th, .admin-table td { 
+    padding: 8px 10px; 
+    white-space: nowrap;
+  }
+  
+  .admin-actions .btn-sm { padding: 3px 6px; font-size: 0.65rem; }
+  
+  .categories-grid { gap: 12px; }
+  .category-card { min-height: 180px; padding: 24px 16px; }
+  .category-card h3 { font-size: 0.9rem; }
+  .category-icon { width: 56px; height: 56px; font-size: 1.4rem; }
+  
+  .navbar-menu.active {
+    right: 0;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+  }
+  
+  .page-section { padding-top: 90px !important; }
+  
+  /* Ad detail */
+  #adDetailPage .ad-detail-layout {
+    flex-direction: column;
+  }
+  #adDetailPage .ad-detail-images {
+    max-height: 300px;
+  }
+  
+  /* Publish modal */
+  .plan-selector { flex-direction: column; }
+  .plan-option { padding: 12px; }
+  
+  .upload-zone { padding: 20px 16px; }
+  
+  /* Shop modal */
+  .credit-packs { grid-template-columns: 1fr 1fr; gap: 10px; }
+  
+  /* Addon select */
+  #addonAdsList { max-height: 200px; }
+  .sponsor-ad-item { padding: 8px 10px; }
+  
+  /* Search */
+  .search-form { flex-direction: column; }
+  .search-form .form-control { width: 100%; }
+  
+  /* Modal */
+  .modal-content {
+    margin: 60px 12px;
+    padding: 28px 20px;
+    max-height: 85vh;
+  }
+  
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+  
+  .ads-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  
+  .ad-card-image { height: 180px; }
+  
+  .hero { padding: 100px 0 60px; }
+  .hero-title { font-size: 2rem; }
+  
+  .auth-social { gap: 10px; }
+  .social-buttons { gap: 8px; }
+  .btn-social { width: 44px; height: 44px; }
+  
+  .user-dropdown {
+    right: -70px;
+    width: 240px;
+  }
+}
+
+/* Phone: sotto 480 */
+@media (max-width: 480px) {
+  .container { padding: 0 12px; }
+  
+  .admin-stats-grid { grid-template-columns: 1fr 1fr; }
+  .admin-stat-card { padding: 12px 8px; }
+  .admin-stat-card strong { font-size: 1.1rem; }
+  .admin-stat-card span { font-size: 0.65rem; }
+  .admin-stat-card i { font-size: 1rem; margin-bottom: 4px; }
+  
+  .admin-table { font-size: 0.7rem; }
+  .admin-table th, .admin-table td { padding: 6px 8px; }
+  
+  .credit-packs { grid-template-columns: 1fr; }
+  
+  .categories-grid { grid-template-columns: 1fr; gap: 10px; }
+  .category-card { min-height: 160px; padding: 20px 12px; }
+  .category-icon { width: 48px; height: 48px; font-size: 1.2rem; }
+  
+  .ads-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .ad-card-image { height: 140px; }
+  .ad-card-body { padding: 10px; }
+  .ad-card-title { font-size: 0.8rem; }
+  .ad-card-meta { font-size: 0.65rem; flex-direction: column; gap: 2px; }
+  .ad-card-desc { font-size: 0.7rem; }
+  .ad-card-footer { padding: 8px 10px; }
+  .ad-badge { font-size: 0.55rem; padding: 2px 6px; }
+  
+  .hero-title { font-size: 1.6rem; }
+  .hero-subtitle { font-size: 0.85rem; }
+  .hero-badge { font-size: 0.7rem; padding: 4px 10px; }
+  
+  .navbar .brand-text { font-size: 0.9rem; }
+  .navbar-mobile-actions .btn-ghost { width: 36px; height: 36px; font-size: 0.8rem; }
+  
+  .navbar-menu {
+    width: 100%;
+    max-width: 100%;
+    padding: 80px 20px 20px;
+  }
+  
+  .section { padding: 40px 0; }
+  .section-title { font-size: 1.4rem; }
+  .section-desc { font-size: 0.8rem; }
+  
+  .modal-content { 
+    margin: 40px 8px; 
+    padding: 24px 16px; 
+    max-height: 90vh;
+  }
+  .modal-title { font-size: 1.3rem; }
+  
+  .form-group label { font-size: 0.8rem; }
+  .form-control { font-size: 0.85rem; padding: 10px 12px; }
+  
+  .btn { font-size: 0.85rem; padding: 10px 20px; }
+  
+  .stats-grid { gap: 10px; }
+  .stat-card { padding: 20px 12px; }
+  .stat-number { font-size: 1.5rem; }
+  
+  .vetrina-pricing { grid-template-columns: 1fr; gap: 12px; }
+  
+  .footer-grid { gap: 20px; }
+  
+  .page-section { padding-top: 80px !important; }
+  
+  /* Support modal */
+  #supportModal .modal-content { max-width: 100%; }
+  
+  /* Admin */
+  .admin-tab { 
+    font-size: 0.65rem; 
+    padding: 6px 10px;
+  }
+}
+
+/* Molto piccolo */
+@media (max-width: 380px) {
+  .ads-grid { grid-template-columns: 1fr; }
+  .admin-stats-grid { grid-template-columns: 1fr; }
+  
+  .hero-title { font-size: 1.3rem; }
+  
+  .navbar .brand-text { font-size: 0.8rem; }
+  .navbar-brand i { font-size: 1.2rem; }
+  
+  .category-card { min-height: 140px; }
+}
