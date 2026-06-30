@@ -365,10 +365,192 @@ document.addEventListener('keydown', (e) => {
 // ============================================================
 // PUBLISH MODAL
 // ============================================================
-function openPublish() { document.getElementById('publishModal').classList.add('active'); document.body.style.overflow = 'hidden'; }
-function closePublish() { document.getElementById('publishModal').classList.remove('active'); document.body.style.overflow = 'visible'; }
-document.getElementById('publishModal')?.addEventListener('click', function(e) { if (e.target === this) closePublish(); });
-function submitAd(e) { e.preventDefault(); closePublish(); showToast('Annuncio pubblicato con successo! 🎉', 'success'); }
+// ============================================================
+// PUBLISH AD — Nuovo annuncio con foto e piano
+// ============================================================
+
+let selectedPhotos = [];
+let currentPublishPlan = 'free';
+
+function selectPublishPlan(plan) {
+  currentPublishPlan = plan;
+  document.querySelectorAll('.plan-option').forEach(p => p.classList.remove('active'));
+  document.getElementById('plan' + plan.charAt(0).toUpperCase() + plan.slice(1)).classList.add('active');
+  const limits = { free: 1, premium: 5, gold: 10 };
+  document.getElementById('photoLimit').textContent = '(max ' + limits[plan] + ')';
+  if (selectedPhotos.length > limits[plan]) {
+    selectedPhotos = selectedPhotos.slice(0, limits[plan]);
+    renderPhotos();
+  }
+}
+
+function openPublish() {
+  if (!currentUser) { showToast('Devi effettuare il login prima di pubblicare', 'success'); openLogin(); return; }
+  document.getElementById('publishModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  selectedPhotos = [];
+  currentPublishPlan = 'free';
+  selectPublishPlan('free');
+  renderPhotos();
+  document.getElementById('publishError').style.display = 'none';
+}
+
+function closePublish() {
+  document.getElementById('publishModal').classList.remove('active');
+  document.body.style.overflow = 'visible';
+}
+
+document.getElementById('publishModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closePublish();
+});
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+}
+
+function handleFiles(files) {
+  const limits = { free: 1, premium: 5, gold: 10 };
+  const max = limits[currentPublishPlan];
+  const remaining = max - selectedPhotos.length;
+  
+  if (remaining <= 0) {
+    showToast('Hai raggiunto il limite di foto per questo piano', 'success');
+    return;
+  }
+  
+  const toAdd = Math.min(files.length, remaining);
+  for (let i = 0; i < toAdd; i++) {
+    const file = files[i];
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        selectedPhotos.push({ file: file, dataUrl: e.target.result });
+        renderPhotos();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+}
+
+function renderPhotos() {
+  const container = document.getElementById('photoPreview');
+  container.innerHTML = '';
+  selectedPhotos.forEach((photo, idx) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    thumb.innerHTML = '<img src="' + photo.dataUrl + '" alt="Foto"><button class="remove-btn" onclick="removePhoto(' + idx + ')">&times;</button>';
+    container.appendChild(thumb);
+  });
+}
+
+function removePhoto(idx) {
+  selectedPhotos.splice(idx, 1);
+  renderPhotos();
+}
+
+// Carica città nel datalist all'avvio
+(async function loadCityList() {
+  try {
+    const cities = await supabaseGet('cities', 'select=name&order=name.asc');
+    const datalist = document.getElementById('cityList');
+    if (cities && datalist) {
+      datalist.innerHTML = cities.map(c => '<option value="' + c.name + '">').join('');
+    }
+  } catch(e) {}
+})();
+
+async function submitAd(e) {
+  e.preventDefault();
+  const btn = document.getElementById('publishBtn');
+  const errorEl = document.getElementById('publishError');
+  errorEl.style.display = 'none';
+  
+  const title = document.getElementById('adTitle').value.trim();
+  const category = document.getElementById('adCategory').value;
+  const city = document.getElementById('adCity').value.trim();
+  const age = parseInt(document.getElementById('adAge').value) || 0;
+  const gender = document.getElementById('adGender').value;
+  const description = document.getElementById('adDescription').value.trim();
+  const price = document.getElementById('adPrice').value.trim();
+  
+  if (!title || !description) {
+    errorEl.textContent = 'Inserisci titolo e descrizione';
+    errorEl.style.display = 'block';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pubblicazione...';
+  
+  try {
+    // Upload foto su Supabase Storage
+    let imageUrls = [];
+    if (selectedPhotos.length > 0) {
+      for (let i = 0; i < selectedPhotos.length; i++) {
+        const file = selectedPhotos[i].file;
+        const ext = file.name.split('.').pop();
+        const fileName = currentUser.id + '/' + Date.now() + '_' + i + '.' + ext;
+        
+        await supabaseUpload(fileName, file);
+        const url = SUPABASE_URL + '/storage/v1/object/public/ad-photos/' + fileName;
+        imageUrls.push(url);
+      }
+    }
+    
+    // Crea annuncio su Supabase
+    const token = localStorage.getItem('authToken');
+    const adData = {
+      user_id: currentUser.id,
+      title: title,
+      category: category,
+      city: city,
+      age: age,
+      gender: gender,
+      description: description,
+      price: price || null,
+      image: imageUrls[0] || 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=face',
+      images: imageUrls,
+      is_premium: currentPublishPlan !== 'free',
+      is_sponsored: currentPublishPlan === 'gold',
+      is_active: true,
+      rating: 0,
+      review_count: 0
+    };
+    
+    await supabasePost('ads', adData, token);
+    
+    closePublish();
+    showToast('Annuncio pubblicato con successo! 🎉', 'success');
+    initAds();
+  } catch(e) {
+    errorEl.textContent = 'Errore durante la pubblicazione: ' + (e.message || 'Riprova');
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Pubblica annuncio';
+  }
+}
+
+// Upload file a Supabase Storage
+async function supabaseUpload(path, file) {
+  const token = localStorage.getItem('authToken');
+  const res = await fetch(SUPABASE_URL + '/storage/v1/object/ad-photos/' + path, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + (token || SUPABASE_ANON_KEY),
+      'Content-Type': file.type,
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('Upload fallito: ' + txt);
+  }
+  return res.json();
+}
 
 // ============================================================
 // AUTH

@@ -150,42 +150,102 @@
         <i class="fas fa-feather-alt"></i>
       </div>
       <h2 class="modal-title">Pubblica il tuo annuncio</h2>
-      <p class="modal-subtitle">Gratuito e senza impegno. Inizia ora!</p>
       <form id="publishForm" onsubmit="submitAd(event)">
+        
+        <!-- Piano -->
         <div class="form-group">
-          <label>Titolo annuncio</label>
-          <input type="text" class="form-control" placeholder="Es. Bella ragazza cerca...">
+          <label>Piano di pubblicazione</label>
+          <div class="plan-selector">
+            <label class="plan-option active" id="planFree" onclick="selectPublishPlan('free')">
+              <input type="radio" name="publishPlan" value="free" checked hidden>
+              <i class="fas fa-star"></i>
+              <strong>Gratis</strong>
+              <small>1 foto • Base</small>
+            </label>
+            <label class="plan-option" id="planPremium" onclick="selectPublishPlan('premium')">
+              <input type="radio" name="publishPlan" value="premium" hidden>
+              <i class="fas fa-crown"></i>
+              <strong>Premium €4.95</strong>
+              <small>5 foto • In Vetrina</small>
+            </label>
+            <label class="plan-option" id="planGold" onclick="selectPublishPlan('gold')">
+              <input type="radio" name="publishPlan" value="gold" hidden>
+              <i class="fas fa-gem"></i>
+              <strong>Gold €19.95</strong>
+              <small>10 foto • TOP 7gg</small>
+            </label>
+          </div>
+        </div>
+
+        <!-- Foto upload -->
+        <div class="form-group" id="photoUploadGroup">
+          <label>Foto <span id="photoLimit">(max 1)</span></label>
+          <div class="upload-zone" id="uploadZone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Trascina qui le tue foto o <a href="#" onclick="document.getElementById('fileInput').click();return false">clicca per caricare</a></p>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handleFiles(this.files)">
+          </div>
+          <div class="photo-preview" id="photoPreview"></div>
+        </div>
+
+        <!-- Dati annuncio -->
+        <div class="form-group">
+          <label>Titolo</label>
+          <input type="text" id="adTitle" class="form-control" placeholder="Es. Bella ragazza cerca..." required>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Categoria</label>
-            <select class="form-control">
-              <option>Donna cerca Uomo</option>
-              <option>Uomo cerca Donna</option>
-              <option>Uomo cerca Uomo</option>
-              <option>Donna cerca Donna</option>
-              <option>Coppie</option>
-              <option>Trans</option>
-              <option>Cerco Amici</option>
+            <select id="adCategory" class="form-control">
+              <option value="donna-cerca-uomo">Donna cerca Uomo</option>
+              <option value="uomo-cerca-donna">Uomo cerca Donna</option>
+              <option value="uomo-cerca-uomo">Uomo cerca Uomo</option>
+              <option value="donna-cerca-donna">Donna cerca Donna</option>
+              <option value="coppie">Coppie</option>
+              <option value="trans">Trans</option>
+              <option value="cerco-amici">Cerco Amici</option>
+              <option value="anima-gemella">Anima Gemella</option>
             </select>
           </div>
           <div class="form-group">
             <label>Città</label>
-            <select class="form-control">
-              <option>Napoli</option>
-              <option>Roma</option>
-              <option>Milano</option>
-              <option>Torino</option>
-              <option>Firenze</option>
-              <option>Bologna</option>
+            <input type="text" id="adCity" class="form-control" placeholder="La tua città" list="cityList">
+            <datalist id="cityList">
+              <option value="Napoli"><option value="Roma"><option value="Milano"><option value="Torino">
+              <option value="Firenze"><option value="Bologna"><option value="Venezia"><option value="Palermo">
+              <option value="Genova"><option value="Bari"><option value="Catania"><option value="Verona">
+            </datalist>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Età</label>
+            <input type="number" id="adAge" class="form-control" placeholder="25" min="18" max="99">
+          </div>
+          <div class="form-group">
+            <label>Genere</label>
+            <select id="adGender" class="form-control">
+              <option value="donna">Donna</option>
+              <option value="uomo">Uomo</option>
+              <option value="coppia">Coppia</option>
+              <option value="trans">Trans</option>
             </select>
           </div>
         </div>
         <div class="form-group">
           <label>Descrizione</label>
-          <textarea class="form-control" rows="4" placeholder="Descrivi chi sei e cosa cerchi..."></textarea>
+          <textarea id="adDescription" class="form-control" rows="4" placeholder="Chi sei? Cosa cerchi?..." required></textarea>
         </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg">
+
+        <!-- Prezzo (opzionale) -->
+        <div class="form-group">
+          <label>Prezzo (opzionale)</label>
+          <input type="text" id="adPrice" class="form-control" placeholder="Es. 100€/h o lascia vuoto">
+        </div>
+
+        <div id="publishError" style="color:#ef4444;font-size:0.85rem;margin-bottom:0.75rem;display:none"></div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="publishBtn">
           <i class="fas fa-paper-plane"></i> Pubblica annuncio
         </button>
       </form>
