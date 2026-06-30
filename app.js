@@ -123,7 +123,7 @@ function initParticles() {
 }
 
 // ============================================================
-// CATEGORIES — CON FOTO REALI DAGLI ANNUNCI
+// CATEGORIES — CON FOTO REALI
 // ============================================================
 function initCategories() {
   const grid = document.getElementById('categoriesGrid');
@@ -144,62 +144,32 @@ function initCategories() {
     { id: 'trans', name: 'Trans', icon: 'fa-transgender', color: '#e84393', desc: 'Incontri trans e travestiti' }
   ];
 
-  // Recupera UNA foto reale per ogni categoria dagli annunci esistenti
-  // Se non ci sono annunci, usa immagini rappresentative di bakecaincontrii.com
   const fallbackImages = {
-    'donna-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/c1/15/c1159dd0393b4e7897947243c7c18ff9.jpg',
-    'uomo-cerca-donna': 'https://www.bakecaincontrii.com/image/post/02/a7/02a70dc19a144ebd95b8498888c9e5f1.jpg',
-    'uomo-cerca-uomo': 'https://www.bakecaincontrii.com/image/post/20/aa/20aa777a87c54de28f7029a3d4b68e64.jpg',
-    'donna-cerca-donna': 'https://www.bakecaincontrii.com/image/post/b4/7d/b47d4593fa364b658a8b7cfb9feca455.jpg',
-    'coppie': 'https://www.bakecaincontrii.com/image/post/70/6c/706c486f51e74f989b31f27b054f0d56.jpg',
-    'cerco-amici': 'https://www.bakecaincontrii.com/image/post/49/25/49258831e9114e03bddedca633830089.jpg',
-    'anima-gemella': 'https://www.bakecaincontrii.com/image/post/e3/d9/e3d98a5ff6e746cf935728958ea1515d.jpg',
-    'trans': 'https://www.bakecaincontrii.com/image/post/37/a1/37a17bf35c0e4006a334fe3d2ff225a2.jpg'
+    'donna-cerca-uomo': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80',
+    'uomo-cerca-donna': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
+    'uomo-cerca-uomo': 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=900&q=80',
+    'donna-cerca-donna': 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+    'coppie': 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=900&q=80',
+    'cerco-amici': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
+    'anima-gemella': 'https://images.unsplash.com/photo-1501901609772-df0848060b33?auto=format&fit=crop&w=900&q=80',
+    'trans': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80'
   };
   
-  sbGet('ads', 'select=image,category&is_active=eq.true&not.is.image.eq.&order=created_at.desc&limit=100').then(ads => {
-    const catPhotos = {};
-    (ads || []).forEach(ad => {
-      const cat = ad.category;
-      if (!catPhotos[cat] && ad.image && ad.image.startsWith('http')) catPhotos[cat] = ad.image;
-    });
-    
-    grid.innerHTML = '';
-    cats.forEach(cat => {
-      const card = document.createElement('div');
-      card.className = 'category-card';
-      card.style.setProperty('--cat-color', cat.color);
-      card.setAttribute('data-aos', 'fade-up');
-      
-      const img = catPhotos[cat.id] || fallbackImages[cat.id];
-      card.innerHTML = `<div class="category-card-bg"${img ? ` style="background-image:url('${img}')"` : ''}>
-          <div class="category-card-overlay"></div>
-        </div>
-        <div class="category-icon"><i class="fas ${cat.icon}"></i></div>
-        <h3>${cat.name}</h3>
-        <p>${cat.desc}</p>`;
-      
-      card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
-      grid.appendChild(card);
-    });
-  }).catch(() => {
-    // Fallback con foto reali da bakecaincontrii
-    grid.innerHTML = '';
-    cats.forEach(cat => {
-      const card = document.createElement('div');
-      card.className = 'category-card';
-      card.style.setProperty('--cat-color', cat.color);
-      card.setAttribute('data-aos', 'fade-up');
-      const img = fallbackImages[cat.id];
-      card.innerHTML = `<div class="category-card-bg"${img ? ` style="background-image:url('${img}')"` : ''}>
-          <div class="category-card-overlay"></div>
-        </div>
-        <div class="category-icon"><i class="fas ${cat.icon}"></i></div>
-        <h3>${cat.name}</h3>
-        <p>${cat.desc}</p>`;
-      card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
-      grid.appendChild(card);
-    });
+  grid.innerHTML = '';
+  cats.forEach(cat => {
+    const card = document.createElement('div');
+    card.className = 'category-card';
+    card.style.setProperty('--cat-color', cat.color);
+    card.setAttribute('data-aos', 'fade-up');
+    const img = fallbackImages[cat.id];
+    card.innerHTML = `<div class="category-card-bg" style="background-image:url('${img}')">
+        <div class="category-card-overlay"></div>
+      </div>
+      <div class="category-icon"><i class="fas ${cat.icon}"></i></div>
+      <h3>${cat.name}</h3>
+      <p>${cat.desc}</p>`;
+    card.onclick = () => navigateTo('/?page=category&slug=' + cat.id);
+    grid.appendChild(card);
   });
 }
 
@@ -450,6 +420,12 @@ document.getElementById('registerModal')?.addEventListener('click', function (e)
 function togglePass(id, btn) {
   const inp = document.getElementById(id);
   if (inp.type === 'password') { inp.type = 'text'; btn.innerHTML = '<i class="fas fa-eye-slash"></i>'; } else { inp.type = 'password'; btn.innerHTML = '<i class="fas fa-eye"></i>'; }
+}
+function togglePassword(id, btn) {
+  togglePass(id, btn);
+}
+function socialLogin(provider) {
+  showToast('Accesso con ' + provider + ' non ancora configurato. Usa email e password.', 'warning');
 }
 
 function checkPasswordStrength(pw) {
@@ -1825,7 +1801,7 @@ function adminAddCredits(userId, userName) {
     const cur = (profiles?.[0]?.credits || 0);
     const newCredits = cur + parseInt(amount);
     sbPatch('profiles', { credits: newCredits }, { id: userId }, token).then(() => {
-      sbPost('credit_transactions', { user_id: userId, amount: parseInt(amount), type: 'admin', description: 'Admin: aggiunti ' + amount + ' crediti' }, token);
+      sbPost('credit_transactions', { user_id: userId, amount: parseInt(amount), type: 'bonus', description: 'Admin: aggiunti ' + amount + ' crediti' }, token);
       showToast('✅ ' + amount + ' crediti aggiunti a ' + userName, 'success');
       loadAdminData();
     });
@@ -2097,7 +2073,7 @@ function loadAdminCities(container, token) {
                 <td style="color:var(--text-muted);font-size:0.8rem">${c.region || '—'}</td>
                 <td>
                   <div class="admin-actions">
-                    <button class="btn btn-sm btn-danger" onclick="adminDeleteCity(${c.id}, '${(c.name || '').replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="adminDeleteCity('${(c.name || '').replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>
                   </div>
                 </td>
               </tr>
@@ -2124,16 +2100,17 @@ function adminAddCity() {
   if (!name) return;
   const region = prompt('📝 Regione:');
   const token = localStorage.getItem('authToken');
-  sbPost('cities', { name, region: region || '', province: region || '' }, token).then(() => {
+  const slug = name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  sbPost('cities', { name, slug, region: region || '' }, token).then(() => {
     showToast('✅ Città "' + name + '" aggiunta', 'success');
     loadAdminData();
   }).catch(e => showToast('Errore: ' + e.message, 'error'));
 }
 
-function adminDeleteCity(id, name) {
+function adminDeleteCity(name) {
   if (!confirm('⚠️ ELIMINARE la città "' + name + '"?')) return;
   const token = localStorage.getItem('authToken');
-  sbDelete('cities', { id }, token).then(() => {
+  sbDelete('cities', { name }, token).then(() => {
     showToast('🗑️ Città "' + name + '" eliminata', 'success');
     loadAdminData();
   });

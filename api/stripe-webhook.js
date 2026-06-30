@@ -3,8 +3,12 @@
 // Deploy insieme a create-checkout.js
 // ============================================================
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const crypto = require('crypto');
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY non configurata');
+  }
+  return require('stripe')(process.env.STRIPE_SECRET_KEY);
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -49,6 +53,7 @@ module.exports = async (req, res) => {
   let event;
 
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,

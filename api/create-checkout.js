@@ -5,7 +5,12 @@
 //   Netlify: ntl deploy --prod
 // ============================================================
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY non configurata');
+  }
+  return require('stripe')(process.env.STRIPE_SECRET_KEY);
+}
 
 module.exports = async (req, res) => {
   // CORS
@@ -22,6 +27,7 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const stripe = getStripe();
     const { amount, credits, userId, successUrl, cancelUrl } = req.body;
 
     if (!amount || !userId) {

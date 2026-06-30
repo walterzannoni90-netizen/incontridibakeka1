@@ -3,6 +3,10 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3030;
 
+app.all('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  require('./api/stripe-webhook')(req, res);
+});
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
@@ -20,6 +24,10 @@ console.log('  🗄️  Database: Supabase PostgreSQL');
 // ============================================================
 // API ROUTES
 // ============================================================
+
+app.all('/api/create-checkout', (req, res) => {
+  require('./api/create-checkout')(req, res);
+});
 
 app.get('/api/categories', async (req, res) => {
   const { data, error } = await supabase.from('categories').select('*').order('sort_order');
