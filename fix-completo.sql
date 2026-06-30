@@ -99,7 +99,40 @@ CREATE POLICY "Propri annunci delete" ON ads
 ALTER TABLE support_messages ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
 
 -- ============================================================
--- 6. VERIFICA FINALE
+-- 6. CREA TRIGGER PER AUTO-CREATE PROFILO AL SIGNUP (MANCANTE)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, name)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1))
+  )
+  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
+-- 7. FIX: AGGIORNA EMAIL ESISTENTI NEI PROFILI
+-- ============================================================
+UPDATE public.profiles p
+SET email = u.email
+FROM auth.users u
+WHERE p.id = u.id AND (p.email IS NULL OR p.email = '');
+
+-- ============================================================
+-- 8. VERIFICA FINALE
 -- ============================================================
 SELECT '✅ images column' AS check_col WHERE EXISTS (
   SELECT column_name FROM information_schema.columns

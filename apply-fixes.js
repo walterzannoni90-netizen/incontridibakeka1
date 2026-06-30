@@ -99,6 +99,7 @@ async function main() {
       RETURN json_build_object('totalAds',t1,'premiumAds',t2,'verifiedUsers',t3,'citiesAvailable',t4,'categoriesAvailable',t5);
     END; $$;`,
 
+`CREATE OR REPLACE FUNCTION public.handle_new_user()    RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$    BEGIN      INSERT INTO public.profiles (id, email, name)      VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'''name''', split_part(NEW.email, '''@''', 1)))      ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;      RETURN NEW;    END;$$;`,    `DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;`,    `CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();`,    `UPDATE public.profiles p SET email = u.email FROM auth.users u WHERE p.id = u.id AND (p.email IS NULL OR p.email = '');`,
     `DROP POLICY IF EXISTS "Annunci pubblici" ON ads CASCADE;`,
     `CREATE POLICY "Annunci pubblici" ON ads FOR SELECT USING (is_active = true OR auth.uid() = user_id);`,
     `DROP POLICY IF EXISTS "Propri annunci insert" ON ads CASCADE;`,
