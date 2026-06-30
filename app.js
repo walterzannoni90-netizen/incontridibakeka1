@@ -204,7 +204,13 @@ function createAdCard(ad) {
       <div class="ad-card-rating">
         <i class="fas fa-star"></i> ${ad.rating || '0'} <span>(${ad.review_count || 0})</span>
       </div>
-      <div class="ad-card-action">Vedi <i class="fas fa-arrow-right"></i></div>
+      <div class="ad-card-actions">
+        ${currentUser && currentUser.id === ad.user_id ? `
+          <button class="ad-action-btn edit" onclick="event.stopPropagation();editAd('${ad.id}')" title="Modifica"><i class="fas fa-edit"></i></button>
+          <button class="ad-action-btn delete" onclick="event.stopPropagation();deleteAd('${ad.id}')" title="Elimina"><i class="fas fa-trash"></i></button>
+        ` : ''}
+        <div class="ad-card-action">Vedi <i class="fas fa-arrow-right"></i></div>
+      </div>
     </div>`;
   card.onclick = () => navigateTo('/?page=ad&id=' + ad.id);
   return card;
@@ -534,12 +540,19 @@ function selectPublishPlan(plan) {
 
 function openPublish() {
   if (!currentUser) { showToast('Devi effettuare il login prima di pubblicare', 'warning'); openLogin(); return; }
-  document.getElementById('publishModal')?.classList.add('active');
-  document.body.style.overflow = 'hidden';
+  // Reset edit mode
+  editingAdId = null;
+  document.getElementById('publishModal')?.classList.remove('editing');
+  document.querySelector('.modal-title').textContent = 'Pubblica il tuo annuncio';
+  document.getElementById('publishBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Pubblica annuncio';
+  // Reset form
+  document.getElementById('publishForm')?.reset();
   selectedPhotos = [];
   currentPublishPlan = 'free';
   selectPublishPlan('free');
   renderPhotos();
+  document.getElementById('publishModal')?.classList.add('active');
+  document.body.style.overflow = 'hidden';
   const err = document.getElementById('publishError');
   if (err) err.style.display = 'none';
 }
@@ -547,6 +560,8 @@ function openPublish() {
 function closePublish() {
   document.getElementById('publishModal')?.classList.remove('active');
   document.body.style.overflow = 'visible';
+  editingAdId = null;
+  document.getElementById('publishModal')?.classList.remove('editing');
 }
 document.getElementById('publishModal')?.addEventListener('click', function (e) { if (e.target === this) closePublish(); });
 
@@ -650,6 +665,152 @@ async function submitAd(e) {
 }
 
 // ============================================================
+// EDIT AD
+// ============================================================
+let editingAdId = null;
+
+function editAd(adId) {
+  editingAdId = adId;
+  const token = localStorage.getItem('authToken');
+  sbGet('ads', 'select=*&id=eq.' + adId, token).then(ads => {
+    if (!ads || ads.length === 0) { showToast('Annuncio non trovato', 'error'); return; }
+    const ad = ads[0];
+    // Prefill form
+    document.getElementById('adTitle').value = ad.title || '';
+    document.getElementById('adCategory').value = ad.category || '';
+    document.getElementById('adCity').value = ad.city || '';
+    document.getElementById('adAge').value = ad.age || '';
+    document.getElementById('adGender').value = ad.gender || '';
+    document.getElementById('adDescription').value = ad.description || '';
+    document.getElementById('adPrice').value = ad.price || '';
+    document.getElementById('adPhotoClass').value = ad.photo_classification || 'safe';
+    
+    // Set plan
+    if (ad.is_sponsored) selectPublishPlan('gold');
+    else if (ad.is_premium) selectPublishPlan('premium');
+    else selectPublishPlan('free');
+    
+    // Load existing photos
+    selectedPhotos = [];
+    if (ad.images && ad.images.length > 0) {
+      ad.images.forEach(url => {
+        selectedPhotos.push({ file: null, dataUrl: url, existing: true });
+      });
+    } else if (ad.image) {
+      selectedPhotos.push({ file: null, dataUrl: ad.image, existing: true });
+    }
+    renderPhotos();
+    
+    // Change button text
+    document.getElementById('publishBtn').innerHTML = '<i class="fas fa-save"></i> Salva modifiche';
+    // Add hidden field for edit mode
+    document.getElementById('publishModal').classList.add('editing');
+    
+    openPublish();
+    document.querySelector('.modal-title').textContent = 'Modifica annuncio';
+  }).catch(() => showToast('Errore caricamento annuncio', 'error'));
+}
+
+// Modifica submitAd per gestire edit
+const originalSubmitAd = submitAd;
+
+async function submitAd(e) {
+  e.preventDefault();
+  const btn = document.getElementById('publishBtn');
+  const errorEl = document.getElementById('publishError');
+  if (errorEl) errorEl.style.display = 'none';
+
+  const title = document.getElementById('adTitle')?.value.trim();
+  const category = document.getElementById('adCategory')?.value;
+  const city = document.getElementById('adCity')?.value.trim();
+  const age = parseInt(document.getElementById('adAge')?.value) || 0;
+  const gender = document.getElementById('adGender')?.value;
+  const description = document.getElementById('adDescription')?.value.trim();
+  const price = document.getElementById('adPrice')?.value.trim();
+  const photoClass = document.getElementById('adPhotoClass')?.value || 'safe';
+
+  if (!title || !description) {
+    if (errorEl) { errorEl.textContent = 'Inserisci titolo e descrizione'; errorEl.style.display = 'block'; }
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio...';
+
+  try {
+    const token = localStorage.getItem('authToken');
+    let imageUrls = [];
+    
+    // Handle photos: keep existing + upload new
+    if (selectedPhotos.length > 0) {
+      for (let i = 0; i < selectedPhotos.length; i++) {
+        if (selectedPhotos[i].existing) {
+          imageUrls.push(selectedPhotos[i].dataUrl);
+        } else if (selectedPhotos[i].file) {
+          const file = selectedPhotos[i].file;
+          const ext = file.name.split('.').pop();
+          const fileName = currentUser.id + '/' + Date.now() + '_' + i + '.' + ext;
+          await sbUpload(fileName, file, token);
+          imageUrls.push(SUPABASE_URL + '/storage/v1/object/public/ad-photos/' + fileName);
+        }
+      }
+    }
+
+    const adData = {
+      title, category, city, age, gender,
+      description, price: price || null,
+      image: imageUrls[0] || null,
+      images: imageUrls,
+      photo_classification: photoClass,
+      is_premium: currentPublishPlan !== 'free',
+      is_sponsored: currentPublishPlan === 'gold',
+      boost_available: currentPublishPlan === 'gold' ? 3 : (currentPublishPlan === 'premium' ? 1 : 0)
+    };
+
+    if (editingAdId) {
+      // UPDATE existing ad
+      await sbPatch('ads', adData, { id: editingAdId }, token);
+      showToast('Annuncio aggiornato con successo! ✅', 'success');
+      editingAdId = null;
+    } else {
+      // CREATE new ad
+      adData.user_id = currentUser.id;
+      adData.is_active = true;
+      adData.rating = 0;
+      adData.review_count = 0;
+      await sbPost('ads', adData, token);
+      showToast('Annuncio pubblicato con successo! 🎉', 'success');
+    }
+    
+    closePublish();
+    document.querySelector('.modal-title').textContent = 'Pubblica il tuo annuncio';
+    document.getElementById('publishBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Pubblica annuncio';
+    document.getElementById('publishModal')?.classList.remove('editing');
+    initAds();
+    // Refresh my ads if visible
+    if (document.getElementById('myAdsPage')?.style.display !== 'none') showMyAdsPage();
+  } catch (e) {
+    if (errorEl) { errorEl.textContent = 'Errore: ' + (e.message || 'Riprova'); errorEl.style.display = 'block'; }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Pubblica annuncio';
+  }
+}
+
+// ============================================================
+// DELETE AD
+// ============================================================
+function deleteAd(adId) {
+  if (!confirm('❌ Sei sicuro di voler eliminare questo annuncio?\n\nQuesta azione non può essere annullata.')) return;
+  const token = localStorage.getItem('authToken');
+  sbDelete('ads', { id: adId }, token).then(() => {
+    showToast('Annuncio eliminato', 'success');
+    if (document.getElementById('myAdsPage')?.style.display !== 'none') showMyAdsPage();
+    initAds();
+  }).catch(() => showToast('Errore eliminazione', 'error'));
+}
+
+// ============================================================
 // SHOP — CREDITI E ADDONS
 // ============================================================
 let addonsList = [];
@@ -724,18 +885,52 @@ function renderShop() {
 }
 
 async function buyCredits(amount) {
-  // Simula acquisto crediti (nell'implementazione reale: Stripe/PayPal)
   if (!currentUser) { showToast('Accedi prima di acquistare', 'warning'); return; }
-  showToast(`Reindirizzamento al pagamento per ${amount} crediti...`, 'success');
-  // Mock: aggiunge crediti direttamente (in produzione: gateway pagamento)
+  
+  // Price mapping
+  const prices = { 10: 4.99, 30: 9.99, 70: 19.99, 150: 34.99 };
+  const euro = prices[amount] || (amount * 0.5);
+  
+  showToast(`Reindirizzamento a Stripe per €${euro.toFixed(2)}...`, 'success');
+  
+  try {
+    // Prova Stripe Checkout via Supabase Edge Function
+    const response = await fetch(
+      'https://rdqsmfgpbuswzilgbjyr.supabase.co/functions/v1/create-checkout',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
+          priceId: 'price_' + amount + 'credits', // Stripe Price ID da configurare
+          userId: currentUser.id,
+          credits: amount,
+          successUrl: window.location.origin + '/?payment=success&credits=' + amount,
+          cancelUrl: window.location.origin + '/?shop=cancelled'
+        })
+      }
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+    }
+  } catch (e) { /* Stripe non configurato, fallback a mock */ }
+  
+  // FALLBACK: credito diretto (finché Stripe non è configurato)
   const token = localStorage.getItem('authToken');
   await sbPatch('profiles', { credits: (currentUser.credits || 0) + amount }, { id: currentUser.id }, token);
-  await sbPost('credit_transactions', { user_id: currentUser.id, amount, type: 'purchase', description: `Acquisto ${amount} crediti` }, token);
+  await sbPost('credit_transactions', { user_id: currentUser.id, amount, type: 'purchase', description: `Acquisto ${amount} crediti (mock)` }, token);
   currentUser.credits = (currentUser.credits || 0) + amount;
   localStorage.setItem('currentUser', JSON.stringify(currentUser));
   updateUIForLoggedUser();
   renderShop();
-  showToast(`✅ ${amount} crediti aggiunti!`, 'success');
+  showToast(`✅ ${amount} crediti aggiunti! (Modalità test)`, 'success');
 }
 
 function openAddonPurchase(code) {
