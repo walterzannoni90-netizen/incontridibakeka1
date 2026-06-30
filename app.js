@@ -16,27 +16,32 @@ const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0
 function sbHeaders(token) {
   return { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
 }
+async function sbRead(r) {
+  const text = await r.text();
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return text; }
+}
 async function sbGet(table, query, token) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: sbHeaders(token) });
   if (!r.ok) throw new Error(`GET ${table}: ${r.status}`);
-  return r.json();
+  return sbRead(r);
 }
 async function sbPost(table, data, token) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: sbHeaders(token), body: JSON.stringify(data) });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: { ...sbHeaders(token), 'Prefer': 'return=representation' }, body: JSON.stringify(data) });
   if (!r.ok) throw new Error(`POST ${table}: ${r.status}`);
-  return r.json();
+  return sbRead(r);
 }
 async function sbPatch(table, data, match, token) {
   const q = Object.entries(match).map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, { method: 'PATCH', headers: sbHeaders(token), body: JSON.stringify(data) });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, { method: 'PATCH', headers: { ...sbHeaders(token), 'Prefer': 'return=representation' }, body: JSON.stringify(data) });
   if (!r.ok) throw new Error(`PATCH ${table}: ${r.status}`);
-  return r.json();
+  return sbRead(r);
 }
 async function sbDelete(table, match, token) {
   const q = Object.entries(match).map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, { method: 'DELETE', headers: sbHeaders(token) });
   if (!r.ok) throw new Error(`DELETE ${table}: ${r.status}`);
-  return r.json();
+  return sbRead(r);
 }
 async function sbAuth(method, body, token) {
   const r = await fetch(`${SUPABASE_URL}/auth/v1/${method}`, { method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
@@ -671,19 +676,20 @@ function selectPublishPlan(plan) {
   if (selectedPhotos.length > limits[plan]) { selectedPhotos = selectedPhotos.slice(0, limits[plan]); renderPhotos(); }
 }
 
-function openPublish() {
+function openPublish(options = {}) {
   if (!currentUser) { showToast('Devi effettuare il login prima di pubblicare', 'warning'); openLogin(); return; }
-  // Reset edit mode
-  editingAdId = null;
-  document.getElementById('publishModal')?.classList.remove('editing');
-  document.querySelector('.modal-title').textContent = 'Pubblica il tuo annuncio';
-  document.getElementById('publishBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Pubblica annuncio';
-  // Reset form
-  document.getElementById('publishForm')?.reset();
-  selectedPhotos = [];
-  currentPublishPlan = 'free';
-  selectPublishPlan('free');
-  renderPhotos();
+  const shouldReset = options.reset !== false;
+  if (shouldReset) {
+    editingAdId = null;
+    document.getElementById('publishModal')?.classList.remove('editing');
+    document.querySelector('.modal-title').textContent = 'Pubblica il tuo annuncio';
+    document.getElementById('publishBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Pubblica annuncio';
+    document.getElementById('publishForm')?.reset();
+    selectedPhotos = [];
+    currentPublishPlan = 'free';
+    selectPublishPlan('free');
+    renderPhotos();
+  }
   document.getElementById('publishModal')?.classList.add('active');
   document.body.style.overflow = 'hidden';
   const err = document.getElementById('publishError');
@@ -839,7 +845,7 @@ function editAd(adId) {
     // Add hidden field for edit mode
     document.getElementById('publishModal').classList.add('editing');
     
-    openPublish();
+    openPublish({ reset: false });
     document.querySelector('.modal-title').textContent = 'Modifica annuncio';
   }).catch(() => showToast('Errore caricamento annuncio', 'error'));
 }
@@ -849,6 +855,7 @@ const originalSubmitAd = submitAd;
 
 async function submitAd(e) {
   e.preventDefault();
+  if (!currentUser) { openLogin(); return; }
   const btn = document.getElementById('publishBtn');
   const errorEl = document.getElementById('publishError');
   if (errorEl) errorEl.style.display = 'none';

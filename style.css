@@ -940,7 +940,6 @@ textarea.form-control {
   z-index: 2;
   text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
-}
 
 .category-desc {
   font-size: 0.85rem;
@@ -3951,4 +3950,85 @@ body.menu-open {
   .navbar-brand i { font-size: 1.2rem; }
   
   .category-card { min-height: 140px; }
+}
+
+/* ============================================================
+   PROFESSIONAL VISUAL PASS
+   ============================================================ */
+:root {
+  --primary: #4f7cff;
+  --primary-dark: #315bdc;
+  --primary-light: #8fb2ff;
+  --primary-glow: rgba(79, 124, 255, 0.18);
+  --secondary: #0ea5a4;
+  --accent: #d4a243;
+  --accent-light: #e8c878;
+  --bg-primary: #090d14;
+  --bg-secondary: #101722;
+  --bg-card: #151d29;
+  --bg-card-hover: #1b2635;
+  --gradient-primary: linear-gradient(135deg, #4f7cff, #0ea5a4);
+  --gradient-accent: linear-gradient(135deg, #d4a243, #8fb2ff);
+  --gradient-hero: linear-gradient(135deg, #090d14 0%, #111827 55%, #0f1720 100%);
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+.hero-particles,
+.particle,
+.hero-bg::before {
+  display: none;
+}
+
+.btn,
+.filter-btn,
+.search-tag,
+.hero-badge,
+.city-pill {
+  border-radius: 8px;
+}
+
+.btn::before {
+  display: none;
+}
+
+.btn:hover,
+.btn-primary:hover,
+.btn-outline:hover,
+.ad-card:hover,
+.category-card:hover {
+  transform: translateY(-2px);
+}
+
+.hero-title,
+.section-title,
+.modal-title,
+.category-card h3 {
+  font-family: var(--font-primary);
+  letter-spacing: 0;
+}
+
+.gradient-text {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--text-primary);
+}
+
+.category-card,
+.ad-card,
+.modal-content,
+.admin-settings-card,
+.plan-option,
+.credit-pack,
+.addon-card {
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.category-icon,
+.modal-icon,
+.brand-icon {
+  transform: none !important;
+  box-shadow: none !important;
 }
