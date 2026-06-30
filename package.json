@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "test:e2e": "node tests/e2e-smoke.js"
+    "dev": "node server.js"
   },
   "keywords": [
     "incontri",
@@ -19,10 +18,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
     "dotenv": "^17.4.2",
-    "express": "^4.22.2",
-    "stripe": "^22.3.0"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.61.1"
+    "express": "^4.22.2"
   }
 }
