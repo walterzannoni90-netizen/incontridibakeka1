@@ -427,16 +427,32 @@ async function initAuth() {
   const token = localStorage.getItem('authToken');
   if (!token) return;
   try {
-    const res = await fetch('/api/auth/me', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    const data = await res.json();
-    if (data.success && data.user) {
-      currentUser = { ...data.user, isAdmin: isAdmin(data.user.email) };
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      updateUIForLoggedUser();
-      loadSavedContacts();
-    } else { localStorage.removeItem('authToken'); }
+    // Prova Supabase Auth direttamente (funziona su GitHub Pages)
+    let data;
+    try {
+      data = await sbAuth('user', {}, token);
+      if (!data || !data.id) throw new Error('Token non valido');
+      const p = await sbGet('profiles', `select=*&id=eq.${data.id}`, token);
+      const prof = p?.[0] || {};
+      currentUser = {
+        id: data.id, name: prof.name || '', surname: prof.surname || '',
+        email: data.email || prof.email || '', city: prof.city || '',
+        credits: prof.credits || 0, isVerified: !!prof.is_verified,
+        isPremium: !!prof.is_premium, role: prof.role || 'user',
+        isAdmin: isAdmin(data.email || prof.email || '')
+      };
+    } catch (e2) {
+      // Fallback: API Express locale (solo sviluppo)
+      const res = await fetch('/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const d2 = await res.json();
+      if (!d2.success || !d2.user) throw new Error('Non autenticato');
+      currentUser = { ...d2.user, isAdmin: isAdmin(d2.user.email) };
+    }
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    updateUIForLoggedUser();
+    loadSavedContacts();
   } catch (e) { localStorage.removeItem('authToken'); }
 }
 
@@ -504,16 +520,39 @@ async function handleLogin(e) {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Accesso...';
   try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Login fallito');
+    // Prova Supabase Auth direttamente (funziona su GitHub Pages)
+    let data, prof;
+    try {
+      data = await sbAuth('token?grant_type=password', { email, password });
+      if (data.error) throw new Error(data.error_description || data.error);
+      const p = await sbGet('profiles', `select=*&id=eq.${data.user.id}`, data.access_token);
+      prof = p?.[0] || {};
+    } catch (e2) {
+      // Fallback: API Express locale (solo sviluppo)
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const d2 = await res.json();
+      if (!d2.success) throw new Error(d2.error || 'Login fallito');
+      data = { user: d2.user, access_token: d2.token };
+      prof = d2.user;
+    }
     
-    currentUser = { ...data.user, isAdmin: isAdmin(data.user.email) };
-    localStorage.setItem('authToken', data.token);
+    currentUser = {
+      id: data.user.id,
+      name: prof.name || data.user.name || '',
+      surname: prof.surname || data.user.surname || '',
+      email: data.user.email || email,
+      city: prof.city || data.user.city || '',
+      credits: prof.credits || 0,
+      isVerified: !!prof.is_verified || !!data.user.isVerified,
+      isPremium: !!prof.is_premium || !!data.user.isPremium,
+      role: prof.role || data.user.role || 'user',
+      isAdmin: isAdmin(email)
+    };
+    localStorage.setItem('authToken', data.access_token);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeLogin();
     updateUIForLoggedUser();
@@ -569,23 +608,35 @@ async function handleRegister(e) {
   
   try {
     const fullPhone = phone ? phonePrefix + phone : '';
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        surname: surname || '',
-        email,
-        password,
-        city: city || '',
-        gender: gender || '',
-        birthDate,
-        acceptTerms: true
-      })
-    });
-    const data = await res.json();
-    
-    if (!data.success) throw new Error(data.error || 'Registrazione fallita');
+    // Prova Supabase Auth direttamente (funziona su GitHub Pages)
+    let data;
+    try {
+      data = await sbAuth('signup', { 
+        email, password, 
+        data: { name, surname: surname || '', birth_date: birthDate, gender: gender || '' }
+      });
+      if (data.error) throw new Error(data.error);
+      
+      if (data.user) {
+        const userData = {
+          id: data.user.id, name, surname: surname || '', email,
+          city: city || '', gender: gender || '', birth_date: birthDate,
+          is_verified: false, is_premium: isAdmin(email),
+          credits: isAdmin(email) ? 999 : 20
+        };
+        await sbPost('profiles', userData, data.access_token).catch(() => {});
+      }
+    } catch (e2) {
+      // Fallback: API Express locale (solo sviluppo)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, surname, email, password, city, gender, birthDate, acceptTerms: true })
+      });
+      const d2 = await res.json();
+      if (!d2.success) throw new Error(d2.error || 'Registrazione fallita');
+      data = { user: d2.user, access_token: d2.token };
+    }
     
     const userEmail = email;
     const userIsAdmin = isAdmin(userEmail);
