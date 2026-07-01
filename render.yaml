@@ -4,17 +4,24 @@ services:
     runtime: node
     repo: https://github.com/walterzannoni90-netizen/incontridibakeka1
     branch: master
-    plan: free
+    plan: starter # Minimo $7/mese per domini personalizzati
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /api/stats
+    domains:
+      - incontridibakeka.com
+      - www.incontridibakeka.com
     envVars:
       - key: PORT
         value: "10000"
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_ENV
+        value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: APP_URL
+        value: https://incontridibakeka.com
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY

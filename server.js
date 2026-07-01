@@ -3,9 +3,16 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3030;
+const APP_URL = process.env.APP_URL || 'http://localhost:3030';
 const JWT_SECRET = process.env.JWT_SECRET || 'bakeka-jwt-secret-2024';
+
+app.use(cors({
+  origin: APP_URL,
+  credentials: true
+}));
 
 app.use(cookieParser());
 app.all('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => {
@@ -303,7 +310,7 @@ async function start() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  ✦ IncontriDiBakeka — Annunci Premium ✦`);
     console.log(`  ──────────────────────────────────────`);
-    console.log(`  🌐  http://0.0.0.0:${PORT}`);
+    console.log(`  🌐  ${APP_URL}`);
     console.log(`  🗄️  Dati: Supabase PostgreSQL`);
     console.log(`  🔐  Auth: SQLite Locale`);
     console.log(`  💎  Premium Dating Experience\n`);
