@@ -188,6 +188,27 @@ npm start
 
 ---
 
+## 🌐 Deploy su Render (gratuito)
+
+Questo progetto è configurato per il deploy su **Render** (hosting Node.js gratuito):
+
+1. **Crea account** su [Render.com](https://render.com) (gratis)
+2. **Collega GitHub**: Vai su Dashboard → **New +** → **Blueprint**
+3. **Seleziona** il repository `incontridibakeka1`
+4. **Render legge** automaticamente il file `render.yaml` e configura tutto
+5. **Variabili d'ambiente** da impostare manualmente:
+   - `SUPABASE_URL` — URL del tuo Supabase
+   - `SUPABASE_ANON_KEY` — Chiave anonima Supabase
+
+Oppure crea un **Web Service** manualmente:
+- **Build Command**: `npm install`
+- **Start Command**: `node server.js`
+- **Plan**: **Free** ✅
+
+L'app sarà disponibile su `https://incontridibakeka.onrender.com`
+
+---
+
 ## 📄 Licenza
 
 © 2026 IncontriDiBakeka. Tutti i diritti riservati.
@@ -196,5 +217,6 @@ npm start
 
 <p align="center">
   <strong>IncontriDiBakeka</strong> — <em>Il tuo desiderio, la nostra passione</em><br>
-  <a href="http://localhost:3030">http://localhost:3030</a>
+  🌐 <a href="https://incontridibakeka.onrender.com">Versione Live su Render</a> · 
+  💻 <a href="http://localhost:3030">Sviluppo Locale</a>
 </p>

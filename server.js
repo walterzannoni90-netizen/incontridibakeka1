@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = process.env.PORT || 3030;
-const JWT_SECRET = 'bakeka-jwt-secret-2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'bakeka-jwt-secret-2024';
 
 app.use(cookieParser());
 app.all('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => {
