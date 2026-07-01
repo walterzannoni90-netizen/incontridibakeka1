@@ -427,18 +427,13 @@ async function initAuth() {
   const token = localStorage.getItem('authToken');
   if (!token) return;
   try {
-    const data = await sbAuth('user', {}, token);
-    if (data && data.id) {
-      const p = await sbGet('profiles', `select=*&id=eq.${data.id}`, token);
-      const prof = p?.[0] || {};
-      currentUser = {
-        id: data.id, name: prof.name || data.user_metadata?.name || '',
-        surname: prof.surname || '', email: data.email || prof.email || '',
-        city: prof.city || '', credits: prof.credits || 0,
-        isVerified: !!prof.is_verified, isPremium: !!prof.is_premium,
-        role: prof.role || 'user',
-        isAdmin: isAdmin(data.email || prof.email || '')
-      };
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      currentUser = { ...data.user, isAdmin: isAdmin(data.user.email) };
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
       updateUIForLoggedUser();
       loadSavedContacts();
     } else { localStorage.removeItem('authToken'); }
@@ -509,19 +504,22 @@ async function handleLogin(e) {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Accesso...';
   try {
-    const data = await sbAuth('token?grant_type=password', { email, password });
-    if (data.error) throw new Error(data.error_description || data.error);
-    const p = await sbGet('profiles', `select=*&id=eq.${data.user.id}`, data.access_token);
-    const prof = p?.[0] || {};
-    const userEmail = data.user.email || prof.email || '';
-    currentUser = { id: data.user.id, name: prof.name || '', surname: prof.surname || '', email: userEmail, city: prof.city || '', credits: prof.credits || 0, isVerified: !!prof.is_verified, isPremium: !!prof.is_premium, role: prof.role || 'user', isAdmin: isAdmin(userEmail) };
-    localStorage.setItem('authToken', data.access_token);
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Login fallito');
+    
+    currentUser = { ...data.user, isAdmin: isAdmin(data.user.email) };
+    localStorage.setItem('authToken', data.token);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeLogin();
     updateUIForLoggedUser();
     loadSavedContacts();
     showToast(`Bentornato, ${currentUser.name || 'Utente'}! 🎉`, 'success');
-  } catch (e) { error.textContent = 'Email o password non validi'; error.style.color = '#ef4444'; }
+  } catch (e) { error.textContent = e.message || 'Email o password non validi'; error.style.color = '#ef4444'; }
   finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Accedi'; }
 }
 
@@ -571,62 +569,41 @@ async function handleRegister(e) {
   
   try {
     const fullPhone = phone ? phonePrefix + phone : '';
-    const data = await sbAuth('signup', { 
-      email, 
-      password, 
-      data: {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name,
         surname: surname || '',
-        birth_date: birthDate,
-        phone: fullPhone,
-        gender: gender || '',
-        role: document.getElementById('regRole')?.value || 'user'
-      }
-    });
-    
-    if (data.error) throw new Error(data.error);
-    
-    if (data.user) {
-      const userData = {
-        id: data.user.id,
-        name,
-        surname: surname || '',
-        email: email,
+        email,
+        password,
         city: city || '',
         gender: gender || '',
-        birth_date: birthDate,
-        phone: fullPhone,
-        is_verified: false,
-        is_premium: isAdmin(email),
-        role: document.getElementById('regRole')?.value || 'user',
-        credits: isAdmin(email) ? 999 : 20
-      };
-      await sbPost('profiles', userData, data.access_token);
-      
-      // Bonus crediti
-      await sbPost('credit_transactions', { 
-        user_id: data.user.id, 
-        amount: isAdmin(email) ? 999 : 20, 
-        type: 'bonus', 
-        description: isAdmin(email) ? 'Crediti admin' : 'Bonus benvenuto 20 crediti'
-      }, data.access_token);
-    }
+        birthDate,
+        acceptTerms: true
+      })
+    });
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error || 'Registrazione fallita');
     
     const userEmail = email;
     const userIsAdmin = isAdmin(userEmail);
+    const u = data.user || {};
     currentUser = {
-      id: data.user?.id || '',
-      name,
+      id: u.id || '',
+      name: u.name || name,
+      surname: u.surname || '',
       email: userEmail,
-      city: city || '',
-      credits: userIsAdmin ? 999 : 20,
-      isVerified: false,
-      isPremium: userIsAdmin,
-      role: userIsAdmin ? 'admin' : 'user',
+      city: u.city || city || '',
+      credits: u.credits || (userIsAdmin ? 999 : 20),
+      isVerified: !!u.isVerified,
+      isPremium: !!u.isPremium || userIsAdmin,
+      role: u.role || (userIsAdmin ? 'admin' : 'user'),
       isAdmin: userIsAdmin
     };
     
-    if (data.access_token) localStorage.setItem('authToken', data.access_token);
+    if (data.token) localStorage.setItem('authToken', data.token);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeRegister();
     updateUIForLoggedUser();
@@ -634,7 +611,7 @@ async function handleRegister(e) {
     if (isAdmin(email)) {
       showToast('Benvenuto Admin! 👑', 'success');
     } else {
-      showToast(`Benvenuto, ${name}! Ricevi 20 crediti gratis 🎉 Controlla la tua email per confermare la registrazione.`, 'success');
+      showToast(`Benvenuto, ${name}! Registrazione completata! 🎉`, 'success');
     }
   } catch (e) { 
     error.textContent = e.message.includes('already') ? 'Email già registrata' : 'Errore registrazione: ' + (e.message || ''); 
