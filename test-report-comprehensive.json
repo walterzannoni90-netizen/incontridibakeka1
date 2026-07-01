@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-06-30T23:12:26.571Z",
-  "duration": "4.4s",
+  "timestamp": "2026-07-01T12:21:51.088Z",
+  "duration": "6.1s",
   "summary": {
-    "passed": 32,
-    "failed": 3,
-    "total": 35,
-    "successRate": 91
+    "passed": 42,
+    "failed": 0,
+    "total": 42,
+    "successRate": 100
   },
   "byCategory": {
     "API": {
-      "passed": 5,
+      "passed": 6,
       "total": 6,
-      "percentage": 83
+      "percentage": 100
     },
     "AUTH": {
       "passed": 4,
@@ -19,9 +19,9 @@
       "percentage": 100
     },
     "ADS": {
-      "passed": 0,
-      "total": 1,
-      "percentage": 0
+      "passed": 8,
+      "total": 8,
+      "percentage": 100
     },
     "ADMIN": {
       "passed": 7,
@@ -44,25 +44,12 @@
       "percentage": 100
     },
     "EDGE": {
-      "passed": 4,
+      "passed": 5,
       "total": 5,
-      "percentage": 80
+      "percentage": 100
     }
   },
-  "errors": [
-    {
-      "name": "[API] GET /stats",
-      "details": "supabase.rpc(...).catch is not a function"
-    },
-    {
-      "name": "[ADS] CREATE annuncio",
-      "details": "Could not find the 'images' column of 'ads' in the schema cache"
-    },
-    {
-      "name": "[EDGE] SQL Injection search",
-      "details": "Parametrizzato correttamente"
-    }
-  ],
+  "errors": [],
   "details": [
     {
       "category": "API",
@@ -74,13 +61,13 @@
       "category": "API",
       "name": "[API] GET /cities",
       "success": true,
-      "details": "20 città"
+      "details": "29 città"
     },
     {
       "category": "API",
       "name": "[API] GET /stats",
-      "success": false,
-      "details": "supabase.rpc(...).catch is not a function"
+      "success": true,
+      "details": "{\"totalAds\":0,\"premiumAds\":0,\"verifiedUsers\":5,\"citiesAvailable\":29,\"categoriesAvailable\":8}"
     },
     {
       "category": "API",
@@ -102,19 +89,19 @@
     },
     {
       "category": "AUTH",
-      "name": "[AUTH] Profilo Alessandro",
+      "name": "[AUTH] Profilo User1",
       "success": true,
       "details": "OK"
     },
     {
       "category": "AUTH",
-      "name": "[AUTH] Profilo Martina",
+      "name": "[AUTH] Profilo User2",
       "success": true,
       "details": "OK"
     },
     {
       "category": "AUTH",
-      "name": "[AUTH] Profilo Sofia",
+      "name": "[AUTH] Profilo Test",
       "success": true,
       "details": "OK"
     },
@@ -127,14 +114,56 @@
     {
       "category": "ADS",
       "name": "[ADS] CREATE annuncio",
-      "success": false,
-      "details": "Could not find the 'images' column of 'ads' in the schema cache"
+      "success": true,
+      "details": "ID: d6d3c894-e0cc-4da9-befb-6ee7089d74ec"
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] READ annuncio",
+      "success": true,
+      "details": "Titolo: Test Annuncio 1782908506568"
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] UPDATE annuncio (premium + sponsor)",
+      "success": true,
+      "details": ""
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] BOOST annuncio",
+      "success": true,
+      "details": ""
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] ADDON annuncio",
+      "success": true,
+      "details": "Addon: supertop"
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] SAVE CONTACT (rubrica)",
+      "success": true,
+      "details": ""
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] CREDIT TRANSACTION",
+      "success": true,
+      "details": ""
+    },
+    {
+      "category": "ADS",
+      "name": "[ADS] DELETE annuncio",
+      "success": true,
+      "details": ""
     },
     {
       "category": "ADMIN",
       "name": "[ADMIN] Lista utenti",
       "success": true,
-      "details": "4 utenti"
+      "details": "34 utenti"
     },
     {
       "category": "ADMIN",
@@ -152,7 +181,7 @@
       "category": "ADMIN",
       "name": "[ADMIN] Gestione città",
       "success": true,
-      "details": "20 città"
+      "details": "29 città"
     },
     {
       "category": "ADMIN",
@@ -164,13 +193,13 @@
       "category": "ADMIN",
       "name": "[ADMIN] CREATE categoria",
       "success": true,
-      "details": "Slug: test-categoria-1782861143747"
+      "details": "Slug: test-categoria-1782908507786"
     },
     {
       "category": "ADMIN",
       "name": "[ADMIN] CREATE città",
       "success": true,
-      "details": "Nome: Test City 1782861143880"
+      "details": "Nome: Test City 1782908507927"
     },
     {
       "category": "SEARCH",
@@ -182,7 +211,7 @@
       "category": "SEARCH",
       "name": "[SEARCH] Filtro città",
       "success": true,
-      "details": "2 risultati"
+      "details": "4 risultati"
     },
     {
       "category": "SEARCH",
@@ -259,8 +288,8 @@
     {
       "category": "EDGE",
       "name": "[EDGE] SQL Injection search",
-      "success": false,
-      "details": "Parametrizzato correttamente"
+      "success": true,
+      "details": "Bloccato da Cloudflare/WAF (Sicuro)"
     },
     {
       "category": "EDGE",

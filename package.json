@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.110.0",
     "dotenv": "^17.4.2",
     "express": "^4.22.2",
+    "stripe": "^14.14.0",
     "ws": "^8.21.0"
   }
 }
