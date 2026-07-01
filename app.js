@@ -4,12 +4,12 @@
    Chiama Supabase REST API direttamente (nessun SDK)
    ============================================================ */
 
-const SUPABASE_URL = 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
+const SUPABASE_URL = window.ENV?.SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
+const SUPABASE_ANON_KEY = window.ENV?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
 
 // Stripe — Chiave pubblicabile + Edge Function
-const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1';
-const EDGE_FUNCTION_URL = 'https://rdqsmfgpbuswzilgbjyr.functions.supabase.co';
+const STRIPE_PUBLISHABLE_KEY = window.ENV?.STRIPE_PUBLISHABLE_KEY || 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1';
+const EDGE_FUNCTION_URL = window.ENV?.EDGE_FUNCTION_URL || 'https://rdqsmfgpbuswzilgbjyr.functions.supabase.co';
 
 // ============================================================
 // SUPABASE HELPERS

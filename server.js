@@ -1,3 +1,8 @@
+try {
+  require('dotenv').config();
+} catch (e) {
+  console.log('dotenv not found, using environment variables or defaults');
+}
 const express = require('express');
 const path = require('path');
 const bcrypt = require('bcryptjs');
@@ -15,6 +20,26 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
+
+// Inject environment variables into HTML
+app.get('/index.html', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  let html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  
+  const envConfig = {
+    SUPABASE_URL: process.env.SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co',
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E',
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1',
+    EDGE_FUNCTION_URL: process.env.EDGE_FUNCTION_URL || 'https://rdqsmfgpbuswzilgbjyr.functions.supabase.co'
+  };
+  
+  const envScript = `window.ENV = ${JSON.stringify(envConfig)};`;
+  html = html.replace('<script id="env-config"></script>', `<script id="env-config">${envScript}</script>`);
+  
+  res.send(html);
+});
+
 app.all('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => {
   require('./api/stripe-webhook')(req, res);
 });
@@ -80,8 +105,8 @@ function _saveLocalDb() {
 // ============================================================
 // SUPABASE — Dati pubblici
 // ============================================================
-const SUPABASE_URL = 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
 
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
