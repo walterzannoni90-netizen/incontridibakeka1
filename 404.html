@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="IncontriDiBakeka — Il portale premium di annunci incontri. Escort, accompagnatori, coppie, trans e molto più. Esperienza esclusiva nella tua città.">
+  <meta name="theme-color" content="#0a0a1a">
+  
+  <title>IncontriDiBakeka 🔥 — Annunci Incontri Premium</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- AOS - Animate On Scroll -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  
+  <!-- Stripe JS -->
+  <script src="https://js.stripe.com/v3/"></script>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============================================================
+  PRELOADER
+  ============================================================ -->
+  <div id="preloader" class="preloader">
+    <div class="preloader-content">
+      <div class="preloader-logo">
+        <i class="fas fa-heart"></i>
+        <span>IncontriDiBakeka</span>
+      </div>
+      <div class="preloader-bar">
+        <div class="preloader-fill"></div>
+      </div>
+      <p class="preloader-text">Caricando esperienze premium...</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  NAVBAR
+  ============================================================ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <div class="navbar-inner">
+        <a href="/" class="navbar-brand">
+          <i class="fas fa-heart brand-icon"></i>
+          <span class="brand-text">Incontri<span class="brand-highlight">Di</span>Bakeka</span>
+        </a>
+
+        <div class="navbar-menu" id="navbarMenu">
+          <a href="#" class="nav-link active" data-section="home">Home</a>
+          <a href="#categories" class="nav-link" data-section="categories">Categorie</a>
+          <a href="#annunci" class="nav-link" data-section="ads">Annunci</a>
+          <a href="#stats" class="nav-link" data-section="stats">Numeri</a>
+          <a href="#vetrina" class="nav-link" data-section="vetrina">Vetrina</a>
+          
+          <div class="nav-actions">
+            <button class="btn btn-ghost" onclick="openSearch()">
+              <i class="fas fa-search"></i>
+            </button>
+            <div class="auth-buttons" id="authButtons">
+              <button class="btn btn-ghost" onclick="openLogin()">
+                <i class="fas fa-user"></i>
+                <span class="btn-text d-none d-md-inline">Accedi</span>
+              </button>
+              <button class="btn btn-primary" onclick="openRegister()">
+                <i class="fas fa-edit"></i>
+                <span class="btn-text">Registrati</span>
+              </button>
+            </div>
+            <div class="user-menu" id="userMenu" style="display:none;">
+              <button class="btn btn-ghost user-dropdown-toggle" onclick="toggleUserDropdown()">
+                <i class="fas fa-user-circle"></i>
+                <span class="user-name" id="userName">Utente</span>
+                <span id="adminBadge" style="display:none;background:var(--accent);color:#000;font-size:0.55rem;padding:1px 6px;border-radius:10px;font-weight:700;text-transform:uppercase;margin-left:4px">Admin</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="user-dropdown" id="userDropdown">
+                <div class="dropdown-header">
+                  <strong id="dropdownUserName">Utente</strong>
+                  <span id="dropdownUserEmail">email@example.com</span>
+                </div>
+                <div class="dropdown-body">
+                  <div class="dropdown-credits" onclick="userAction('credits')">
+                    <i class="fas fa-coins" style="color:var(--accent)"></i>
+                    <span id="userCredits">0 crediti</span>
+                  </div>
+                  <div class="dropdown-divider"></div>
+                  <a href="#" onclick="userAction('profile')"><i class="fas fa-id-card"></i> Il mio profilo</a>
+                  <a href="#" onclick="userAction('myads')"><i class="fas fa-list"></i> I miei annunci</a>
+                  <a href="#" onclick="userAction('contacts')"><i class="fas fa-bookmark"></i> Rubrica contatti</a>
+                  <a href="#" onclick="userAction('credits')"><i class="fas fa-shopping-cart"></i> Negozio addons</a>
+                  <a href="#" onclick="userAction('vetrina')"><i class="fas fa-crown"></i> Vetrina</a>
+                  <a href="#" onclick="userAction('settings')"><i class="fas fa-cog"></i> Impostazioni</a>
+                  <a href="#" onclick="userAction('support')"><i class="fas fa-headset"></i> Supporto</a>
+                  <a href="#" onclick="userAction('admin')" data-action="admin" style="display:none"><i class="fas fa-shield-alt"></i> Admin Panel</a>
+                  <div class="dropdown-divider"></div>
+                  <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Esci</a>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary d-none d-md-inline-flex" onclick="openPublish()">
+              <i class="fas fa-plus-circle"></i>
+              <span class="btn-text">Pubblica</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="navbar-mobile-actions">
+          <button class="btn btn-ghost" onclick="openSearch()">
+            <i class="fas fa-search"></i>
+          </button>
+          <button class="btn btn-ghost" onclick="openLogin()">
+            <i class="fas fa-user"></i>
+          </button>
+          <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============================================================
+  SEARCH OVERLAY
+  ============================================================ -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-overlay-content">
+      <button class="search-close" onclick="closeSearch()">&times;</button>
+      <h2 class="search-title">Cosa cerchi?</h2>
+      <div class="search-form">
+        <input type="text" id="searchInput" class="search-input" placeholder="Cerca per nome, città, categoria..." autofocus>
+        <button class="btn btn-primary btn-lg" onclick="performSearch()">
+          <i class="fas fa-search"></i> Cerca
+        </button>
+      </div>
+      <div class="search-tags">
+        <span class="search-tag" onclick="quickSearch('donna cerca uomo')">Donna cerca Uomo</span>
+        <span class="search-tag" onclick="quickSearch('uomo cerca donna')">Uomo cerca Donna</span>
+        <span class="search-tag" onclick="quickSearch('trans')">Trans</span>
+        <span class="search-tag" onclick="quickSearch('coppia')">Coppie</span>
+        <span class="search-tag" onclick="quickSearch('Napoli')">Napoli</span>
+        <span class="search-tag" onclick="quickSearch('Milano')">Milano</span>
+        <span class="search-tag" onclick="quickSearch('Roma')">Roma</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  PUBLISH MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="publishModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closePublish()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-feather-alt"></i>
+      </div>
+      <h2 class="modal-title">Pubblica il tuo annuncio</h2>
+      <form id="publishForm" onsubmit="submitAd(event)">
+        
+        <!-- Piano -->
+        <div class="form-group">
+          <label>Piano di pubblicazione</label>
+          <div class="plan-selector">
+            <label class="plan-option active" id="planFree" onclick="selectPublishPlan('free')">
+              <input type="radio" name="publishPlan" value="free" checked hidden>
+              <i class="fas fa-star"></i>
+              <strong>Gratis</strong>
+              <small>1 foto • Base</small>
+            </label>
+            <label class="plan-option" id="planPremium" onclick="selectPublishPlan('premium')">
+              <input type="radio" name="publishPlan" value="premium" hidden>
+              <i class="fas fa-crown"></i>
+              <strong>Premium €4.95</strong>
+              <small>5 foto • In Vetrina</small>
+            </label>
+            <label class="plan-option" id="planGold" onclick="selectPublishPlan('gold')">
+              <input type="radio" name="publishPlan" value="gold" hidden>
+              <i class="fas fa-gem"></i>
+              <strong>Gold €19.95</strong>
+              <small>10 foto • TOP 7gg</small>
+            </label>
+          </div>
+        </div>
+
+        <!-- Foto upload -->
+        <div class="form-group" id="photoUploadGroup">
+          <label>Foto <span id="photoLimit">(max 1)</span></label>
+          <div class="upload-zone" id="uploadZone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Trascina qui le tue foto o <a href="#" onclick="document.getElementById('fileInput').click();return false">clicca per caricare</a></p>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handleFiles(this.files)">
+          </div>
+          <div class="photo-preview" id="photoPreview"></div>
+        </div>
+
+        <!-- Dati annuncio -->
+        <div class="form-group">
+          <label>Titolo</label>
+          <input type="text" id="adTitle" class="form-control" placeholder="Es. Bella ragazza cerca..." required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="adCategory" class="form-control">
+              <option value="donna-cerca-uomo">Donna cerca Uomo</option>
+              <option value="uomo-cerca-donna">Uomo cerca Donna</option>
+              <option value="uomo-cerca-uomo">Uomo cerca Uomo</option>
+              <option value="donna-cerca-donna">Donna cerca Donna</option>
+              <option value="coppie">Coppie</option>
+              <option value="trans">Trans</option>
+              <option value="cerco-amici">Cerco Amici</option>
+              <option value="anima-gemella">Anima Gemella</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Città</label>
+            <input type="text" id="adCity" class="form-control" placeholder="La tua città" list="cityList">
+            <datalist id="cityList"></datalist>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Età</label>
+            <input type="number" id="adAge" class="form-control" placeholder="25" min="18" max="99">
+          </div>
+          <div class="form-group">
+            <label>Genere</label>
+            <select id="adGender" class="form-control">
+              <option value="donna">Donna</option>
+              <option value="uomo">Uomo</option>
+              <option value="coppia">Coppia</option>
+              <option value="trans">Trans</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descrizione</label>
+          <textarea id="adDescription" class="form-control" rows="4" placeholder="Chi sei? Cosa cerchi?..." required></textarea>
+        </div>
+
+        <!-- Prezzo (opzionale) -->
+        <div class="form-group">
+          <label>Prezzo (opzionale)</label>
+          <input type="text" id="adPrice" class="form-control" placeholder="Es. 100€/h o lascia vuoto">
+        </div>
+
+        <div class="form-group">
+          <label>Classificazione foto</label>
+          <select id="adPhotoClass" class="form-control">
+            <option value="safe">Safe</option>
+            <option value="hot">Hot</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+
+        <div id="publishError" style="color:#ef4444;font-size:0.85rem;margin-bottom:0.75rem;display:none"></div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="publishBtn">
+          <i class="fas fa-paper-plane"></i> Pubblica annuncio
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  LOGIN MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-content auth-modal-content">
+      <button class="modal-close" onclick="closeLogin()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-user-circle"></i>
+      </div>
+      <h2 class="modal-title">Bentornato! <span class="gradient-text">Accedi</span></h2>
+      <p class="modal-subtitle">Inserisci le tue credenziali per continuare</p>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label><i class="fas fa-envelope"></i> Email</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="tua@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Password</label>
+          <div class="password-field">
+            <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-row-actions">
+          <label class="checkbox-label">
+            <input type="checkbox" id="loginRemember">
+            <span>Ricordami</span>
+          </label>
+          <a href="#" class="forgot-link" onclick="alert('Funzionalità di reset password in arrivo!'); return false;">Password dimenticata?</a>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+          <i class="fas fa-sign-in-alt"></i> Accedi
+        </button>
+        <div id="loginError" class="form-error"></div>
+      </form>
+
+      <div class="auth-social">
+        <p class="auth-divider"><span>oppure accedi con</span></p>
+        <div class="social-buttons">
+          <button class="btn btn-social btn-google" onclick="socialLogin('google')">
+            <i class="fab fa-google"></i>
+          </button>
+          <button class="btn btn-social btn-facebook" onclick="socialLogin('facebook')">
+            <i class="fab fa-facebook-f"></i>
+          </button>
+          <button class="btn btn-social btn-apple" onclick="socialLogin('apple')">
+            <i class="fab fa-apple"></i>
+          </button>
+          <button class="btn btn-social btn-telegram" onclick="socialLogin('telegram')">
+            <i class="fab fa-telegram-plane"></i>
+          </button>
+        </div>
+      </div>
+
+      <p class="auth-switch">
+        Non hai un account? <a href="#" onclick="closeLogin(); openRegister(); return false;">Registrati ora</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  REGISTER MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="registerModal">
+    <div class="modal-content auth-modal-content">
+      <button class="modal-close" onclick="closeRegister()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-feather-alt"></i>
+      </div>
+      <h2 class="modal-title">Crea il tuo <span class="gradient-text">account</span></h2>
+      <p class="modal-subtitle">Unisciti alla community premium di IncontriDiBakeka</p>
+
+      <form id="registerForm" onsubmit="handleRegister(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fas fa-user"></i> Nome *</label>
+            <input type="text" id="regName" class="form-control" placeholder="Il tuo nome" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-user"></i> Cognome</label>
+            <input type="text" id="regSurname" class="form-control" placeholder="Il tuo cognome">
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-envelope"></i> Email *</label>
+          <input type="email" id="regEmail" class="form-control" placeholder="tua@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Password *</label>
+          <div class="password-field">
+            <input type="password" id="regPassword" class="form-control" placeholder="Crea una password sicura" required autocomplete="new-password">
+            <button type="button" class="password-toggle" onclick="togglePassword('regPassword', this)">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+          <div class="password-strength" id="passwordStrength">
+            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+            <span class="strength-text" id="strengthText">Inserisci una password</span>
+          </div>
+          <ul class="password-rules">
+            <li id="ruleLength"><i class="fas fa-circle"></i> Almeno 8 caratteri</li>
+            <li id="ruleLower"><i class="fas fa-circle"></i> Una lettera minuscola</li>
+            <li id="ruleUpper"><i class="fas fa-circle"></i> Una lettera MAIUSCOLA</li>
+            <li id="ruleNumber"><i class="fas fa-circle"></i> Un numero</li>
+          </ul>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fas fa-city"></i> Città</label>
+            <select id="regCity" class="form-control">
+              <option value="">Seleziona città</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-user-tag"></i> Tipologia utente</label>
+            <select id="regRole" class="form-control">
+              <option value="user">Cerco Annunci (End User)</option>
+              <option value="advertiser">Pubblico Annunci (Advertiser)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-venus-mars"></i> Genere</label>
+            <select id="regGender" class="form-control">
+              <option value="">Seleziona</option>
+              <option value="donna">Donna</option>
+              <option value="uomo">Uomo</option>
+              <option value="coppia">Coppia</option>
+              <option value="trans">Trans</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-calendar-alt"></i> Data di nascita *</label>
+          <input type="date" id="regBirthDate" class="form-control" required>
+          <small style="color:var(--text-muted);font-size:0.7rem;margin-top:4px;display:block">Devi essere maggiorenne per registrarti</small>
+        </div>
+        <div class="form-group">
+          <label><i class="fab fa-whatsapp"></i> Whatsapp / Telefono (opzionale)</label>
+          <div style="display:flex;gap:8px">
+            <select id="regPhonePrefix" class="form-control" style="max-width:120px;flex-shrink:0">
+              <option value="+39">🇮🇹 +39</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+55">🇧🇷 +55</option>
+              <option value="+54">🇦🇷 +54</option>
+              <option value="+57">🇨🇴 +57</option>
+              <option value="+56">🇨🇱 +56</option>
+              <option value="+51">🇵🇪 +51</option>
+              <option value="+48">🇵🇱 +48</option>
+              <option value="+40">🇷🇴 +40</option>
+              <option value="+7">🇷🇺 +7</option>
+              <option value="+86">🇨🇳 +86</option>
+              <option value="+81">🇯🇵 +81</option>
+              <option value="+351">🇵🇹 +351</option>
+              <option value="+30">🇬🇷 +30</option>
+              <option value="+90">🇹🇷 +90</option>
+              <option value="+381">🇷🇸 +381</option>
+              <option value="+385">🇭🇷 +385</option>
+              <option value="+43">🇦🇹 +43</option>
+              <option value="+41">🇨🇭 +41</option>
+              <option value="+32">🇧🇪 +32</option>
+              <option value="+31">🇳🇱 +31</option>
+              <option value="+46">🇸🇪 +46</option>
+              <option value="+47">🇳🇴 +47</option>
+              <option value="+45">🇩🇰 +45</option>
+              <option value="+358">🇫🇮 +358</option>
+              <option value="+353">🇮🇪 +353</option>
+              <option value="+61">🇦🇺 +61</option>
+              <option value="+852">🇭🇰 +852</option>
+              <option value="+82">🇰🇷 +82</option>
+              <option value="+65">🇸🇬 +65</option>
+              <option value="+971">🇦🇪 +971</option>
+              <option value="+966">🇸🇦 +966</option>
+              <option value="+972">🇮🇱 +972</option>
+              <option value="+212">🇲🇦 +212</option>
+              <option value="+216">🇹🇳 +216</option>
+              <option value="+213">🇩🇿 +213</option>
+              <option value="+20">🇪🇬 +20</option>
+            </select>
+            <input type="tel" id="regPhone" class="form-control" placeholder="Numero Whatsapp">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="regAcceptTerms" required>
+            <span>Accetto i <a href="#" class="terms-link">Termini e Condizioni</a> e la <a href="#" class="terms-link">Privacy Policy</a>. Dichiaro di essere maggiorenne. *</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
+          <i class="fas fa-feather-alt"></i> Crea Account
+        </button>
+        <div id="registerError" class="form-error"></div>
+      </form>
+
+      <div class="auth-social">
+        <p class="auth-divider"><span>oppure registrati con</span></p>
+        <div class="social-buttons">
+          <button class="btn btn-social btn-google" onclick="socialLogin('google')">
+            <i class="fab fa-google"></i>
+          </button>
+          <button class="btn btn-social btn-facebook" onclick="socialLogin('facebook')">
+            <i class="fab fa-facebook-f"></i>
+          </button>
+          <button class="btn btn-social btn-apple" onclick="socialLogin('apple')">
+            <i class="fab fa-apple"></i>
+          </button>
+        </div>
+      </div>
+
+      <p class="auth-switch">
+        Hai già un account? <a href="#" onclick="closeRegister(); openLogin(); return false;">Accedi ora</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  SPONSOR MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="sponsorModal">
+    <div class="modal-content sponsor-modal-content">
+      <button class="modal-close" onclick="closeSponsor()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-crown"></i>
+      </div>
+      <h2 class="modal-title">Sponsorizza il tuo annuncio</h2>
+      <p class="modal-subtitle">Scegli l'annuncio da mettere in vetrina</p>
+      
+      <div class="sponsor-progress">
+        <div class="sponsor-step active" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-label">Annuncio</div>
+        </div>
+        <div class="sponsor-step" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-label">Piano</div>
+        </div>
+        <div class="sponsor-step" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-label">Pagamento</div>
+        </div>
+        <div class="sponsor-step" data-step="4">
+          <div class="step-number">4</div>
+          <div class="step-label">Conferma</div>
+        </div>
+      </div>
+
+      <!-- Step 1: Seleziona Annuncio -->
+      <div class="sponsor-step-content" id="sponsorStep1">
+        <p style="color: var(--text-secondary); margin-bottom: 1rem; text-align: center;">Seleziona quale annuncio vuoi sponsorizzare:</p>
+        <div class="sponsor-ads-list" id="sponsorAdsList">
+          <!-- Generated by JS -->
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; margin-top: 1rem;">
+          <i class="fas fa-info-circle"></i> Non hai ancora pubblicato un annuncio? <a href="#" onclick="closeSponsor(); openPublish(); return false;" style="color: var(--primary-light);">Pubblica ora</a>
+        </p>
+      </div>
+
+      <!-- Step 2: Riepilogo Piano -->
+      <div class="sponsor-step-content" id="sponsorStep2" style="display: none;">
+        <div class="sponsor-summary" id="sponsorSummary">
+          <!-- Generated by JS -->
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="nextSponsorStep(3)" style="margin-top: 1.5rem;">
+          <i class="fas fa-credit-card"></i> Procedi al pagamento
+        </button>
+      </div>
+
+      <!-- Step 3: Pagamento -->
+      <div class="sponsor-step-content" id="sponsorStep3" style="display: none;">
+        <div class="payment-methods">
+          <div class="payment-method active" onclick="selectPayment(this, 'card')">
+            <i class="fas fa-credit-card"></i>
+            <span>Carta di Credito</span>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this, 'paypal')">
+            <i class="fab fa-paypal"></i>
+            <span>PayPal</span>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this, 'satispay')">
+            <i class="fas fa-mobile-alt"></i>
+            <span>Satispay</span>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this, 'crypto')">
+            <i class="fas fa-coins"></i>
+            <span>Crypto</span>
+          </div>
+        </div>
+        <div class="payment-form">
+          <div class="form-group">
+            <label>Numero Carta</label>
+            <input type="text" class="form-control" placeholder="1234 5678 9012 3456" maxlength="19">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Scadenza</label>
+              <input type="text" class="form-control" placeholder="MM/AA">
+            </div>
+            <div class="form-group">
+              <label>CVV</label>
+              <input type="text" class="form-control" placeholder="123">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Intestatario</label>
+            <input type="text" class="form-control" placeholder="Mario Rossi">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="nextSponsorStep(4)" style="margin-top: 1rem;">
+          <i class="fas fa-lock"></i> Paga €<span id="sponsorPayAmount">4.95</span>
+        </button>
+        <p style="color: var(--text-muted); font-size: 0.75rem; text-align: center; margin-top: 0.8rem;">
+          <i class="fas fa-lock"></i> Pagamento sicuro • Crittografia SSL
+        </p>
+      </div>
+
+      <!-- Step 4: Conferma -->
+      <div class="sponsor-step-content" id="sponsorStep4" style="display: none;">
+        <div class="sponsor-confirm">
+          <div class="confirm-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h3>Pagamento confermato! 🎉</h3>
+          <p>Il tuo annuncio è ora in vetrina.</p>
+          <div class="confirm-details" id="confirmDetails"></div>
+          <button class="btn btn-primary btn-lg" onclick="closeSponsor()">
+            <i class="fas fa-check"></i> Perfetto!
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  SHOP MODAL — CREDITI E ADDONS
+  ============================================================ -->
+  <div class="modal-overlay" id="shopModal">
+    <div class="modal-content shop-modal-content">
+      <button class="modal-close" onclick="closeShop()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-shopping-bag"></i>
+      </div>
+      <h2 class="modal-title">Negozio</h2>
+      <p class="modal-subtitle">Acquista crediti e potenzia i tuoi annunci</p>
+      <div id="shopContent" style="margin-top:24px">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  ADDON PURCHASE MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="addonPurchaseModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeAddonPurchase()">&times;</button>
+      <h2 class="modal-title">Scegli l'annuncio</h2>
+      <p class="modal-subtitle">Su quale annuncio vuoi applicare questo addon?</p>
+      <div id="addonAdsList" style="margin-top:16px">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  SUPPORT MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="supportModal">
+    <div class="modal-content" style="max-width:500px">
+      <button class="modal-close" onclick="closeSupport()">&times;</button>
+      <div class="modal-icon">
+        <i class="fas fa-headset"></i>
+      </div>
+      <h2 class="modal-title">Supporto</h2>
+      <p class="modal-subtitle">Invia un messaggio all'amministratore</p>
+      <form onsubmit="sendSupportMessage(event)" style="margin-top:20px">
+        <div class="form-group">
+          <label>La tua email</label>
+          <input type="email" id="supportEmail" class="form-control" placeholder="tua@email.com">
+        </div>
+        <div class="form-group">
+          <label>Messaggio</label>
+          <textarea id="supportMessage" class="form-control" rows="5" placeholder="Descrivi il tuo problema..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="supportBtn">
+          <i class="fas fa-paper-plane"></i> Invia messaggio
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  HERO SECTION
+  ============================================================ -->
+  <section class="hero home-section" id="home">
+    <div class="hero-bg">
+      <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1920&h=1080&fit=crop&auto=format&q=80" 
+           alt="" class="hero-bg-image" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.3;">
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg, rgba(10,10,26,0.95) 0%, rgba(10,10,26,0.7) 50%, rgba(10,10,26,0.95) 100%);"></div>
+    </div>
+    <div class="hero-particles" id="particles"></div>
+    
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge" data-aos="fade-up" data-aos-delay="100">
+          <i class="fas fa-crown"></i>
+          <span>Portale Incontri Premium #1 in Italia</span>
+        </div>
+        
+        <h1 class="hero-title" data-aos="fade-up" data-aos-delay="200">
+          Il tuo <span class="gradient-text">desiderio</span><br>
+          la nostra <span class="gradient-text">passione</span>
+        </h1>
+        
+        <p class="hero-subtitle" data-aos="fade-up" data-aos-delay="300">
+          Scopri annunci esclusivi nella tua città. Persone reali, esperienze autentiche,<br class="d-none d-md-block">
+          discrezione assoluta. Benvenuto nell'élite degli incontri.
+        </p>
+
+        <div class="hero-actions" data-aos="fade-up" data-aos-delay="400">
+          <button class="btn btn-primary btn-lg" onclick="openSearch()">
+            <i class="fas fa-search"></i> Esplora Annunci
+          </button>
+          <button class="btn btn-outline btn-lg" onclick="openPublish()">
+            <i class="fas fa-plus-circle"></i> Pubblica Gratis
+          </button>
+        </div>
+
+        <div class="hero-stats" data-aos="fade-up" data-aos-delay="500">
+          <div class="hero-stat">
+            <span class="hero-stat-number" id="statAds">0</span>
+            <span class="hero-stat-label">Annunci Attivi</span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat-number" id="statPremium">0</span>
+            <span class="hero-stat-label">Annunci Premium</span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat-number" id="statCities">0</span>
+            <span class="hero-stat-label">Città</span>
+          </div>
+          <div class="hero-stat-divider"></div>
+          <div class="hero-stat">
+            <span class="hero-stat-number" id="statVerified">0</span>
+            <span class="hero-stat-label">Verificati</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-scroll">
+      <span>Scorri per scoprire</span>
+      <i class="fas fa-chevron-down"></i>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  CATEGORIES SECTION
+  ============================================================ -->
+  <section class="section categories-section home-section" id="categories">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge">Categorie</span>
+        <h2 class="section-title">Scegli la tua <span class="gradient-text">passione</span></h2>
+        <p class="section-desc">Ogni desiderio ha la sua categoria. Trova quella che fa per te.</p>
+      </div>
+
+      <div class="categories-grid" id="categoriesGrid">
+        <!-- Generate by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  FEATURED ADS SECTION
+  ============================================================ -->
+  <section class="section ads-section home-section" id="annunci">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge">In Evidenza</span>
+        <h2 class="section-title">Annunci <span class="gradient-text">Premium</span></h2>
+        <p class="section-desc">I migliori profili selezionati per te. Esperienze esclusive garantite.</p>
+      </div>
+
+      <div class="ads-filters" data-aos="fade-up">
+        <button class="filter-btn active" data-filter="all">Tutti</button>
+        <button class="filter-btn" data-filter="donna-cerca-uomo">Donna cerca Uomo</button>
+        <button class="filter-btn" data-filter="uomo-cerca-donna">Uomo cerca Donna</button>
+        <button class="filter-btn" data-filter="donna-cerca-donna">Donna cerca Donna</button>
+        <button class="filter-btn" data-filter="uomo-cerca-uomo">Uomo cerca Uomo</button>
+        <button class="filter-btn" data-filter="coppie">Coppie</button>
+        <button class="filter-btn" data-filter="trans">Trans</button>
+        <button class="filter-btn" data-filter="cerco-amici">Cerco Amici</button>
+        <button class="filter-btn" data-filter="anima-gemella">Anima Gemella</button>
+      </div>
+
+      <div class="ads-grid" id="adsGrid">
+        <!-- Generate by JS -->
+      </div>
+
+      <div class="section-footer" data-aos="fade-up">
+        <button class="btn btn-outline btn-lg" onclick="openSearch()">
+          <i class="fas fa-search"></i> Vedi tutti gli annunci
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  STATS SECTION
+  ============================================================ -->
+  <section class="section stats-section home-section" id="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="0">
+          <div class="stat-icon"><i class="fas fa-heart"></i></div>
+          <div class="stat-number" data-target="15000">0</div>
+          <div class="stat-label">Incontri Riusciti</div>
+        </div>
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+          <div class="stat-number" data-target="8920">0</div>
+          <div class="stat-label">Utenti Verificati</div>
+        </div>
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="stat-icon"><i class="fas fa-city"></i></div>
+          <div class="stat-number" data-target="105">0</div>
+          <div class="stat-label">Città Coperte</div>
+        </div>
+        <div class="stat-card" data-aos="fade-up" data-aos-delay="300">
+          <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+          <div class="stat-number" data-target="100">0</div>
+          <div class="stat-label">Discrezione Garantita</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  FEATURES SECTION
+  ============================================================ -->
+  <section class="section features-section home-section">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge">Perché Noi</span>
+        <h2 class="section-title">Un'esperienza <span class="gradient-text">superiore</span></h2>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="0">
+          <div class="feature-icon"><i class="fas fa-shield-haltered"></i></div>
+          <h3>Discrezione Totale</h3>
+          <p>Privacy garantita con crittografia end-to-end e dati protetti. Nessuna informazione condivisa senza il tuo consenso.</p>
+        </div>
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
+          <div class="feature-icon"><i class="fas fa-badge-check"></i></div>
+          <h3>Profili Verificati</h3>
+          <p>Tutti gli utenti sono verificati con documento d'identità. Niente fake, solo persone reali per esperienze autentiche.</p>
+        </div>
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+          <div class="feature-icon"><i class="fas fa-gem"></i></div>
+          <h3>Annunci Premium</h3>
+          <p>Profili esclusivi con foto in alta qualità, video presentazioni e dettagli verificati per un'esperienza di alto livello.</p>
+        </div>
+        <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
+          <div class="feature-icon"><i class="fas fa-headset"></i></div>
+          <h3>Supporto 24/7</h3>
+          <p>Assistenza clienti sempre disponibile. Team di professionisti pronti ad aiutarti in qualsiasi momento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  VETRINA — SPONSORIZZAZIONE ANNUNCI
+  ============================================================ -->
+  <section class="section vetrina-section home-section" id="vetrina">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge">Sponsorizzazione</span>
+        <h2 class="section-title">Metti il tuo annuncio in <span class="gradient-text">vetrina</span></h2>
+        <p class="section-desc">Fai vedere il tuo annuncio a più persone! Scegli la durata e spicca tra gli altri con la sponsorizzazione premium.</p>
+      </div>
+
+      <!-- Vantaggi Vetrina -->
+      <div class="vetrina-benefits" data-aos="fade-up">
+        <div class="benefit-item">
+          <i class="fas fa-star"></i>
+          <span>In prima pagina</span>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-bolt"></i>
+          <span>Più visualizzazioni</span>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-badge-check"></i>
+          <span>Badge Premium</span>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-tag"></i>
+          <span>Tag personalizzati</span>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-chart-line"></i>
+          <span>Statistiche in tempo reale</span>
+        </div>
+        <div class="benefit-item">
+          <i class="fas fa-phone"></i>
+          <span>Contatto diretto</span>
+        </div>
+      </div>
+
+      <!-- Pricing Cards -->
+      <div class="vetrina-pricing" data-aos="fade-up" data-aos-delay="100">
+        
+        <!-- Piano 1 giorno -->
+        <div class="pricing-card" data-plan="1day" onclick="selectPlan('1day')">
+          <div class="pricing-badge">BASE</div>
+          <div class="pricing-icon">
+            <i class="fas fa-sun"></i>
+          </div>
+          <h3 class="pricing-name">Vetrina Express</h3>
+          <div class="pricing-duration">1 Giorno</div>
+          <div class="pricing-price">
+            <span class="price">€4,<span class="price-dec">95</span></span>
+          </div>
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> Annuncio in prima pagina</li>
+            <li><i class="fas fa-check"></i> Badge "In Vetrina"</li>
+            <li><i class="fas fa-check"></i> Priorità nei risultati</li>
+            <li><i class="fas fa-check"></i> +300% visualizzazioni</li>
+            <li class="no"><i class="fas fa-times"></i> Tag personalizzati</li>
+            <li class="no"><i class="fas fa-times"></i> Statistiche avanzate</li>
+          </ul>
+          <button class="btn btn-outline btn-block" onclick="openSponsor('1day')">
+            <i class="fas fa-crown"></i> Sponsorizza ora
+          </button>
+        </div>
+
+        <!-- Piano 3 giorni -->
+        <div class="pricing-card popular" data-plan="3days" onclick="selectPlan('3days')">
+          <div class="pricing-badge popular-badge">PIÙ SCELTO</div>
+          <div class="pricing-icon">
+            <i class="fas fa-fire"></i>
+          </div>
+          <h3 class="pricing-name">Vetrina Plus</h3>
+          <div class="pricing-duration">3 Giorni</div>
+          <div class="pricing-price">
+            <span class="price">€9,<span class="price-dec">95</span></span>
+            <span class="price-old">€14,85</span>
+          </div>
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> Annuncio in prima pagina</li>
+            <li><i class="fas fa-check"></i> Badge "In Vetrina"</li>
+            <li><i class="fas fa-check"></i> Priorità nei risultati</li>
+            <li><i class="fas fa-check"></i> +500% visualizzazioni</li>
+            <li><i class="fas fa-check"></i> Tag personalizzati</li>
+            <li class="no"><i class="fas fa-times"></i> Statistiche avanzate</li>
+          </ul>
+          <button class="btn btn-primary btn-block" onclick="openSponsor('3days')">
+            <i class="fas fa-crown"></i> Sponsorizza ora
+          </button>
+        </div>
+
+        <!-- Piano 7 giorni -->
+        <div class="pricing-card" data-plan="7days" onclick="selectPlan('7days')">
+          <div class="pricing-badge">PREMIUM</div>
+          <div class="pricing-icon">
+            <i class="fas fa-gem"></i>
+          </div>
+          <h3 class="pricing-name">Vetrina Premium</h3>
+          <div class="pricing-duration">7 Giorni</div>
+          <div class="pricing-price">
+            <span class="price">€19,<span class="price-dec">95</span></span>
+            <span class="price-old">€34,65</span>
+          </div>
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> Annuncio in prima pagina</li>
+            <li><i class="fas fa-check"></i> Badge "In Vetrina"</li>
+            <li><i class="fas fa-check"></i> Priorità nei risultati</li>
+            <li><i class="fas fa-check"></i> +800% visualizzazioni</li>
+            <li><i class="fas fa-check"></i> Tag personalizzati</li>
+            <li><i class="fas fa-check"></i> Statistiche avanzate</li>
+          </ul>
+          <button class="btn btn-outline btn-block" onclick="openSponsor('7days')">
+            <i class="fas fa-crown"></i> Sponsorizza ora
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Extra: Piano Gold Mensile -->
+      <div class="vetrina-gold" data-aos="fade-up" data-aos-delay="200">
+        <div class="gold-card">
+          <div class="gold-content">
+            <div class="gold-badge"><i class="fas fa-crown"></i> TOP</div>
+            <h3>Vetrina Gold — 30 Giorni</h3>
+            <p>La massima esposizione possibile. Il tuo annuncio sempre in cima, 24 ore su 24, per un mese intero.</p>
+            <div class="gold-price">
+              <span class="price">€49,<span class="price-dec">95</span></span>
+              <span class="price-old">€99,90</span>
+              <span class="price-save">Risparmi il 50%!</span>
+            </div>
+            <button class="btn btn-primary btn-lg" onclick="openSponsor('30days')">
+              <i class="fas fa-crown"></i> Scegli Gold
+            </button>
+          </div>
+          <div class="gold-features">
+            <div class="gold-feature"><i class="fas fa-check-circle"></i> Annuncio sempre in prima posizione</div>
+            <div class="gold-feature"><i class="fas fa-check-circle"></i> Badge Gold esclusivo</div>
+            <div class="gold-feature"><i class="fas fa-check-circle"></i> Tag personalizzati illimitati</div>
+            <div class="gold-feature"><i class="fas fa-check-circle"></i> Statistiche avanzate e report</div>
+            <div class="gold-feature"><i class="fas fa-check-circle"></i> Supporto premium prioritario</div>
+            <div class="gold-feature"><i class="fas fa-check-circle"></i> Foto e video in evidenza</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonianze -->
+      <div class="vetrina-testimonials" data-aos="fade-up">
+        <div class="section-header" style="margin-bottom: 30px;">
+          <span class="section-badge">Cosa dicono</span>
+          <h2 class="section-title" style="font-size: 1.8rem;">Chi ha scelto la <span class="gradient-text">Vetrina</span></h2>
+        </div>
+        <div class="testimonials-grid">
+          <div class="testimonial-card">
+            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+            <p class="testimonial-text">"Ho scelto la Vetrina Plus per 3 giorni e ho ricevuto più di 50 messaggi in 48 ore! Mai avuto così tante richieste. Vale ogni centesimo!"</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">S</div>
+              <div>
+                <strong>Sofia</strong>
+                <span>Napoli • Vetrina Plus</span>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+            <p class="testimonial-text">"Con la Vetrina Premium il mio annuncio era sempre tra i primi risultati. La qualità dei contatti è aumentata tantissimo. Consigliatissimo!"</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">A</div>
+              <div>
+                <strong>Alessandro</strong>
+                <span>Milano • Vetrina Premium</span>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+            <p class="testimonial-text">"Il piano Gold mensile è la scelta migliore per chi vuole continuità. Il mio annuncio è sempre in prima pagina e ricevo contatti ogni giorno."</p>
+            <div class="testimonial-author">
+              <div class="testimonial-avatar">M</div>
+              <div>
+                <strong>Martina</strong>
+                <span>Roma • Vetrina Gold</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+  CITIES SECTION
+  ============================================================ -->
+  <section class="section cities-section home-section">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge">Città</span>
+        <h2 class="section-title">Trova annunci nella tua <span class="gradient-text">città</span></h2>
+      </div>
+
+      <div class="cities-grid" id="citiesGrid">
+        <!-- Generate by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  CTA SECTION
+  ============================================================ -->
+  <section class="cta-section home-section">
+    <div class="container">
+      <div class="cta-card" data-aos="fade-up">
+        <div class="cta-content">
+          <h2 class="cta-title">Pronto per <span class="gradient-text">incontrare</span> qualcuno di speciale?</h2>
+          <p class="cta-text">Pubblica il tuo annuncio gratis e inizia subito a ricevere messaggi. La tua prossima esperienza ti aspetta.</p>
+          <div class="cta-actions">
+            <button class="btn btn-primary btn-lg" onclick="openPublish()">
+              <i class="fas fa-feather-alt"></i> Pubblica Annuncio
+            </button>
+            <button class="btn btn-outline btn-lg" onclick="openSearch()">
+              <i class="fas fa-search"></i> Esplora
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  CATEGORY PAGE
+  ============================================================ -->
+  <section class="section page-section" id="categoryPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text" id="pageTitle"></h1>
+      <div class="ads-grid" id="categoryAdsGrid" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  ADMIN PAGE
+  ============================================================ -->
+  <section class="section page-section" id="adminPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text"><i class="fas fa-shield-alt"></i> Admin Panel</h1>
+      <div class="admin-tabs" id="adminNav"></div>
+      <div id="adminContent" style="margin-top:24px">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  AD DETAIL PAGE
+  ============================================================ -->
+  <section class="section page-section" id="adDetailPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Indietro</button>
+      </div>
+      <div id="adDetailContent"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  PROFILE PAGE
+  ============================================================ -->
+  <section class="section page-section" id="profilePage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text">Il Mio Profilo</h1>
+      <div id="profileContent" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  MY ADS PAGE
+  ============================================================ -->
+  <section class="section page-section" id="myAdsPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+        <button class="btn btn-primary" onclick="openPublish()" style="float:right"><i class="fas fa-plus"></i> Nuovo annuncio</button>
+      </div>
+      <h1 class="section-title gradient-text">I Miei Annunci</h1>
+      <div class="ads-grid" id="myAdsContent" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  CONTACTS PAGE (Rubrica)
+  ============================================================ -->
+  <section class="section page-section" id="contactsPage" style="display:none;padding-top:120px">
+    <div class="container">
+      <div style="margin-bottom:24px">
+        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
+      </div>
+      <h1 class="section-title gradient-text">Rubrica Contatti</h1>
+      <div class="ads-grid" id="contactsContent" style="margin-top:24px"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  FOOTER
+  ============================================================ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="footer-logo">
+            <i class="fas fa-heart"></i>
+            <span>IncontriDiBakeka</span>
+          </a>
+          <p>Il portale premium di annunci incontri in Italia. Esperienze autentiche, persone reali, discrezione assoluta.</p>
+          <div class="footer-social">
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-telegram"></i></a>
+            <a href="#"><i class="fab fa-whatsapp"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+          </div>
+        </div>
+        <div class="footer-links">
+          <h4>Categorie</h4>
+          <a href="#">Donna Cerca Uomo</a>
+          <a href="#">Uomo Cerca Donna</a>
+          <a href="#">Uomo Cerca Uomo</a>
+          <a href="#">Donna Cerca Donna</a>
+          <a href="#">Coppie</a>
+          <a href="#">Trans</a>
+        </div>
+        <div class="footer-links">
+          <h4>Città</h4>
+          <a href="#">Napoli</a>
+          <a href="#">Roma</a>
+          <a href="#">Milano</a>
+          <a href="#">Torino</a>
+          <a href="#">Firenze</a>
+          <a href="#">Bologna</a>
+        </div>
+        <div class="footer-links">
+          <h4>Info</h4>
+          <a href="#">Termini e Condizioni</a>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Cookie Policy</a>
+          <a href="#">Contattaci</a>
+          <a href="#">FAQ</a>
+          <a href="#vetrina" onclick="closeSponsor()">Promuovi Annuncio</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 IncontriDiBakeka — Tutti i diritti riservati. Make Love, Not War ❤️</p>
+        <p class="footer-disclaimer">Portale per adulti. Vietato ai minori di 18 anni.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================================
+  SCRIPTS
+  ============================================================ -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
