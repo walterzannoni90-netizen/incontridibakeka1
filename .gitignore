@@ -1,9 +1,4 @@
 node_modules/
-package-lock.json
-server.log
-.DS_Store
-*.log
+database/
 .env
-database.sqlite
-database.sqlite-wal
-database.sqlite-shm
+*.log
