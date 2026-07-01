@@ -7,8 +7,9 @@
 const SUPABASE_URL = 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
 
-// Stripe — Chiave pubblicabile
+// Stripe — Chiave pubblicabile + Edge Function
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1';
+const EDGE_FUNCTION_URL = 'https://rdqsmfgpbuswzilgbjyr.functions.supabase.co';
 
 // ============================================================
 // SUPABASE HELPERS
@@ -388,6 +389,7 @@ async function initAuth() {
         surname: prof.surname || '', email: data.email || prof.email || '',
         city: prof.city || '', credits: prof.credits || 0,
         isVerified: !!prof.is_verified, isPremium: !!prof.is_premium,
+        role: prof.role || 'user',
         isAdmin: isAdmin(data.email || prof.email || '')
       };
       updateUIForLoggedUser();
@@ -465,7 +467,7 @@ async function handleLogin(e) {
     const p = await sbGet('profiles', `select=*&id=eq.${data.user.id}`, data.access_token);
     const prof = p?.[0] || {};
     const userEmail = data.user.email || prof.email || '';
-    currentUser = { id: data.user.id, name: prof.name || '', surname: prof.surname || '', email: userEmail, city: prof.city || '', credits: prof.credits || 0, isVerified: !!prof.is_verified, isPremium: !!prof.is_premium, isAdmin: isAdmin(userEmail) };
+    currentUser = { id: data.user.id, name: prof.name || '', surname: prof.surname || '', email: userEmail, city: prof.city || '', credits: prof.credits || 0, isVerified: !!prof.is_verified, isPremium: !!prof.is_premium, role: prof.role || 'user', isAdmin: isAdmin(userEmail) };
     localStorage.setItem('authToken', data.access_token);
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     closeLogin();
@@ -480,7 +482,10 @@ async function handleLogin(e) {
 const ADMIN_EMAILS = ['walterzannoni90@outlook.it', 'walterzannoni90@gmail.com', 'Lucianopoleselli@icloud.com'];
 
 function isAdmin(email) {
-  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+  // Controlla sia la lista hardcoded che il ruolo nel profilo
+  if (ADMIN_EMAILS.includes((email || '').toLowerCase())) return true;
+  if (currentUser?.role === 'admin') return true;
+  return false;
 }
 
 async function handleRegister(e) {
@@ -522,12 +527,13 @@ async function handleRegister(e) {
     const data = await sbAuth('signup', { 
       email, 
       password, 
-      data: { 
-        name, 
+      data: {
+        name,
         surname: surname || '',
         birth_date: birthDate,
         phone: fullPhone,
-        gender: gender || ''
+        gender: gender || '',
+        role: document.getElementById('regRole')?.value || 'user'
       }
     });
     
@@ -545,6 +551,7 @@ async function handleRegister(e) {
         phone: fullPhone,
         is_verified: false,
         is_premium: isAdmin(email),
+        role: document.getElementById('regRole')?.value || 'user',
         credits: isAdmin(email) ? 999 : 20
       };
       await sbPost('profiles', userData, data.access_token);
@@ -560,14 +567,15 @@ async function handleRegister(e) {
     
     const userEmail = email;
     const userIsAdmin = isAdmin(userEmail);
-    currentUser = { 
-      id: data.user?.id || '', 
-      name, 
+    currentUser = {
+      id: data.user?.id || '',
+      name,
       email: userEmail,
-      city: city || '', 
-      credits: userIsAdmin ? 999 : 20, 
-      isVerified: false, 
+      city: city || '',
+      credits: userIsAdmin ? 999 : 20,
+      isVerified: false,
       isPremium: userIsAdmin,
+      role: userIsAdmin ? 'admin' : 'user',
       isAdmin: userIsAdmin
     };
     
@@ -639,8 +647,9 @@ function userAction(action) {
       backToHome();
       setTimeout(() => document.getElementById('vetrina')?.scrollIntoView({ behavior: 'smooth' }), 300);
       break;
-    case 'settings': 
-      navigateTo('/?page=settings'); 
+    case 'payment':
+      navigateTo('/?page=credits');
+      showToast('Pagamento completato! I crediti saranno accreditati a breve.', 'success');
       break;
     case 'support': openSupport(); break;
     case 'admin':
@@ -1036,33 +1045,28 @@ async function buyCredits(amount) {
   const prices = { 10: 4.99, 30: 9.99, 70: 19.99, 150: 34.99 };
   const euro = prices[amount] || (amount * 0.5);
   
-  // Stripe Payment Links (funziona senza backend!)
-  const stripeLinks = {
-    10: 'https://buy.stripe.com/7sY3cveZX5Rs7Umg94b7y01',
-    30: 'https://buy.stripe.com/6oU5kD4ljcfQcaC8GCb7y02',
-    70: 'https://buy.stripe.com/fZuaEXeZXgw68YqbSOb7y03',
-    150: 'https://buy.stripe.com/dRm14ncRP6Vw4Ia6yub7y04'
-  };
-  
-  const link = stripeLinks[amount];
-  if (link) {
-    showToast(`Reindirizzamento a Stripe...`, 'success');
-    // Salva userId in sessionStorage per il ritorno
-    sessionStorage.setItem('stripeUserId', currentUser.id);
-    sessionStorage.setItem('stripeCredits', amount);
-    window.location.href = link;
-    return;
+  // Crea sessione Stripe Checkout via Edge Function
+  try {
+    const res = await fetch(`${EDGE_FUNCTION_URL}/stripe-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        credits: amount
+      })
+    });
+    const data = await res.json();
+    if (data.url) {
+      showToast(`Reindirizzamento a Stripe...`, 'success');
+      sessionStorage.setItem('stripeUserId', currentUser.id);
+      sessionStorage.setItem('stripeCredits', amount);
+      window.location.href = data.url;
+    } else {
+      showToast(`Errore pagamento: ${data.error || 'sconosciuto'}`, 'error');
+    }
+  } catch (e) {
+    showToast(`Errore di connessione: ${e.message}`, 'error');
   }
-  
-  // FALLBACK: credito diretto (finché Stripe non è configurato)
-  const token = localStorage.getItem('authToken');
-  await sbPatch('profiles', { credits: (currentUser.credits || 0) + amount }, { id: currentUser.id }, token);
-  await sbPost('credit_transactions', { user_id: currentUser.id, amount, type: 'purchase', description: `Acquisto ${amount} crediti (mock)` }, token);
-  currentUser.credits = (currentUser.credits || 0) + amount;
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-  updateUIForLoggedUser();
-  renderShop();
-  showToast(`✅ ${amount} crediti aggiunti! (Modalità test)`, 'success');
 }
 
 function openAddonPurchase(code) {
