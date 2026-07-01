@@ -223,11 +223,7 @@
           <div class="form-group">
             <label>Città</label>
             <input type="text" id="adCity" class="form-control" placeholder="La tua città" list="cityList">
-            <datalist id="cityList">
-              <option value="Napoli"><option value="Roma"><option value="Milano"><option value="Torino">
-              <option value="Firenze"><option value="Bologna"><option value="Venezia"><option value="Palermo">
-              <option value="Genova"><option value="Bari"><option value="Catania"><option value="Verona">
-            </datalist>
+            <datalist id="cityList"></datalist>
           </div>
         </div>
         <div class="form-row">
@@ -388,17 +384,6 @@
             <label><i class="fas fa-city"></i> Città</label>
             <select id="regCity" class="form-control">
               <option value="">Seleziona città</option>
-              <option value="Napoli">Napoli</option>
-              <option value="Roma">Roma</option>
-              <option value="Milano">Milano</option>
-              <option value="Torino">Torino</option>
-              <option value="Firenze">Firenze</option>
-              <option value="Bologna">Bologna</option>
-              <option value="Venezia">Venezia</option>
-              <option value="Palermo">Palermo</option>
-              <option value="Bari">Bari</option>
-              <option value="Catania">Catania</option>
-              <option value="Verona">Verona</option>
             </select>
           </div>
           <div class="form-group">
@@ -777,9 +762,12 @@
         <button class="filter-btn active" data-filter="all">Tutti</button>
         <button class="filter-btn" data-filter="donna-cerca-uomo">Donna cerca Uomo</button>
         <button class="filter-btn" data-filter="uomo-cerca-donna">Uomo cerca Donna</button>
+        <button class="filter-btn" data-filter="donna-cerca-donna">Donna cerca Donna</button>
         <button class="filter-btn" data-filter="uomo-cerca-uomo">Uomo cerca Uomo</button>
         <button class="filter-btn" data-filter="coppie">Coppie</button>
         <button class="filter-btn" data-filter="trans">Trans</button>
+        <button class="filter-btn" data-filter="cerco-amici">Cerco Amici</button>
+        <button class="filter-btn" data-filter="anima-gemella">Anima Gemella</button>
       </div>
 
       <div class="ads-grid" id="adsGrid">

@@ -129,26 +129,23 @@ function initParticles() {
 }
 
 // ============================================================
-// CATEGORIES — CON FOTO REALI
+// CATEGORIES — DAL DATABASE
 // ============================================================
-function initCategories() {
+let categoriesList = [];
+
+async function initCategories() {
   const grid = document.getElementById('categoriesGrid');
   if (!grid) return;
   
-  // Prima mostra skeleton loading
   grid.innerHTML = '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">' +
     Array(8).fill('<div class="category-card skeleton" style="height:220px;background:rgba(255,255,255,0.03);border-radius:16px;animation:pulse 1.5s infinite"></div>').join('') + '</div>';
-  
-  const cats = [
-    { id: 'donna-cerca-uomo', name: 'Donna Cerca Uomo', icon: 'fa-female', color: '#ff2d55', desc: 'Escort e ragazze squillo' },
-    { id: 'uomo-cerca-donna', name: 'Uomo Cerca Donna', icon: 'fa-male', color: '#007aff', desc: 'Accompagnatori per donne' },
-    { id: 'uomo-cerca-uomo', name: 'Uomo Cerca Uomo', icon: 'fa-venus-mars', color: '#ff9500', desc: 'Incontri gay e escort' },
-    { id: 'donna-cerca-donna', name: 'Donna Cerca Donna', icon: 'fa-venus', color: '#ff3b30', desc: 'Lesbo e amori al femminile' },
-    { id: 'coppie', name: 'Coppie', icon: 'fa-heart', color: '#af52de', desc: 'Swingers e scambismo' },
-    { id: 'cerco-amici', name: 'Cerco Amici', icon: 'fa-handshake', color: '#34c759', desc: 'Amicizie vere in città' },
-    { id: 'anima-gemella', name: 'Cerco Anima Gemella', icon: 'fa-dove', color: '#ff6482', desc: 'Trova l\'altra metà' },
-    { id: 'trans', name: 'Trans', icon: 'fa-transgender', color: '#e84393', desc: 'Incontri trans e travestiti' }
-  ];
+
+  try {
+    const data = await fetch('/api/categories').then(r => r.json());
+    categoriesList = data;
+  } catch (e) {
+    categoriesList = [];
+  }
 
   const fallbackImages = {
     'donna-cerca-uomo': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80',
@@ -160,6 +157,19 @@ function initCategories() {
     'anima-gemella': 'https://images.unsplash.com/photo-1501901609772-df0848060b33?auto=format&fit=crop&w=900&q=80',
     'trans': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80'
   };
+
+  const icons = {
+    'donna-cerca-uomo': 'fa-female', 'uomo-cerca-donna': 'fa-male', 'uomo-cerca-uomo': 'fa-venus-mars',
+    'donna-cerca-donna': 'fa-venus', 'coppie': 'fa-heart', 'cerco-amici': 'fa-handshake',
+    'anima-gemella': 'fa-dove', 'trans': 'fa-transgender'
+  };
+
+  let cats = categoriesList.length > 0
+    ? categoriesList.map(c => ({ id: c.slug, name: c.name, icon: icons[c.slug] || 'fa-tag', color: c.color || '#8b5cf6', desc: c.description }))
+    : Object.keys(fallbackImages).map(id => ({
+        id, name: id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        icon: icons[id] || 'fa-tag', color: '#8b5cf6', desc: ''
+      }));
   
   grid.innerHTML = '';
   cats.forEach(cat => {
@@ -167,7 +177,7 @@ function initCategories() {
     card.className = 'category-card';
     card.style.setProperty('--cat-color', cat.color);
     card.setAttribute('data-aos', 'fade-up');
-    const img = fallbackImages[cat.id];
+    const img = fallbackImages[cat.id] || '';
     card.innerHTML = `<div class="category-card-bg" style="background-image:url('${img}')">
         <div class="category-card-overlay"></div>
       </div>
@@ -182,22 +192,58 @@ function initCategories() {
 // ============================================================
 // ADS — CARDS + GRIGLIA
 // ============================================================
+let adsPage = 0;
+let adsFilter = 'all';
+const ADS_PER_PAGE = 12;
+
 async function initAds(filter) {
+  adsFilter = filter || 'all';
+  adsPage = 0;
+  await loadAds(true);
+}
+
+async function loadAds(reset = false) {
   const grid = document.getElementById('adsGrid');
   if (!grid) return;
-  grid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Caricamento annunci...</div>';
+  if (reset) {
+    grid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Caricamento annunci...</div>';
+  }
   try {
-    let q = 'select=*&is_active=eq.true&order=is_sponsored.desc.nullslast,is_premium.desc.nullslast,created_at.desc.nullslast&limit=12';
-    if (filter && filter !== 'all') q += '&category=eq.' + filter;
+    const offset = adsPage * ADS_PER_PAGE;
+    let q = 'select=*&is_active=eq.true&order=is_sponsored.desc.nullslast,is_premium.desc.nullslast,created_at.desc.nullslast&limit=' + (ADS_PER_PAGE + 1) + '&offset=' + offset;
+    if (adsFilter && adsFilter !== 'all') q += '&category=eq.' + adsFilter;
     const ads = await sbGet('ads', q);
-    grid.innerHTML = '';
+    const hasMore = ads.length > ADS_PER_PAGE;
+    if (hasMore) ads.pop();
+
+    if (reset) grid.innerHTML = '';
+
     if (!ads || ads.length === 0) {
-      grid.innerHTML = '<div class="empty-state"><i class="fas fa-heart-broken"></i><h3>Nessun annuncio</h3><p>Pubblica il primo annuncio!</p></div>';
+      if (reset) grid.innerHTML = '<div class="empty-state"><i class="fas fa-heart-broken"></i><h3>Nessun annuncio</h3><p>Pubblica il primo annuncio!</p></div>';
       return;
     }
     ads.forEach(ad => grid.appendChild(createAdCard(ad)));
+
+    const existingBtn = grid.parentNode.querySelector('.load-more-btn');
+    if (existingBtn) existingBtn.remove();
+
+    if (hasMore) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-outline load-more-btn';
+      btn.style.margin = '32px auto';
+      btn.style.display = 'block';
+      btn.innerHTML = '<i class="fas fa-chevron-down"></i> Carica altri annunci';
+      btn.onclick = async () => {
+        adsPage++;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Caricamento...';
+        btn.disabled = true;
+        await loadAds(false);
+        btn.remove();
+      };
+      grid.parentNode.appendChild(btn);
+    }
   } catch (e) {
-    grid.innerHTML = '<div class="empty-state"><p>Errore caricamento</p></div>';
+    if (reset) grid.innerHTML = '<div class="empty-state"><p>Errore caricamento</p></div>';
   }
 }
 
@@ -250,30 +296,31 @@ function createAdCard(ad) {
 }
 
 // ============================================================
-// CITIES
+// CITIES — DAL DATABASE + CONTESTUALI
 // ============================================================
+let citiesList = [];
+
 async function initCities() {
   const grid = document.getElementById('citiesGrid');
   if (!grid) return;
   try {
     const cities = await sbGet('cities', 'select=name&order=name.asc');
-    (cities || []).forEach(c => {
-      const pill = document.createElement('span');
-      pill.className = 'city-pill';
-      pill.textContent = c.name;
-      pill.setAttribute('data-aos', 'fade-up');
-      pill.onclick = () => navigateTo('/?page=category&slug=donna-cerca-uomo&city=' + encodeURIComponent(c.name));
-      grid.appendChild(pill);
-    });
+    citiesList = (cities || []).map(c => c.name);
   } catch (e) {
-    ['Napoli', 'Roma', 'Milano', 'Torino', 'Firenze', 'Bologna', 'Venezia', 'Palermo', 'Genova', 'Bari'].forEach(city => {
-      const pill = document.createElement('span');
-      pill.className = 'city-pill';
-      pill.textContent = city;
-      pill.onclick = () => navigateTo('/?page=category&slug=donna-cerca-uomo&city=' + encodeURIComponent(city));
-      grid.appendChild(pill);
-    });
+    citiesList = ['Napoli', 'Roma', 'Milano', 'Torino', 'Firenze', 'Bologna', 'Venezia', 'Palermo', 'Genova', 'Bari', 'Catania', 'Verona', 'Pisa', 'Lecce', 'Brescia', 'Parma', 'Modena', 'Salerno', 'Bergamo', 'Cagliari'];
   }
+  renderCityPills(grid);
+}
+
+function renderCityPills(grid) {
+  citiesList.forEach(city => {
+    const pill = document.createElement('span');
+    pill.className = 'city-pill';
+    pill.textContent = city;
+    pill.setAttribute('data-aos', 'fade-up');
+    pill.onclick = () => navigateTo('/?page=category&slug=donna-cerca-uomo&city=' + encodeURIComponent(city));
+    grid.appendChild(pill);
+  });
 }
 
 // ============================================================
@@ -747,9 +794,16 @@ function removePhoto(idx) { selectedPhotos.splice(idx, 1); renderPhotos(); }
 
 async function loadCityList() {
   try {
-    const cities = await sbGet('cities', 'select=name&order=name.asc');
+    if (citiesList.length === 0) {
+      const cities = await sbGet('cities', 'select=name&order=name.asc');
+      citiesList = (cities || []).map(c => c.name);
+    }
     const dl = document.getElementById('cityList');
-    if (dl && cities) dl.innerHTML = cities.map(c => '<option value="' + c.name + '">').join('');
+    if (dl) dl.innerHTML = citiesList.map(c => '<option value="' + c + '">').join('');
+    const sel = document.getElementById('regCity');
+    if (sel) {
+      sel.innerHTML = '<option value="">Seleziona città</option>' + citiesList.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+    }
   } catch (e) { }
 }
 
@@ -1372,6 +1426,14 @@ async function showAdDetail(adId) {
     if (!ads || ads.length === 0) { container.innerHTML = '<h2>Annuncio non trovato</h2>'; return; }
 
     const ad = ads[0];
+
+    // Track view
+    try {
+      const newViews = (ad.views || 0) + 1;
+      const token = localStorage.getItem('authToken');
+      await sbPatch('ads', { views: newViews }, { id: adId }, token || undefined);
+    } catch (e) {}
+
     const images = ad.images && ad.images.length > 0 ? ad.images : (ad.image ? [ad.image] : []);
     const addonBadges = [];
     if (ad.is_sponsored) addonBadges.push('<span class="ad-badge sponsored"><i class="fas fa-star"></i> SuperTop</span>');
@@ -1396,7 +1458,7 @@ async function showAdDetail(adId) {
             <span><i class="fas fa-map-marker-alt"></i> ${ad.city || 'N/D'}</span>
             <span><i class="fas fa-user"></i> ${ad.age || '?'} anni</span>
             ${ad.price ? `<span class="ad-detail-price"><i class="fas fa-tag"></i> ${ad.price}</span>` : ''}
-            <span><i class="fas fa-eye"></i> ${ad.views || 0} visualizzazioni</span>
+            <span><i class="fas fa-eye"></i> ${(ad.views || 0) + 1} visualizzazioni</span>
           </div>
           <div class="ad-detail-rating">
             ${'<i class="fas fa-star" style="color:#f59e0b"></i>'.repeat(Math.round(ad.rating || 0))}
@@ -1416,13 +1478,36 @@ async function showAdDetail(adId) {
           <div style="margin-top:16px;padding:16px;background:rgba(139,92,246,0.08);border-radius:12px">
             <strong style="color:var(--primary-light)"><i class="fas fa-tools"></i> Gestione annuncio</strong>
             <div style="display:flex;gap:8px;margin-top:8px">
-              <button class="btn btn-sm btn-outline" onclick="showToast('Modifica in arrivo!', 'success')"><i class="fas fa-edit"></i> Modifica</button>
+              <button class="btn btn-sm btn-outline" onclick="navigateTo('/?page=myads')"><i class="fas fa-edit"></i> I miei annunci</button>
               <button class="btn btn-sm btn-outline" onclick="openAddonPurchaseFromDetail()"><i class="fas fa-bolt"></i> Potenzia</button>
             </div>
           </div>` : ''}
         </div>
       </div>
-      <div style="margin-top:20px;text-align:center;color:var(--text-muted);font-size:0.8rem">Annuncio #${ad.id.slice(0,8)} • Pubblicato il ${new Date(ad.created_at).toLocaleDateString('it-IT')}</div>`;
+      <div style="margin-top:20px;text-align:center;color:var(--text-muted);font-size:0.8rem">
+        Annuncio #${ad.id.slice(0,8)} • Pubblicato il ${new Date(ad.created_at).toLocaleDateString('it-IT')}
+        ${ad.category ? ` • <a href="/?page=category&slug=${ad.category}" onclick="event.preventDefault();navigateTo('/?page=category&slug=${ad.category}')" style="color:var(--primary-light)">Altri in ${ad.category.replace(/-/g, ' ')}</a>` : ''}
+      </div>
+      <div id="relatedAds" style="margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06)"></div>`;
+
+    // Related ads in same category
+    if (ad.category) {
+      const relGrid = document.getElementById('relatedAds');
+      try {
+        const related = await sbGet('ads', 'select=*&is_active=eq.true&category=eq.' + ad.category + '&id=neq.' + adId + '&order=created_at.desc&limit=4');
+        if (related && related.length > 0) {
+          let html = '<h3 style="margin-bottom:16px;color:var(--primary-light)"><i class="fas fa-tag"></i> Annunci nella stessa categoria</h3><div class="ads-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">';
+          related.forEach(r => {
+            html += '<div class="ad-card" onclick="navigateTo(\'/?page=ad&id=' + r.id + '\')" style="cursor:pointer">' +
+              '<div class="ad-card-image"><div class="ad-card-img-wrapper">' + (r.image ? '<img src="' + r.image + '" loading="lazy">' : '<div class="no-photo-icon"><i class="fas fa-user"></i></div>') + '</div></div>' +
+              '<div class="ad-card-body"><h3 class="ad-card-title">' + r.title + '</h3>' +
+              '<div class="ad-card-meta"><span><i class="fas fa-map-marker-alt"></i> ' + (r.city || 'N/D') + '</span></div></div></div>';
+          });
+          html += '</div>';
+          relGrid.innerHTML = html;
+        }
+      } catch (e) {}
+    }
   } catch (e) { container.innerHTML = '<h2>Errore caricamento annuncio</h2>'; }
 }
 
