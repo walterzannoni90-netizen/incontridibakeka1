@@ -1,5 +1,5 @@
 -- ============================================================
--- INCONTRI DI BAKEKA — SCHEMA COMPLETO (bakecaincontrii style)
+-- INCONTRIDIBEKEKA — SCHEMA COMPLETO V2.0
 -- Esegui nel Supabase SQL Editor: https://supabase.com/dashboard/project/rdqsmfgpbuswzilgbjyr/sql/new
 -- ============================================================
 
@@ -228,4 +228,169 @@ INSERT INTO addons (code, name, description, price_credits, duration_days, icon,
   ('verified_badge', 'Verifica in evidenza ✅', 'Badge di verifica per ispirare fiducia', 15, 30, 'fa-check-circle', '#3b82f6', 5),
   ('boost', 'Risalita ⬆️', 'Torna tra i primi risultati!', 5, 1, 'fa-rocket', '#8b5cf6', 6),
   ('top_ad', 'Annuncio Top 📌', 'Sempre tra i primi nelle ricerche', 25, 7, 'fa-thumbtack', '#ec4899', 7)
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================================
+-- NUOVE TABELLE V2.0 — City districts, messages, subscriptions
+-- ============================================================
+
+-- CITY DISTRICTS (quartieri/zone)
+CREATE TABLE IF NOT EXISTS city_districts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  city TEXT REFERENCES cities(name) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  sort_order INT DEFAULT 0,
+  UNIQUE(city, slug)
+);
+
+-- MESSAGES (internal messaging system)
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sender_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  receiver_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  ad_id UUID REFERENCES ads(id) ON DELETE SET NULL,
+  subject TEXT DEFAULT '',
+  body TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  is_flagged BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SUBSCRIPTION PLANS
+CREATE TABLE IF NOT EXISTS subscription_plans (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  price_monthly DECIMAL(10,2) NOT NULL DEFAULT 0,
+  highlight_ads INT DEFAULT 0,
+  boost_count INT DEFAULT 0,
+  verified_badge BOOLEAN DEFAULT false,
+  priority_support BOOLEAN DEFAULT false,
+  no_ads BOOLEAN DEFAULT false,
+  sort_order INT DEFAULT 0
+);
+
+-- USER SUBSCRIPTIONS
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  plan_code TEXT REFERENCES subscription_plans(code) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','cancelled','expired','trial')),
+  auto_renew BOOLEAN DEFAULT true,
+  current_period_start TIMESTAMPTZ DEFAULT NOW(),
+  current_period_end TIMESTAMPTZ,
+  trial_end TIMESTAMPTZ,
+  cancelled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- AGE VERIFICATIONS
+CREATE TABLE IF NOT EXISTS age_verifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','verified','rejected','expired')),
+  document_type TEXT DEFAULT '',
+  document_image TEXT DEFAULT '',
+  selfie_image TEXT DEFAULT '',
+  verified_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  notes TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- AD VIEWS (tracking per user)
+CREATE TABLE IF NOT EXISTS ad_views (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ad_id UUID REFERENCES ads(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  ip_address TEXT DEFAULT '',
+  viewed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- AD CONTACTS (tracking contacts made)
+CREATE TABLE IF NOT EXISTS ad_contacts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ad_id UUID REFERENCES ads(id) ON DELETE CASCADE,
+  contact_type TEXT NOT NULL CHECK (contact_type IN ('phone','whatsapp','telegram','email','message')),
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SITE SETTINGS (key-value store)
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ADD INDEXES
+CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_ad_views_ad ON ad_views(ad_id);
+CREATE INDEX IF NOT EXISTS idx_ad_views_date ON ad_views(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_ad_contacts_ad ON ad_contacts(ad_id);
+CREATE INDEX IF NOT EXISTS idx_age_verifications_user ON age_verifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user ON user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_city_districts_city ON city_districts(city);
+
+-- RLS POLICIES
+ALTER TABLE city_districts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE age_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ad_views ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ad_contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "City districts pubblici" ON city_districts CASCADE;
+CREATE POLICY "City districts pubblici" ON city_districts FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Messages view" ON messages CASCADE;
+CREATE POLICY "Messages view" ON messages FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+DROP POLICY IF EXISTS "Messages insert" ON messages CASCADE;
+CREATE POLICY "Messages insert" ON messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+
+DROP POLICY IF EXISTS "Subscriptions view" ON user_subscriptions CASCADE;
+CREATE POLICY "Subscriptions view" ON user_subscriptions FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Subscriptions insert" ON user_subscriptions CASCADE;
+CREATE POLICY "Subscriptions insert" ON user_subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Age verifications view" ON age_verifications CASCADE;
+CREATE POLICY "Age verifications view" ON age_verifications FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Age verifications insert" ON age_verifications CASCADE;
+CREATE POLICY "Age verifications insert" ON age_verifications FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Ad views insert" ON ad_views CASCADE;
+CREATE POLICY "Ad views insert" ON ad_views FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Site settings pubblici" ON site_settings CASCADE;
+CREATE POLICY "Site settings pubblici" ON site_settings FOR SELECT USING (true);
+
+-- SEED DATA: Napoletan districts
+INSERT INTO city_districts (city, name, slug, description, sort_order) VALUES
+  ('Napoli','Centro Storico','centro-storico','Quartieri Spagnoli, Piazza del Plebiscito, Toledo',1),
+  ('Napoli','Vomero','vomero','Zona collinare, alta Napoli',2),
+  ('Napoli','Chiaia','chiaia','Lungomare, zona chic, piazza dei Martiri',3),
+  ('Napoli','Fuorigrotta','fuorigrotta','Zona ovest, Stadio Maradona, Mostra',4),
+  ('Napoli','Posillipo','posillipo','Zona residenziale, panoramica',5),
+  ('Napoli','Arenaccia','arenaccia','Zona stazione, centro direzionale',6),
+  ('Napoli','Bagnoli','bagnoli','Zona flegrea, lungomare',7),
+  ('Napoli','Scampia','scampia','Zona nord',8),
+  ('Roma','Centro Storico','centro-storico','Colosseo, Trastevere, Pantheon',1),
+  ('Roma','EUR','eur','Zona affari, architettura moderna',2),
+  ('Roma','Parioli','parioli','Zona residenziale elegante',3),
+  ('Roma','San Giovanni','san-giovanni','Zona popolare centrale',4),
+  ('Milano','Centro','centro','Duomo, Brera, fashion district',1),
+  ('Milano','Navigli','navigli','Zona movida, canali',2),
+  ('Milano','Porta Nuova','porta-nuova','Business district, grattacieli',3),
+  ('Milano','Bicocca','bicocca','Zona universitaria',4)
+ON CONFLICT (city, slug) DO NOTHING;
+
+-- SEED: Subscription plans
+INSERT INTO subscription_plans (code, name, description, price_monthly, highlight_ads, boost_count, verified_badge, priority_support, no_ads, sort_order) VALUES
+  ('free', 'Gratis', 'Account base gratuito', 0, 0, 0, false, false, false, 1),
+  ('plus', 'Plus', 'Abbonamento premium con vantaggi esclusivi', 14.99, 5, 10, true, true, false, 2),
+  ('vip', 'VIP', 'Esperienza completa senza limiti', 29.99, 20, 30, true, true, true, 3)
 ON CONFLICT (code) DO NOTHING;

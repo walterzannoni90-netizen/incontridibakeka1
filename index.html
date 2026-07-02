@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="IncontriDiBakeka — Il portale premium di annunci incontri. Escort, accompagnatori, coppie, trans e molto più. Esperienza esclusiva nella tua città.">
-  <meta name="theme-color" content="#0a0a1a">
+  <meta name="description" content="Incontridibakeka — Il portale premium di annunci incontri. Escort, accompagnatori, coppie, trans e molto più. Esperienza esclusiva nella tua città.">
+  <meta name="theme-color" content="#0b1a1a">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
-  <title>IncontriDiBakeka 🔥 — Annunci Incontri Premium</title>
+  <title>Incontridibakeka 🔥 — Annunci Incontri Premium</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +37,7 @@
     <div class="preloader-content">
       <div class="preloader-logo">
         <i class="fas fa-heart"></i>
-        <span>IncontriDiBakeka</span>
+        <span>Incontridibakeka</span>
       </div>
       <div class="preloader-bar">
         <div class="preloader-fill"></div>
@@ -51,7 +54,7 @@
       <div class="navbar-inner">
         <a href="/" class="navbar-brand">
           <i class="fas fa-heart brand-icon"></i>
-          <span class="brand-text">Incontri<span class="brand-highlight">Di</span>Bakeka</span>
+          <span class="brand-text">Incontri<span class="brand-highlight">di</span>bakeka</span>
         </a>
 
         <div class="navbar-menu" id="navbarMenu">
@@ -60,6 +63,25 @@
           <a href="#annunci" class="nav-link" data-section="ads">Annunci</a>
           <a href="#stats" class="nav-link" data-section="stats">Numeri</a>
           <a href="#vetrina" class="nav-link" data-section="vetrina">Vetrina</a>
+          
+          <div class="navbar-city-select">
+            <select id="citySelect" onchange="switchCity(this.value)">
+              <option value="napoli">Napoli</option>
+              <option value="roma">Roma</option>
+              <option value="milano">Milano</option>
+              <option value="torino">Torino</option>
+              <option value="firenze">Firenze</option>
+              <option value="bologna">Bologna</option>
+              <option value="palermo">Palermo</option>
+              <option value="bari">Bari</option>
+              <option value="genova">Genova</option>
+              <option value="catania">Catania</option>
+              <option value="verona">Verona</option>
+              <option value="venezia">Venezia</option>
+              <option value="lecce">Lecce</option>
+              <option value="salerno">Salerno</option>
+            </select>
+          </div>
           
           <div class="nav-actions">
             <button class="btn btn-ghost" onclick="openSearch()">
@@ -116,6 +138,9 @@
         <div class="navbar-mobile-actions">
           <button class="btn btn-ghost" onclick="openSearch()">
             <i class="fas fa-search"></i>
+          </button>
+          <button class="btn btn-primary" onclick="openPublish()" style="padding:6px 12px;font-size:0.7rem">
+            <i class="fas fa-plus"></i>
           </button>
           <button class="btn btn-ghost" onclick="openLogin()">
             <i class="fas fa-user"></i>
@@ -824,7 +849,7 @@
 
       <div class="features-grid">
         <div class="feature-card" data-aos="fade-up" data-aos-delay="0">
-          <div class="feature-icon"><i class="fas fa-shield-haltered"></i></div>
+          <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
           <h3>Discrezione Totale</h3>
           <p>Privacy garantita con crittografia end-to-end e dati protetti. Nessuna informazione condivisa senza il tuo consenso.</p>
         </div>
@@ -844,6 +869,20 @@
           <p>Assistenza clienti sempre disponibile. Team di professionisti pronti ad aiutarti in qualsiasi momento.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+  HOTTEST SECTION
+  ============================================================ -->
+  <section class="section hottest-section" id="hottest">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge"><i class="fas fa-fire" style="margin-right:4px"></i> Trending</span>
+        <h2 class="section-title">Annunci Più <span class="gradient-text">Hot</span> del Momento</h2>
+        <p class="section-desc">I profili più visti e popolari. Esperienze che stanno facendo parlare di sé.</p>
+      </div>
+      <div class="hottest-grid" id="hottestGrid"></div>
     </div>
   </section>
 
@@ -1055,6 +1094,54 @@
   </section>
 
   <!-- ============================================================
+  PHOTO GUIDE SECTION
+  ============================================================ -->
+  <section class="section photo-guide-section" id="photoGuide">
+    <div class="container">
+      <div class="section-header" data-aos="fade-up">
+        <span class="section-badge">Photo Guide</span>
+        <h2 class="section-title">Classificazione <span class="gradient-text">Foto</span></h2>
+        <p class="section-desc">Scegli la classificazione corretta per le tue foto. Questo aiuta a mantenere il sito organizzato.</p>
+      </div>
+      <div class="photo-guide-grid">
+        <div class="photo-guide-card safe" onclick="showToast('Safe ✅ — Foto coperte, niente nudità esplicita', 'info')">
+          <div class="photo-guide-icon"><i class="fas fa-check-circle"></i></div>
+          <h3>Safe ✅</h3>
+          <p>Foto coperte, niente nudità esplicita. Costume da bagno, biancheria intima, pose suggestive ma coperte.</p>
+          <ul>
+            <li><i class="fas fa-check"></i> Costume da bagno</li>
+            <li><i class="fas fa-check"></i> Biancheria intima</li>
+            <li><i class="fas fa-check"></i> Pose suggestive ma coperte</li>
+            <li><i class="fas fa-check"></i> Ammesse su tutto il sito</li>
+          </ul>
+        </div>
+        <div class="photo-guide-card hot" onclick="showToast('Hot 🔥 — Nudità parziale, pose hot', 'info')">
+          <div class="photo-guide-icon"><i class="fas fa-fire"></i></div>
+          <h3>Hot 🔥</h3>
+          <p>Nudità parziale, pose hot, seno nudo consentito. Non è consentita nudità integrale frontale.</p>
+          <ul>
+            <li><i class="fas fa-check"></i> Seno nudo</li>
+            <li><i class="fas fa-check"></i> Pose hot</li>
+            <li><i class="fas fa-check"></i> Nudità parziale</li>
+            <li><i class="fas fa-check"></i> No integrale frontale</li>
+          </ul>
+        </div>
+        <div class="photo-guide-card hard" onclick="showToast('Hard 🔞 — Contenuti espliciti, solo utenti verificati', 'warning')">
+          <div class="photo-guide-icon"><i class="fas fa-exclamation-triangle"></i></div>
+          <h3>Hard 🔞</h3>
+          <p>Contenuti espliciti, nudità integrale. Visibile solo a utenti con verifica età confermata.</p>
+          <ul>
+            <li><i class="fas fa-check"></i> Nudità integrale</li>
+            <li><i class="fas fa-check"></i> Contenuti espliciti</li>
+            <li><i class="fas fa-check"></i> Solo 18+ verificati</li>
+            <li><i class="fas fa-check"></i> Blur per non verificati</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
   CTA SECTION
   ============================================================ -->
   <section class="cta-section home-section">
@@ -1166,7 +1253,7 @@
         <div class="footer-brand">
           <a href="/" class="footer-logo">
             <i class="fas fa-heart"></i>
-            <span>IncontriDiBakeka</span>
+            <span>Incontridibakeka</span>
           </a>
           <p>Il portale premium di annunci incontri in Italia. Esperienze autentiche, persone reali, discrezione assoluta.</p>
           <div class="footer-social">
@@ -1205,9 +1292,20 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 IncontriDiBakeka — Tutti i diritti riservati. Make Love, Not War ❤️</p>
-        <p class="footer-disclaimer">Portale per adulti. Vietato ai minori di 18 anni.</p>
+        <span>© 2026 Incontridibakeka — Tutti i diritti riservati</span>
+        <div class="footer-city-links">
+          <a href="#">Napoli</a><a href="#">Roma</a><a href="#">Milano</a><a href="#">Torino</a>
+          <a href="#">Firenze</a><a href="#">Bologna</a><a href="#">Palermo</a><a href="#">Bari</a>
+          <a href="#">Genova</a><a href="#">Catania</a><a href="#">Verona</a><a href="#">Venezia</a>
+          <a href="#">Lecce</a><a href="#">Salerno</a><a href="#">Bergamo</a><a href="#">Cagliari</a>
+        </div>
       </div>
+      <div class="footer-countries">
+        <a href="#">Italia</a><a href="#">Spagna</a><a href="#">Francia</a><a href="#">Germania</a>
+        <a href="#">Regno Unito</a><a href="#">Brasile</a><a href="#">Argentina</a><a href="#">Messico</a>
+        <a href="#">Colombia</a><a href="#">Perù</a><a href="#">Cile</a><a href="#">Venezuela</a>
+      </div>
+      <p class="footer-disclaimer">Portale per adulti. Vietato ai minori di 18 anni.</p>
     </div>
   </footer>
 

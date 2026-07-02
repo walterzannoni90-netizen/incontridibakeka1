@@ -165,8 +165,8 @@ app.get('/api/auth/me', async (req, res) => {
 // AVVIO
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  ✦ IncontriDiBakeka — Annunci Premium ✦`);
-  console.log(`  ──────────────────────────────────────`);
+  console.log(`\n  ✦ Incontridibakeka — Annunci Premium ✦`);
+  console.log(`  ────────────────────────────────────────`);
   console.log(`  🌐  http://0.0.0.0:${PORT}`);
   console.log(`  🗄️  Supabase PostgreSQL`);
   console.log(`  💎  Premium Dating Experience\n`);

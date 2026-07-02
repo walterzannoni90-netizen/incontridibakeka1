@@ -1,6 +1,7 @@
 /* ============================================================
-   INCONTRI DI BAKEKA — APP COMPLETA V2
-   Tutte le feature: credito, addons, boost, vetrina, contatti
+   INCONTRIDIBEKEKA — APP COMPLETA V2.0
+   Tutte le feature: credito, addons, boost, vetrina, contatti,
+   hottest now, boost schedule, dashboard, age verification
    Chiama Supabase REST API direttamente (nessun SDK)
    ============================================================ */
 
@@ -84,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAddons();
   setTimeout(initRouter, 150);
   loadCityList();
+  setTimeout(loadHottestAds, 300);
 });
 
 // ============================================================
@@ -1541,6 +1543,7 @@ function showProfilePage() {
         <button class="btn btn-outline" onclick="navigateTo('/?page=myads')"><i class="fas fa-list"></i> I miei annunci</button>
       </div>
     </div>`;
+  loadDashboardStats();
 }
 
 // ============================================================
@@ -2437,6 +2440,133 @@ function showSettingsPage() {
       </div>
     </div>
   `;
+}
+
+// ============================================================
+// HOTTEST NOW — Annunci Trending
+// ============================================================
+async function loadHottestAds() {
+  const grid = document.getElementById('hottestGrid');
+  if (!grid) return;
+  try {
+    const ads = await sbGet('ads', 'select=*&is_active=eq.true&order=views.desc.nullslast&limit=6');
+    if (!ads || ads.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><p>Nessun annuncio popolare</p></div>';
+      return;
+    }
+    grid.innerHTML = '';
+    ads.forEach((ad, i) => {
+      const card = document.createElement('div');
+      card.className = 'hottest-card';
+      card.setAttribute('data-aos', 'fade-up');
+      card.setAttribute('data-aos-delay', (i * 100).toString());
+      const imgHtml = ad.image ? `<img src="${ad.image}" alt="${ad.title}" loading="lazy">` : '<div style="width:100%;height:100%;background:var(--bg-glass);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--text-muted)"><i class="fas fa-user"></i></div>';
+      card.innerHTML = `
+        ${imgHtml}
+        <div class="hottest-rank">${i + 1}</div>
+        <div class="hottest-fire"><i class="fas fa-fire"></i></div>
+        <div class="hottest-card-overlay">
+          <h3>${ad.title}</h3>
+          <p><i class="fas fa-map-marker-alt"></i> ${ad.city || 'N/D'} • ${ad.views || 0} visualizzazioni</p>
+        </div>`;
+      card.onclick = () => navigateTo('/?page=ad&id=' + ad.id);
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = '';
+  }
+}
+
+// ============================================================
+// CITY SWITCHER
+// ============================================================
+function switchCity(city) {
+  const section = document.getElementById('annunci');
+  if (section) section.scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  const cityBtn = document.querySelector(`.filter-btn[data-city="${city}"]`);
+  const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+  if (cityBtn) cityBtn.click();
+  else if (allBtn) allBtn.click();
+  showToast('Annunci a ' + city.charAt(0).toUpperCase() + city.slice(1), 'success');
+}
+
+// ============================================================
+// DASHBOARD — Statistiche per advertiser
+// ============================================================
+async function loadDashboardStats() {
+  const container = document.getElementById('profileDashboard');
+  if (!container || !currentUser) return;
+  const token = localStorage.getItem('authToken');
+  try {
+    const [ads, views, contacts, messages] = await Promise.all([
+      sbGet('ads', 'select=id,views,is_active&user_id=eq.' + currentUser.id, token),
+      sbGet('ad_views', 'select=id&user_id=eq.' + currentUser.id + '&limit=1000', token),
+      sbGet('ad_contacts', 'select=id&ad_id=in.(select id from ads where user_id=eq.' + currentUser.id + ')&limit=1000', token),
+      sbGet('messages', 'select=id,is_read&receiver_id=eq.' + currentUser.id, token)
+    ]);
+    const totalViews = views?.length || 0;
+    const totalContacts = contacts?.length || 0;
+    const unreadMessages = messages?.filter(m => !m.is_read).length || 0;
+    const activeAds = ads?.filter(a => a.is_active).length || 0;
+    container.innerHTML = `
+      <h3 style="margin-bottom:16px"><i class="fas fa-chart-bar"></i> La tua Dashboard</h3>
+      <div class="dashboard-grid">
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon"><i class="fas fa-newspaper"></i></div>
+          <div class="dashboard-card-number">${activeAds}</div>
+          <div class="dashboard-card-label">Annunci Attivi</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon"><i class="fas fa-eye"></i></div>
+          <div class="dashboard-card-number">${totalViews}</div>
+          <div class="dashboard-card-label">Visualizzazioni</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon"><i class="fas fa-phone"></i></div>
+          <div class="dashboard-card-number">${totalContacts}</div>
+          <div class="dashboard-card-label">Contatti Ricevuti</div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dashboard-card-icon"><i class="fas fa-envelope"></i></div>
+          <div class="dashboard-card-number">${unreadMessages}</div>
+          <div class="dashboard-card-label">Messaggi ${unreadMessages > 0 ? '🆕' : ''}</div>
+        </div>
+      </div>`;
+  } catch (e) {}
+}
+
+// ============================================================
+// AGE VERIFICATION
+// ============================================================
+function checkAgeVerification(photoClass) {
+  if (photoClass !== 'hard') return false;
+  const verified = localStorage.getItem('ageVerified') === 'true';
+  return !verified;
+}
+
+function applyAgeBlur(container, photoClass) {
+  if (!checkAgeVerification(photoClass)) return;
+  container.classList.add('age-blur-overlay');
+  const msg = document.createElement('div');
+  msg.className = 'age-blur-message';
+  msg.innerHTML = '<i class="fas fa-lock"></i><p>Contenuto riservato a utenti 18+ verificati</p>';
+  container.appendChild(msg);
+}
+
+// ============================================================
+// CONTACT NOTES
+// ============================================================
+async function saveContactNote(adId, note) {
+  if (!currentUser) return;
+  const token = localStorage.getItem('authToken');
+  try {
+    const existing = await sbGet('saved_contacts', 'select=id&user_id=eq.' + currentUser.id + '&ad_id=eq.' + adId, token);
+    if (existing && existing.length > 0) {
+      await sbPatch('saved_contacts', { notes: note }, { id: existing[0].id }, token);
+      showToast('Nota salvata!', 'success');
+    }
+  } catch (e) {}
 }
 
 // POPSTATE

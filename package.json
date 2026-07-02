@@ -1,7 +1,7 @@
 {
-  "name": "incontri-di-bakeka",
-  "version": "1.0.0",
-  "description": "IncontriDiBakeka — Annunci Incontri Premium",
+  "name": "incontridibakeka",
+  "version": "2.0.0",
+  "description": "Incontridibakeka — Annunci Incontri Premium",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.110.0",
     "dotenv": "^17.4.2",
     "express": "^4.22.2",
+    "libsodium-wrappers": "^0.8.4",
     "ws": "^8.21.0"
   }
 }

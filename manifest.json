@@ -1,0 +1,14 @@
+{
+  "name": "Incontridibakeka",
+  "short_name": "Bakeka",
+  "description": "Portale premium di annunci incontri. Escort, accompagnatori, coppie, trans.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1a1a",
+  "theme_color": "#0b1a1a",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
