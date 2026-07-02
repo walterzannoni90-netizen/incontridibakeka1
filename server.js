@@ -1,62 +1,38 @@
-try {
-  require('dotenv').config();
-} catch (e) {
-  console.log('dotenv not found, using environment variables or defaults');
-}
+/**
+ * BAKECA INCONTRI CLONE - Server
+ * Versione pulita e funzionante
+ */
+
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
+const { v4: uuidv4 } = require('uuid');
+
 const app = express();
 const PORT = process.env.PORT || 3030;
 const APP_URL = process.env.APP_URL || 'http://localhost:3030';
 const JWT_SECRET = process.env.JWT_SECRET || 'bakeka-jwt-secret-2024';
 
-app.use(cors({
-  origin: APP_URL,
-  credentials: true
-}));
-
-app.use(cookieParser());
-
-// Inject environment variables into HTML
-app.get('/index.html', (req, res) => {
-  const fs = require('fs');
-  const path = require('path');
-  let html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-  
-  const envConfig = {
-    SUPABASE_URL: process.env.SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E',
-    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1',
-    EDGE_FUNCTION_URL: process.env.EDGE_FUNCTION_URL || 'https://rdqsmfgpbuswzilgbjyr.functions.supabase.co'
-  };
-  
-  const envScript = `window.ENV = ${JSON.stringify(envConfig)};`;
-  html = html.replace('<script id="env-config"></script>', `<script id="env-config">${envScript}</script>`);
-  
-  res.send(html);
-});
-
-app.all('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  require('./api/stripe-webhook')(req, res);
-});
-
-app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// Supabase Client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 // ============================================================
-// LOCAL SQLITE AUTH (fallback quando Supabase Auth non è raggiungibile)
+// LOCAL SQLite DB for Auth
 // ============================================================
 const initSqlJs = require('sql.js');
-const fs = require('fs');
-let SQL, localDb;
+let localDb;
 
 async function initLocalDb() {
-  SQL = await initSqlJs();
-  const dbPath = path.join(__dirname, 'database', 'auth.db');
+  const SQL = await initSqlJs();
+  const dbPath = path.join(__dirname, 'database', 'users.db');
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
   
@@ -69,108 +45,23 @@ async function initLocalDb() {
   localDb.run(`CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    surname TEXT DEFAULT '',
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
+    phone TEXT DEFAULT '',
     city TEXT DEFAULT '',
-    gender TEXT DEFAULT '',
-    birth_date TEXT,
-    is_verified INTEGER DEFAULT 0,
-    is_premium INTEGER DEFAULT 0,
-    credits INTEGER DEFAULT 0,
-    role TEXT DEFAULT 'user',
     created_at TEXT DEFAULT (datetime('now'))
   )`);
   
-  localDb.run(`CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    token TEXT UNIQUE NOT NULL,
-    created_at TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
-  
-  _saveLocalDb();
+  saveLocalDb();
 }
 
-function _saveLocalDb() {
+function saveLocalDb() {
   if (localDb) {
-    const dbPath = path.join(__dirname, 'database', 'auth.db');
+    const dbPath = path.join(__dirname, 'database', 'users.db');
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(dbPath, Buffer.from(localDb.export()));
   }
-}
-
-// ============================================================
-// SUPABASE — Dati pubblici
-// ============================================================
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
-
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-console.log('  🗄️  Dati: Supabase PostgreSQL');
-
-// ============================================================
-// API ROUTES
-// ============================================================
-
-app.all('/api/create-checkout', (req, res) => {
-  require('./api/create-checkout')(req, res);
-});
-
-app.get('/api/categories', async (req, res) => {
-  const { data, error } = await supabase.from('categories').select('*').order('sort_order');
-  res.json(error ? [] : data);
-});
-
-app.get('/api/cities', async (req, res) => {
-  const { data, error } = await supabase.from('cities').select('name').order('name');
-  res.json(error ? [] : data.map(r => r.name));
-});
-
-app.get('/api/stats', async (req, res) => {
-  const [{ count: totalAds }, { count: premiumAds }, { count: verifiedUsers }] = await Promise.all([
-    supabase.from('ads').select('*', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('ads').select('*', { count: 'exact', head: true }).eq('is_premium', true).eq('is_active', true),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_verified', true)
-  ]);
-  const { count: cityCount } = await supabase.from('cities').select('*', { count: 'exact', head: true });
-  const { count: catCount } = await supabase.from('categories').select('*', { count: 'exact', head: true });
-  res.json({ totalAds: totalAds || 0, premiumAds: premiumAds || 0, verifiedUsers: verifiedUsers || 0, citiesAvailable: cityCount || 0, categoriesAvailable: catCount || 0 });
-});
-
-app.get('/api/ads', async (req, res) => {
-  const { category, city, search, gender, premium, verified } = req.query;
-  let query = supabase.from('ads').select('*').eq('is_active', true);
-  if (category && category !== 'all') query = query.eq('category', category);
-  if (city && city !== 'all') query = query.ilike('city', city);
-  if (search) query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
-  if (gender) query = query.eq('gender', gender);
-  if (premium === 'true') query = query.eq('is_premium', true);
-  if (verified === 'true') query = query.eq('is_verified', true);
-  query = query.order('is_sponsored', { ascending: false }).order('is_premium', { ascending: false }).order('created_at', { ascending: false });
-  const { data, error } = await query;
-  res.json(error ? [] : data);
-});
-
-app.get('/api/ads/featured', async (req, res) => {
-  const { data, error } = await supabase.from('ads').select('*').eq('is_premium', true).eq('is_active', true).order('is_sponsored', { ascending: false }).order('rating', { ascending: false }).limit(6);
-  res.json(error ? [] : data);
-});
-
-// ============================================================
-// AUTH — Locale con SQLite
-// ============================================================
-
-function getUserById(id) {
-  const stmt = localDb.prepare('SELECT * FROM users WHERE id = ?');
-  stmt.bind([id]);
-  const user = stmt.step() ? stmt.getAsObject() : null;
-  stmt.free();
-  return user;
 }
 
 function getUserByEmail(email) {
@@ -181,148 +72,470 @@ function getUserByEmail(email) {
   return user;
 }
 
-function sanitizeUser(user) {
-  if (!user) return null;
-  return {
-    id: user.id,
-    name: user.name,
-    surname: user.surname || '',
-    email: user.email,
-    city: user.city || '',
-    gender: user.gender || '',
-    isVerified: !!user.is_verified,
-    isPremium: !!user.is_premium,
-    credits: user.credits || 0,
-    role: user.role || 'user',
-    createdAt: user.created_at
-  };
+function getUserById(id) {
+  const stmt = localDb.prepare('SELECT * FROM users WHERE id = ?');
+  stmt.bind([id]);
+  const user = stmt.step() ? stmt.getAsObject() : null;
+  stmt.free();
+  return user;
 }
 
-// --- Register ---
+// ============================================================
+// MIDDLEWARE
+// ============================================================
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: '10mb' }));
+
+// Inject env vars in HTML - DEVE essere prima di express.static
+app.get('/', (req, res) => {
+  let html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  
+  const envScript = `<script>
+    window.ENV = {
+      SUPABASE_URL: '${process.env.SUPABASE_URL}',
+      SUPABASE_ANON_KEY: '${process.env.SUPABASE_ANON_KEY}',
+      STRIPE_PUBLISHABLE_KEY: '${process.env.STRIPE_PUBLISHABLE_KEY || ''}'
+    };
+  </script>`;
+  
+  html = html.replace('<script id="env-config"></script>', envScript);
+  res.send(html);
+});
+
+app.use(express.static(path.join(__dirname)));
+
+// Stripe Webhook
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  const sig = req.headers['stripe-signature'];
+  
+  try {
+    const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const userId = session.metadata.userId;
+      const credits = parseInt(session.metadata.credits);
+      
+      // Aggiungi crediti
+      const { data: profile } = await supabase.from('profiles').select('credits').eq('id', userId).single();
+      const newCredits = (profile?.credits || 0) + credits;
+      await supabase.from('profiles').update({ credits: newCredits }).eq('id', userId);
+      
+      // Registra transazione
+      await supabase.from('credit_transactions').insert({
+        user_id: userId,
+        amount: credits,
+        type: 'purchase',
+        description: `Acquisto ${credits} crediti via Stripe`
+      });
+    }
+    
+    res.json({ received: true });
+  } catch (err) {
+    console.error('Webhook Error:', err.message);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+
+// ============================================================
+// API: PUBBLICHE
+// ============================================================
+
+// Stats
+app.get('/api/stats', async (req, res) => {
+  try {
+    const { count: totalAds } = await supabase.from('ads').select('*', { count: 'exact', head: true }).eq('is_active', true);
+    const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: cities } = await supabase.from('cities').select('*', { count: 'exact', head: true });
+    
+    res.json({ totalAds: totalAds || 0, totalUsers: totalUsers || 0, cities: cities || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Categorie
+app.get('/api/categories', async (req, res) => {
+  try {
+    const { data } = await supabase.from('categories').select('*').order('sort_order');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Città
+app.get('/api/cities', async (req, res) => {
+  try {
+    const { data } = await supabase.from('cities').select('name, slug').order('name');
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Annunci con filtri
+app.get('/api/ads', async (req, res) => {
+  try {
+    const { category, city, search, limit = 50 } = req.query;
+    let query = supabase.from('ads').select('*').eq('is_active', true);
+    
+    if (category && category !== 'all') query = query.eq('category', category);
+    if (city && city !== 'all') query = query.ilike('city', city);
+    if (search) query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+    
+    query = query.order('created_at', { ascending: false }).limit(parseInt(limit));
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Annuncio singolo
+app.get('/api/ads/:id', async (req, res) => {
+  try {
+    const { data } = await supabase.from('ads').select('*').eq('id', req.params.id).single();
+    
+    if (!data) return res.status(404).json({ error: 'Annuncio non trovato' });
+    
+    // Incrementa views
+    await supabase.from('ads').update({ views: (data.views || 0) + 1 }).eq('id', req.params.id);
+    
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Annunci per città/categoria (URL style)
+app.get('/api/ads-by/:city/:category', async (req, res) => {
+  try {
+    const { city, category } = req.params;
+    let query = supabase.from('ads').select('*').eq('is_active', true);
+    
+    if (city !== 'all') query = query.ilike('city', city);
+    if (category !== 'all') query = query.eq('category', category);
+    
+    query = query.order('created_at', { ascending: false }).limit(50);
+    const { data } = await query;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// API: AUTH (using local SQLite)
+// ============================================================
+
+// Registrazione
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, surname, email, password, city, gender, birthDate, acceptTerms } = req.body;
-    if (!name || !email || !password || !acceptTerms) 
-      return res.json({ success: false, error: 'Compila tutti i campi obbligatori' });
-    if (password.length < 6) 
-      return res.json({ success: false, error: 'Password almeno 6 caratteri' });
-
-    // Check existing
+    const { name, email, password, phone, city, acceptTerms } = req.body;
+    
+    if (!name || !email || !password || !acceptTerms) {
+      return res.status(400).json({ success: false, error: 'Compila tutti i campi obbligatori' });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password minimo 6 caratteri' });
+    }
+    
+    // Check se email esiste nel DB locale
     const existing = getUserByEmail(email);
-    if (existing) return res.json({ success: false, error: 'Email già registrata' });
-
-    const uid = require('uuid').v4();
-    const hashedPwd = bcrypt.hashSync(password, 10);
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Email già registrata' });
+    }
     
-    const stmt = localDb.prepare(`
-      INSERT INTO users (id, name, surname, email, password, city, gender, birth_date, is_verified, is_premium, credits)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
-    `);
-    stmt.bind([uid, name, surname || '', email, hashedPwd, city || '', gender || '', birthDate || null]);
-    stmt.step();
-    stmt.free();
-    _saveLocalDb();
-
-    // Generate JWT
-    const token = jwt.sign({ id: uid, email, role: 'user' }, JWT_SECRET, { expiresIn: '30d' });
+    const userId = uuidv4();
+    const hashedPassword = bcrypt.hashSync(password, 10);
     
-    // Save session
-    const sessionStmt = localDb.prepare('INSERT INTO sessions (id, user_id, token) VALUES (?, ?, ?)');
-    sessionStmt.bind([require('uuid').v4(), uid, token]);
-    sessionStmt.step();
-    sessionStmt.free();
-    _saveLocalDb();
-
-    console.log('[REGISTER] User created:', email);
+    // Salva in SQLite locale
+    localDb.run(
+      'INSERT INTO users (id, name, email, password, phone, city) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, name, email, hashedPassword, phone || '', city || '']
+    );
+    saveLocalDb();
     
-    return res.json({
+    // Genera token
+    const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({
       success: true,
-      user: { id: uid, name, email, city: city || '', isVerified: false, isPremium: false, credits: 0 },
+      user: { id: userId, name, email, city: city || '', isPremium: false, credits: 0 },
       token
     });
-  } catch (e) {
-    console.error('[REGISTER] Exception:', e.message);
-    res.json({ success: false, error: 'Errore registrazione: ' + e.message });
+  } catch (err) {
+    console.error('Register error:', err);
+    res.status(500).json({ success: false, error: 'Errore registrazione' });
   }
 });
 
-// --- Login ---
-app.post('/api/auth/login', (req, res) => {
+// Login
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.json({ success: false, error: 'Inserisci email e password' });
-
+    
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Inserisci email e password' });
+    }
+    
     const user = getUserByEmail(email);
-    if (!user) return res.json({ success: false, error: 'Email non registrata' });
+    
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Email non registrata' });
+    }
     
     if (!bcrypt.compareSync(password, user.password)) {
-      return res.json({ success: false, error: 'Password non valida' });
+      return res.status(401).json({ success: false, error: 'Password non valida' });
     }
-
-    // Generate JWT
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role || 'user' }, JWT_SECRET, { expiresIn: '30d' });
     
-    // Save session
-    const uuid = require('uuid').v4;
-    const sessionStmt = localDb.prepare('DELETE FROM sessions WHERE user_id = ?');
-    sessionStmt.bind([user.id]);
-    sessionStmt.step();
-    sessionStmt.free();
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
     
-    const insertStmt = localDb.prepare('INSERT INTO sessions (id, user_id, token) VALUES (?, ?, ?)');
-    insertStmt.bind([require('uuid').v4(), user.id, token]);
-    insertStmt.step();
-    insertStmt.free();
-    _saveLocalDb();
-
-    console.log('[LOGIN] Success:', email);
-    
-    return res.json({
+    res.json({
       success: true,
-      user: sanitizeUser(user),
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        city: user.city || '',
+        phone: user.phone || ''
+      },
       token
     });
-  } catch (e) {
-    console.error('[LOGIN] Exception:', e.message);
-    res.json({ success: false, error: 'Errore accesso' });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ success: false, error: 'Errore login' });
   }
 });
 
-// --- Logout ---
-app.post('/api/auth/logout', (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (token) {
-    const stmt = localDb.prepare('DELETE FROM sessions WHERE token = ?');
-    stmt.bind([token]);
-    stmt.step();
-    stmt.free();
-    _saveLocalDb();
-  }
-  res.json({ success: true });
-});
-
-// --- Me ---
-app.get('/api/auth/me', (req, res) => {
+// Chi è loggato
+app.get('/api/auth/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.json({ success: false, error: 'Non autenticato' });
+    if (!authHeader) return res.status(401).json({ success: false, error: 'Non autenticato' });
     
     const token = authHeader.replace('Bearer ', '');
-    
-    // Verify JWT
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      return res.json({ success: false, error: 'Sessione scaduta' });
-    }
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     const user = getUserById(decoded.id);
-    if (!user) return res.json({ success: false, error: 'Utente non trovato' });
     
-    return res.json({ success: true, user: sanitizeUser(user) });
-  } catch (e) {
-    res.json({ success: false, error: 'Errore' });
+    if (!user) return res.status(404).json({ success: false, error: 'Utente non trovato' });
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        city: user.city || '',
+        phone: user.phone || ''
+      }
+    });
+  } catch (err) {
+    res.status(401).json({ success: false, error: 'Sessione scaduta' });
+  }
+});
+
+// ============================================================
+// API: UTENTI LOGGATI
+// ============================================================
+
+// Middleware auth
+const requireAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Non autenticato' });
+    
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Token non valido' });
+  }
+};
+
+// I miei annunci
+app.get('/api/my-ads', requireAuth, async (req, res) => {
+  try {
+    const { data } = await supabase.from('ads').select('*').eq('user_id', req.userId).order('created_at', { ascending: false });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Crea annuncio
+app.post('/api/ads', requireAuth, async (req, res) => {
+  try {
+    const { title, description, category, city, phone, whatsapp, age, price, images } = req.body;
+    
+    if (!title || !description || !category || !city || !phone) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+    }
+    
+    const adId = uuidv4();
+    const imageUrl = images?.[0] || '';
+    
+    const { error } = await supabase.from('ads').insert({
+      id: adId,
+      user_id: req.userId,
+      title,
+      description,
+      category,
+      city,
+      phone,
+      whatsapp: whatsapp || phone,
+      age: age || null,
+      price: price || null,
+      image: imageUrl,
+      images: images || [],
+      is_active: true,
+      views: 0,
+      is_premium: false,
+      is_verified: false
+    });
+    
+    if (error) throw error;
+    
+    res.json({ success: true, id: adId });
+  } catch (err) {
+    console.error('Create ad error:', err);
+    res.status(500).json({ error: 'Errore creazione annuncio' });
+  }
+});
+
+// Elimina annuncio
+app.delete('/api/ads/:id', requireAuth, async (req, res) => {
+  try {
+    const { error } = await supabase.from('ads').delete().eq('id', req.params.id).eq('user_id', req.userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Acquisto crediti - crea checkout Stripe
+app.post('/api/create-checkout', requireAuth, async (req, res) => {
+  try {
+    const { credits, price } = req.body;
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: { name: `${credits} Crediti Bakeca` },
+          unit_amount: price * 100
+        },
+        quantity: 1
+      }],
+      mode: 'payment',
+      success_url: `${APP_URL}?payment=success&credits=${credits}`,
+      cancel_url: `${APP_URL}?payment=cancelled`,
+      metadata: { userId: req.userId, credits: credits.toString() }
+    });
+    
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Stripe error:', err);
+    res.status(500).json({ error: 'Errore Stripe' });
+  }
+});
+
+// ============================================================
+// API: ADMIN
+// ============================================================
+
+// Middleware admin
+const requireAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Non autenticato' });
+    
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    const { data: user } = await supabase.from('profiles').select('role').eq('id', decoded.id).single();
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    req.userId = decoded.id;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Token non valido' });
+  }
+};
+
+// Tutti gli utenti
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Tutti gli annunci
+app.get('/api/admin/ads', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await supabase.from('ads').select('*').order('created_at', { ascending: false });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Gestisci utente
+app.patch('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const { is_premium, is_verified, credits, role } = req.body;
+    const updates = {};
+    if (typeof is_premium === 'boolean') updates.is_premium = is_premium;
+    if (typeof is_verified === 'boolean') updates.is_verified = is_verified;
+    if (typeof credits === 'number') updates.credits = credits;
+    if (role) updates.role = role;
+    
+    const { error } = await supabase.from('profiles').update(updates).eq('id', req.params.id);
+    if (error) throw error;
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Elimina annuncio (admin)
+app.delete('/api/admin/ads/:id', requireAdmin, async (req, res) => {
+  try {
+    const { error } = await supabase.from('ads').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Statistiche admin
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const { count: users } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+    const { count: ads } = await supabase.from('ads').select('*', { count: 'exact', head: true });
+    const { count: activeAds } = await supabase.from('ads').select('*', { count: 'exact', head: true }).eq('is_active', true);
+    
+    res.json({ users: users || 0, ads: ads || 0, activeAds: activeAds || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -333,12 +546,15 @@ async function start() {
   await initLocalDb();
   
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n  ✦ IncontriDiBakeka — Annunci Premium ✦`);
-    console.log(`  ──────────────────────────────────────`);
-    console.log(`  🌐  ${APP_URL}`);
-    console.log(`  🗄️  Dati: Supabase PostgreSQL`);
-    console.log(`  🔐  Auth: SQLite Locale`);
-    console.log(`  💎  Premium Dating Experience\n`);
+    console.log(`
+╔════════════════════════════════════════════╗
+║   BAKECA INCONTRI CLONE - Running            ║
+╠════════════════════════════════════════════╣
+║   🌐 ${APP_URL}
+║   🗄️  Supabase Database
+║   💳 Stripe Payments
+╚════════════════════════════════════════════╝
+  `);
   });
 }
 

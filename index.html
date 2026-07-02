@@ -3,1225 +3,1667 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="IncontriDiBakeka — Il portale premium di annunci incontri. Escort, accompagnatori, coppie, trans e molto più. Esperienza esclusiva nella tua città.">
-  <meta name="theme-color" content="#0a0a1a">
+  <meta name="description" content="Bakeca Incontri - Annunci escort, trans, incontri in tutta Italia">
+  <title>Bakeca Incontri - Annunci Escort e Incontri</title>
   
-  <title>IncontriDiBakeka 🔥 — Annunci Incontri Premium</title>
-
-  <!-- Environment Variables (injected by server) -->
   <script id="env-config"></script>
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
   
-  <!-- Font Awesome 6 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  
-  <!-- AOS - Animate On Scroll -->
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  
-  <!-- Stripe JS -->
   <script src="https://js.stripe.com/v3/"></script>
   
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #e91e63;
+      --primary-dark: #c2185b;
+      --dark: #1a1a2e;
+      --darker: #0f0f1a;
+      --light: #f5f5f5;
+      --gray: #888;
+      --border: #333;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--darker);
+      color: #fff;
+      min-height: 100vh;
+    }
+    
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+    
+    /* Navbar */
+    .navbar {
+      background: var(--dark);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    .nav-links a {
+      color: #aaa;
+      font-size: 0.9rem;
+      transition: color 0.3s;
+    }
+    
+    .nav-links a:hover { color: var(--primary); }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    
+    .btn-primary:hover { background: var(--primary-dark); }
+    
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
+      padding: 80px 30px;
+      text-align: center;
+    }
+    
+    .hero h1 {
+      font-size: 3rem;
+      margin-bottom: 15px;
+    }
+    
+    .hero h1 span { color: var(--primary); }
+    
+    .hero p {
+      color: #aaa;
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+    }
+    
+    /* Search */
+    .search-box {
+      max-width: 600px;
+      margin: 0 auto 30px;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .search-box input, .search-box select {
+      flex: 1;
+      padding: 15px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--dark);
+      color: #fff;
+      font-size: 1rem;
+    }
+    
+    .search-box input:focus, .search-box select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    /* Categories */
+    .categories {
+      padding: 60px 30px;
+      background: var(--dark);
+    }
+    
+    .section-title {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 40px;
+    }
+    
+    .section-title span { color: var(--primary); }
+    
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 25px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .category-card {
+      background: var(--darker);
+      border-radius: 12px;
+      padding: 30px;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .category-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-5px);
+    }
+    
+    .category-card i {
+      font-size: 2.5rem;
+      color: var(--primary);
+      margin-bottom: 15px;
+    }
+    
+    .category-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+    
+    .category-card p {
+      color: #888;
+      font-size: 0.85rem;
+    }
+    
+    .category-card .cities {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    
+    .category-card .cities a {
+      background: rgba(233, 30, 99, 0.1);
+      color: var(--primary);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    
+    /* Ads Grid */
+    .ads-section {
+      padding: 60px 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .ads-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .ads-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .ads-filters select {
+      padding: 10px 15px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--dark);
+      color: #fff;
+    }
+    
+    .ads-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .ad-card {
+      background: var(--dark);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+    
+    .ad-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+    }
+    
+    .ad-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: #222;
+    }
+    
+    .ad-content {
+      padding: 15px;
+    }
+    
+    .ad-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .ad-info {
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+    
+    .ad-info i {
+      color: var(--primary);
+      margin-right: 5px;
+    }
+    
+    .ad-price {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .ad-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .ad-actions .btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 0.85rem;
+    }
+    
+    .btn-whatsapp {
+      background: #25d366;
+      color: #fff;
+    }
+    
+    .btn-whatsapp:hover { background: #128c7e; }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .modal.active { display: flex; }
+    
+    .modal-content {
+      background: var(--dark);
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h2 {
+      font-size: 1.3rem;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .modal-close:hover { color: var(--primary); }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    /* Forms */
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+    
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--darker);
+      color: #fff;
+      font-size: 1rem;
+    }
+    
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    /* User Menu */
+    .user-menu {
+      position: relative;
+    }
+    
+    .user-menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 200px;
+      margin-top: 10px;
+      z-index: 100;
+    }
+    
+    .user-menu-dropdown.active { display: block; }
+    
+    .user-menu-dropdown a {
+      display: block;
+      padding: 12px 15px;
+      color: #aaa;
+      transition: all 0.3s;
+    }
+    
+    .user-menu-dropdown a:hover {
+      background: var(--darker);
+      color: #fff;
+    }
+    
+    .user-info {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .user-info strong { display: block; margin-bottom: 3px; }
+    .user-info span { color: #888; font-size: 0.85rem; }
+    
+    /* Admin Panel */
+    .admin-panel {
+      display: none;
+      padding: 100px 30px 60px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .admin-panel.active { display: block; }
+    
+    .admin-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .admin-tab {
+      padding: 12px 20px;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #aaa;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .admin-tab:hover, .admin-tab.active {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    
+    .admin-content {
+      background: var(--dark);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .admin-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: var(--darker);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .stat-card h3 {
+      color: var(--primary);
+      font-size: 2rem;
+      margin-bottom: 5px;
+    }
+    
+    .stat-card p { color: #888; font-size: 0.9rem; }
+    
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .admin-table th, .admin-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .admin-table th {
+      color: #888;
+      font-weight: 500;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+    }
+    
+    .admin-table tr:hover td {
+      background: var(--darker);
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 15px 25px;
+      border-radius: 8px;
+      font-weight: 500;
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+    
+    .toast.success { background: #10b981; color: #fff; }
+    .toast.error { background: #ef4444; color: #fff; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    /* Footer */
+    .footer {
+      background: var(--dark);
+      padding: 60px 30px 30px;
+      margin-top: 60px;
+    }
+    
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 40px;
+    }
+    
+    .footer-section h4 {
+      margin-bottom: 15px;
+      color: var(--primary);
+    }
+    
+    .footer-section a {
+      display: block;
+      color: #888;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      transition: color 0.3s;
+    }
+    
+    .footer-section a:hover { color: var(--primary); }
+    
+    .footer-bottom {
+      text-align: center;
+      padding-top: 30px;
+      margin-top: 30px;
+      border-top: 1px solid var(--border);
+      color: #666;
+      font-size: 0.85rem;
+    }
+    
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    
+    .loading i {
+      font-size: 2rem;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Auth forms */
+    .auth-divider {
+      text-align: center;
+      color: #888;
+      margin: 20px 0;
+      position: relative;
+    }
+    
+    .auth-divider::before, .auth-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: var(--border);
+    }
+    
+    .auth-divider::before { left: 0; }
+    .auth-divider::after { right: 0; }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px;
+      color: #888;
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: var(--border);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .search-box { flex-direction: column; }
+      .nav-links { display: none; }
+      .form-row { grid-template-columns: 1fr; }
+      .navbar { padding: 15px; }
+    }
+    
+    /* Hidden */
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
 
-  <!-- ============================================================
-  PRELOADER
-  ============================================================ -->
-  <div id="preloader" class="preloader">
-    <div class="preloader-content">
-      <div class="preloader-logo">
-        <i class="fas fa-heart"></i>
-        <span>IncontriDiBakeka</span>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="logo">
+      <i class="fas fa-heart"></i> Bakeca Incontri
+    </a>
+    
+    <div class="nav-links">
+      <a href="#" onclick="showPage('home')">Home</a>
+      <a href="#" onclick="showPage('ads')">Annunci</a>
+      <div id="authArea">
+        <button class="btn btn-outline" onclick="openModal('loginModal')">Accedi</button>
+        <button class="btn btn-primary" onclick="openModal('registerModal')">Registrati</button>
       </div>
-      <div class="preloader-bar">
-        <div class="preloader-fill"></div>
-      </div>
-      <p class="preloader-text">Caricando esperienze premium...</p>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  NAVBAR
-  ============================================================ -->
-  <nav class="navbar" id="navbar">
-    <div class="container">
-      <div class="navbar-inner">
-        <a href="/" class="navbar-brand">
-          <i class="fas fa-heart brand-icon"></i>
-          <span class="brand-text">Incontri<span class="brand-highlight">Di</span>Bakeka</span>
-        </a>
-
-        <div class="navbar-menu" id="navbarMenu">
-          <a href="#" class="nav-link active" data-section="home">Home</a>
-          <a href="#categories" class="nav-link" data-section="categories">Categorie</a>
-          <a href="#annunci" class="nav-link" data-section="ads">Annunci</a>
-          <a href="#stats" class="nav-link" data-section="stats">Numeri</a>
-          <a href="#vetrina" class="nav-link" data-section="vetrina">Vetrina</a>
-          
-          <div class="nav-actions">
-            <button class="btn btn-ghost" onclick="openSearch()">
-              <i class="fas fa-search"></i>
-            </button>
-            <div class="auth-buttons" id="authButtons">
-              <button class="btn btn-ghost" onclick="openLogin()">
-                <i class="fas fa-user"></i>
-                <span class="btn-text d-none d-md-inline">Accedi</span>
-              </button>
-              <button class="btn btn-primary" onclick="openRegister()">
-                <i class="fas fa-edit"></i>
-                <span class="btn-text">Registrati</span>
-              </button>
-            </div>
-            <div class="user-menu" id="userMenu" style="display:none;">
-              <button class="btn btn-ghost user-dropdown-toggle" onclick="toggleUserDropdown()">
-                <i class="fas fa-user-circle"></i>
-                <span class="user-name" id="userName">Utente</span>
-                <span id="adminBadge" style="display:none;background:var(--accent);color:#000;font-size:0.55rem;padding:1px 6px;border-radius:10px;font-weight:700;text-transform:uppercase;margin-left:4px">Admin</span>
-                <i class="fas fa-chevron-down"></i>
-              </button>
-              <div class="user-dropdown" id="userDropdown">
-                <div class="dropdown-header">
-                  <strong id="dropdownUserName">Utente</strong>
-                  <span id="dropdownUserEmail">email@example.com</span>
-                </div>
-                <div class="dropdown-body">
-                  <div class="dropdown-credits" onclick="userAction('credits')">
-                    <i class="fas fa-coins" style="color:var(--accent)"></i>
-                    <span id="userCredits">0 crediti</span>
-                  </div>
-                  <div class="dropdown-divider"></div>
-                  <a href="#" onclick="userAction('profile')"><i class="fas fa-id-card"></i> Il mio profilo</a>
-                  <a href="#" onclick="userAction('myads')"><i class="fas fa-list"></i> I miei annunci</a>
-                  <a href="#" onclick="userAction('contacts')"><i class="fas fa-bookmark"></i> Rubrica contatti</a>
-                  <a href="#" onclick="userAction('credits')"><i class="fas fa-shopping-cart"></i> Negozio addons</a>
-                  <a href="#" onclick="userAction('vetrina')"><i class="fas fa-crown"></i> Vetrina</a>
-                  <a href="#" onclick="userAction('settings')"><i class="fas fa-cog"></i> Impostazioni</a>
-                  <a href="#" onclick="userAction('support')"><i class="fas fa-headset"></i> Supporto</a>
-                  <a href="#" onclick="userAction('admin')" data-action="admin" style="display:none"><i class="fas fa-shield-alt"></i> Admin Panel</a>
-                  <div class="dropdown-divider"></div>
-                  <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Esci</a>
-                </div>
-              </div>
-            </div>
-            <button class="btn btn-primary d-none d-md-inline-flex" onclick="openPublish()">
-              <i class="fas fa-plus-circle"></i>
-              <span class="btn-text">Pubblica</span>
-            </button>
+      <div id="userArea" class="user-menu hidden">
+        <button class="btn btn-outline" onclick="toggleUserMenu()">
+          <i class="fas fa-user"></i> <span id="userName">Utente</span>
+        </button>
+        <div class="user-menu-dropdown" id="userDropdown">
+          <div class="user-info">
+            <strong id="dropdownName">Utente</strong>
+            <span id="dropdownEmail">email@test.com</span>
           </div>
-        </div>
-
-        <div class="navbar-mobile-actions">
-          <button class="btn btn-ghost" onclick="openSearch()">
-            <i class="fas fa-search"></i>
-          </button>
-          <button class="btn btn-ghost" onclick="openLogin()">
-            <i class="fas fa-user"></i>
-          </button>
-          <button class="hamburger" id="hamburger" onclick="toggleMenu()">
-            <span></span><span></span><span></span>
-          </button>
+          <a href="#" onclick="showPage('my-ads')"><i class="fas fa-list"></i> I miei annunci</a>
+          <a href="#" onclick="showPage('profile')"><i class="fas fa-cog"></i> Profilo</a>
+          <a href="#" onclick="showPage('credits')"><i class="fas fa-coins"></i> Acquista Crediti</a>
+          <a href="#" id="adminLink" href="#" onclick="showPage('admin')" class="hidden"><i class="fas fa-shield-alt"></i> Admin</a>
+          <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Esci</a>
         </div>
       </div>
     </div>
+    
+    <button class="btn btn-primary" onclick="openModal('publishModal')">
+      <i class="fas fa-plus"></i> Pubblica
+    </button>
   </nav>
 
-  <!-- ============================================================
-  SEARCH OVERLAY
-  ============================================================ -->
-  <div class="search-overlay" id="searchOverlay">
-    <div class="search-overlay-content">
-      <button class="search-close" onclick="closeSearch()">&times;</button>
-      <h2 class="search-title">Cosa cerchi?</h2>
-      <div class="search-form">
-        <input type="text" id="searchInput" class="search-input" placeholder="Cerca per nome, città, categoria..." autofocus>
-        <button class="btn btn-primary btn-lg" onclick="performSearch()">
-          <i class="fas fa-search"></i> Cerca
-        </button>
-      </div>
-      <div class="search-tags">
-        <span class="search-tag" onclick="quickSearch('donna cerca uomo')">Donna cerca Uomo</span>
-        <span class="search-tag" onclick="quickSearch('uomo cerca donna')">Uomo cerca Donna</span>
-        <span class="search-tag" onclick="quickSearch('trans')">Trans</span>
-        <span class="search-tag" onclick="quickSearch('coppia')">Coppie</span>
-        <span class="search-tag" onclick="quickSearch('Napoli')">Napoli</span>
-        <span class="search-tag" onclick="quickSearch('Milano')">Milano</span>
-        <span class="search-tag" onclick="quickSearch('Roma')">Roma</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  PUBLISH MODAL
-  ============================================================ -->
-  <div class="modal-overlay" id="publishModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closePublish()">&times;</button>
-      <div class="modal-icon">
-        <i class="fas fa-feather-alt"></i>
-      </div>
-      <h2 class="modal-title">Pubblica il tuo annuncio</h2>
-      <form id="publishForm" onsubmit="submitAd(event)">
+  <!-- Main Content -->
+  <main id="mainContent">
+    
+    <!-- Home Page -->
+    <div id="homePage">
+      <!-- Hero -->
+      <section class="hero">
+        <h1>Trova <span>incontri</span> nella tua città</h1>
+        <p>Annunci escort, trans, coppie e incontri in tutta Italia</p>
         
-        <!-- Piano -->
-        <div class="form-group">
-          <label>Piano di pubblicazione</label>
-          <div class="plan-selector">
-            <label class="plan-option active" id="planFree" onclick="selectPublishPlan('free')">
-              <input type="radio" name="publishPlan" value="free" checked hidden>
-              <i class="fas fa-star"></i>
-              <strong>Gratis</strong>
-              <small>1 foto • Base</small>
-            </label>
-            <label class="plan-option" id="planPremium" onclick="selectPublishPlan('premium')">
-              <input type="radio" name="publishPlan" value="premium" hidden>
-              <i class="fas fa-crown"></i>
-              <strong>Premium €4.95</strong>
-              <small>5 foto • In Vetrina</small>
-            </label>
-            <label class="plan-option" id="planGold" onclick="selectPublishPlan('gold')">
-              <input type="radio" name="publishPlan" value="gold" hidden>
-              <i class="fas fa-gem"></i>
-              <strong>Gold €19.95</strong>
-              <small>10 foto • TOP 7gg</small>
-            </label>
-          </div>
+        <div class="search-box">
+          <select id="searchCategory">
+            <option value="">Tutte le categorie</option>
+          </select>
+          <select id="searchCity">
+            <option value="">Tutte le città</option>
+          </select>
+          <button class="btn btn-primary" onclick="searchAds()">
+            <i class="fas fa-search"></i> Cerca
+          </button>
         </div>
-
-        <!-- Foto upload -->
-        <div class="form-group" id="photoUploadGroup">
-          <label>Foto <span id="photoLimit">(max 1)</span></label>
-          <div class="upload-zone" id="uploadZone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <p>Trascina qui le tue foto o <a href="#" onclick="document.getElementById('fileInput').click();return false">clicca per caricare</a></p>
-            <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handleFiles(this.files)">
-          </div>
-          <div class="photo-preview" id="photoPreview"></div>
+      </section>
+      
+      <!-- Categories -->
+      <section class="categories">
+        <h2 class="section-title">Scegli la <span>categoria</span></h2>
+        <div class="categories-grid" id="categoriesGrid">
+          <div class="loading"><i class="fas fa-spinner"></i></div>
         </div>
-
-        <!-- Dati annuncio -->
-        <div class="form-group">
-          <label>Titolo</label>
-          <input type="text" id="adTitle" class="form-control" placeholder="Es. Bella ragazza cerca..." required>
+      </section>
+      
+      <!-- Recent Ads -->
+      <section class="ads-section">
+        <div class="ads-header">
+          <h2 class="section-title" style="margin:0">Annunci <span>recenti</span></h2>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Categoria</label>
-            <select id="adCategory" class="form-control">
-              <option value="donna-cerca-uomo">Donna cerca Uomo</option>
-              <option value="uomo-cerca-donna">Uomo cerca Donna</option>
-              <option value="uomo-cerca-uomo">Uomo cerca Uomo</option>
-              <option value="donna-cerca-donna">Donna cerca Donna</option>
-              <option value="coppie">Coppie</option>
-              <option value="trans">Trans</option>
-              <option value="cerco-amici">Cerco Amici</option>
-              <option value="anima-gemella">Anima Gemella</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Città</label>
-            <input type="text" id="adCity" class="form-control" placeholder="La tua città" list="cityList">
-            <datalist id="cityList"></datalist>
-          </div>
+        <div class="ads-grid" id="recentAdsGrid">
+          <div class="loading"><i class="fas fa-spinner"></i></div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Età</label>
-            <input type="number" id="adAge" class="form-control" placeholder="25" min="18" max="99">
-          </div>
-          <div class="form-group">
-            <label>Genere</label>
-            <select id="adGender" class="form-control">
-              <option value="donna">Donna</option>
-              <option value="uomo">Uomo</option>
-              <option value="coppia">Coppia</option>
-              <option value="trans">Trans</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Descrizione</label>
-          <textarea id="adDescription" class="form-control" rows="4" placeholder="Chi sei? Cosa cerchi?..." required></textarea>
-        </div>
-
-        <!-- Prezzo (opzionale) -->
-        <div class="form-group">
-          <label>Prezzo (opzionale)</label>
-          <input type="text" id="adPrice" class="form-control" placeholder="Es. 100€/h o lascia vuoto">
-        </div>
-
-        <div class="form-group">
-          <label>Classificazione foto</label>
-          <select id="adPhotoClass" class="form-control">
-            <option value="safe">Safe</option>
-            <option value="hot">Hot</option>
-            <option value="hard">Hard</option>
+      </section>
+    </div>
+    
+    <!-- Ads Page -->
+    <div id="adsPage" class="ads-section hidden">
+      <div class="ads-header">
+        <h2 class="section-title" style="margin:0">Tutti gli <span>annunci</span></h2>
+        <div class="ads-filters">
+          <select id="filterCategory" onchange="loadAds()">
+            <option value="">Tutte</option>
+          </select>
+          <select id="filterCity" onchange="loadAds()">
+            <option value="">Tutte</option>
           </select>
         </div>
-
-        <div id="publishError" style="color:#ef4444;font-size:0.85rem;margin-bottom:0.75rem;display:none"></div>
-
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="publishBtn">
-          <i class="fas fa-paper-plane"></i> Pubblica annuncio
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  LOGIN MODAL
-  ============================================================ -->
-  <div class="modal-overlay" id="loginModal">
-    <div class="modal-content auth-modal-content">
-      <button class="modal-close" onclick="closeLogin()">&times;</button>
-      <div class="modal-icon">
-        <i class="fas fa-user-circle"></i>
       </div>
-      <h2 class="modal-title">Bentornato! <span class="gradient-text">Accedi</span></h2>
-      <p class="modal-subtitle">Inserisci le tue credenziali per continuare</p>
-
-      <form id="loginForm" onsubmit="handleLogin(event)">
-        <div class="form-group">
-          <label><i class="fas fa-envelope"></i> Email</label>
-          <input type="email" id="loginEmail" class="form-control" placeholder="tua@email.com" required autocomplete="email">
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-lock"></i> Password</label>
-          <div class="password-field">
-            <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password">
-            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-        </div>
-        <div class="form-row-actions">
-          <label class="checkbox-label">
-            <input type="checkbox" id="loginRemember">
-            <span>Ricordami</span>
-          </label>
-          <a href="#" class="forgot-link" onclick="alert('Funzionalità di reset password in arrivo!'); return false;">Password dimenticata?</a>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
-          <i class="fas fa-sign-in-alt"></i> Accedi
-        </button>
-        <div id="loginError" class="form-error"></div>
-      </form>
-
-      <div class="auth-social">
-        <p class="auth-divider"><span>oppure accedi con</span></p>
-        <div class="social-buttons">
-          <button class="btn btn-social btn-google" onclick="socialLogin('google')">
-            <i class="fab fa-google"></i>
-          </button>
-          <button class="btn btn-social btn-facebook" onclick="socialLogin('facebook')">
-            <i class="fab fa-facebook-f"></i>
-          </button>
-          <button class="btn btn-social btn-apple" onclick="socialLogin('apple')">
-            <i class="fab fa-apple"></i>
-          </button>
-          <button class="btn btn-social btn-telegram" onclick="socialLogin('telegram')">
-            <i class="fab fa-telegram-plane"></i>
-          </button>
-        </div>
-      </div>
-
-      <p class="auth-switch">
-        Non hai un account? <a href="#" onclick="closeLogin(); openRegister(); return false;">Registrati ora</a>
-      </p>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  REGISTER MODAL
-  ============================================================ -->
-  <div class="modal-overlay" id="registerModal">
-    <div class="modal-content auth-modal-content">
-      <button class="modal-close" onclick="closeRegister()">&times;</button>
-      <div class="modal-icon">
-        <i class="fas fa-feather-alt"></i>
-      </div>
-      <h2 class="modal-title">Crea il tuo <span class="gradient-text">account</span></h2>
-      <p class="modal-subtitle">Unisciti alla community premium di IncontriDiBakeka</p>
-
-      <form id="registerForm" onsubmit="handleRegister(event)">
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fas fa-user"></i> Nome *</label>
-            <input type="text" id="regName" class="form-control" placeholder="Il tuo nome" required>
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-user"></i> Cognome</label>
-            <input type="text" id="regSurname" class="form-control" placeholder="Il tuo cognome">
-          </div>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-envelope"></i> Email *</label>
-          <input type="email" id="regEmail" class="form-control" placeholder="tua@email.com" required autocomplete="email">
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-lock"></i> Password *</label>
-          <div class="password-field">
-            <input type="password" id="regPassword" class="form-control" placeholder="Crea una password sicura" required autocomplete="new-password">
-            <button type="button" class="password-toggle" onclick="togglePassword('regPassword', this)">
-              <i class="fas fa-eye"></i>
-            </button>
-          </div>
-          <div class="password-strength" id="passwordStrength">
-            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
-            <span class="strength-text" id="strengthText">Inserisci una password</span>
-          </div>
-          <ul class="password-rules">
-            <li id="ruleLength"><i class="fas fa-circle"></i> Almeno 8 caratteri</li>
-            <li id="ruleLower"><i class="fas fa-circle"></i> Una lettera minuscola</li>
-            <li id="ruleUpper"><i class="fas fa-circle"></i> Una lettera MAIUSCOLA</li>
-            <li id="ruleNumber"><i class="fas fa-circle"></i> Un numero</li>
-          </ul>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label><i class="fas fa-city"></i> Città</label>
-            <select id="regCity" class="form-control">
-              <option value="">Seleziona città</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-user-tag"></i> Tipologia utente</label>
-            <select id="regRole" class="form-control">
-              <option value="user">Cerco Annunci (End User)</option>
-              <option value="advertiser">Pubblico Annunci (Advertiser)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-venus-mars"></i> Genere</label>
-            <select id="regGender" class="form-control">
-              <option value="">Seleziona</option>
-              <option value="donna">Donna</option>
-              <option value="uomo">Uomo</option>
-              <option value="coppia">Coppia</option>
-              <option value="trans">Trans</option>
-              <option value="altro">Altro</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-calendar-alt"></i> Data di nascita *</label>
-          <input type="date" id="regBirthDate" class="form-control" required>
-          <small style="color:var(--text-muted);font-size:0.7rem;margin-top:4px;display:block">Devi essere maggiorenne per registrarti</small>
-        </div>
-        <div class="form-group">
-          <label><i class="fab fa-whatsapp"></i> Whatsapp / Telefono (opzionale)</label>
-          <div style="display:flex;gap:8px">
-            <select id="regPhonePrefix" class="form-control" style="max-width:120px;flex-shrink:0">
-              <option value="+39">🇮🇹 +39</option>
-              <option value="+1">🇺🇸 +1</option>
-              <option value="+44">🇬🇧 +44</option>
-              <option value="+34">🇪🇸 +34</option>
-              <option value="+33">🇫🇷 +33</option>
-              <option value="+49">🇩🇪 +49</option>
-              <option value="+55">🇧🇷 +55</option>
-              <option value="+54">🇦🇷 +54</option>
-              <option value="+57">🇨🇴 +57</option>
-              <option value="+56">🇨🇱 +56</option>
-              <option value="+51">🇵🇪 +51</option>
-              <option value="+48">🇵🇱 +48</option>
-              <option value="+40">🇷🇴 +40</option>
-              <option value="+7">🇷🇺 +7</option>
-              <option value="+86">🇨🇳 +86</option>
-              <option value="+81">🇯🇵 +81</option>
-              <option value="+351">🇵🇹 +351</option>
-              <option value="+30">🇬🇷 +30</option>
-              <option value="+90">🇹🇷 +90</option>
-              <option value="+381">🇷🇸 +381</option>
-              <option value="+385">🇭🇷 +385</option>
-              <option value="+43">🇦🇹 +43</option>
-              <option value="+41">🇨🇭 +41</option>
-              <option value="+32">🇧🇪 +32</option>
-              <option value="+31">🇳🇱 +31</option>
-              <option value="+46">🇸🇪 +46</option>
-              <option value="+47">🇳🇴 +47</option>
-              <option value="+45">🇩🇰 +45</option>
-              <option value="+358">🇫🇮 +358</option>
-              <option value="+353">🇮🇪 +353</option>
-              <option value="+61">🇦🇺 +61</option>
-              <option value="+852">🇭🇰 +852</option>
-              <option value="+82">🇰🇷 +82</option>
-              <option value="+65">🇸🇬 +65</option>
-              <option value="+971">🇦🇪 +971</option>
-              <option value="+966">🇸🇦 +966</option>
-              <option value="+972">🇮🇱 +972</option>
-              <option value="+212">🇲🇦 +212</option>
-              <option value="+216">🇹🇳 +216</option>
-              <option value="+213">🇩🇿 +213</option>
-              <option value="+20">🇪🇬 +20</option>
-            </select>
-            <input type="tel" id="regPhone" class="form-control" placeholder="Numero Whatsapp">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="regAcceptTerms" required>
-            <span>Accetto i <a href="#" class="terms-link">Termini e Condizioni</a> e la <a href="#" class="terms-link">Privacy Policy</a>. Dichiaro di essere maggiorenne. *</span>
-          </label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
-          <i class="fas fa-feather-alt"></i> Crea Account
-        </button>
-        <div id="registerError" class="form-error"></div>
-      </form>
-
-      <div class="auth-social">
-        <p class="auth-divider"><span>oppure registrati con</span></p>
-        <div class="social-buttons">
-          <button class="btn btn-social btn-google" onclick="socialLogin('google')">
-            <i class="fab fa-google"></i>
-          </button>
-          <button class="btn btn-social btn-facebook" onclick="socialLogin('facebook')">
-            <i class="fab fa-facebook-f"></i>
-          </button>
-          <button class="btn btn-social btn-apple" onclick="socialLogin('apple')">
-            <i class="fab fa-apple"></i>
-          </button>
-        </div>
-      </div>
-
-      <p class="auth-switch">
-        Hai già un account? <a href="#" onclick="closeRegister(); openLogin(); return false;">Accedi ora</a>
-      </p>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  SPONSOR MODAL
-  ============================================================ -->
-  <div class="modal-overlay" id="sponsorModal">
-    <div class="modal-content sponsor-modal-content">
-      <button class="modal-close" onclick="closeSponsor()">&times;</button>
-      <div class="modal-icon">
-        <i class="fas fa-crown"></i>
-      </div>
-      <h2 class="modal-title">Sponsorizza il tuo annuncio</h2>
-      <p class="modal-subtitle">Scegli l'annuncio da mettere in vetrina</p>
-      
-      <div class="sponsor-progress">
-        <div class="sponsor-step active" data-step="1">
-          <div class="step-number">1</div>
-          <div class="step-label">Annuncio</div>
-        </div>
-        <div class="sponsor-step" data-step="2">
-          <div class="step-number">2</div>
-          <div class="step-label">Piano</div>
-        </div>
-        <div class="sponsor-step" data-step="3">
-          <div class="step-number">3</div>
-          <div class="step-label">Pagamento</div>
-        </div>
-        <div class="sponsor-step" data-step="4">
-          <div class="step-number">4</div>
-          <div class="step-label">Conferma</div>
-        </div>
-      </div>
-
-      <!-- Step 1: Seleziona Annuncio -->
-      <div class="sponsor-step-content" id="sponsorStep1">
-        <p style="color: var(--text-secondary); margin-bottom: 1rem; text-align: center;">Seleziona quale annuncio vuoi sponsorizzare:</p>
-        <div class="sponsor-ads-list" id="sponsorAdsList">
-          <!-- Generated by JS -->
-        </div>
-        <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; margin-top: 1rem;">
-          <i class="fas fa-info-circle"></i> Non hai ancora pubblicato un annuncio? <a href="#" onclick="closeSponsor(); openPublish(); return false;" style="color: var(--primary-light);">Pubblica ora</a>
-        </p>
-      </div>
-
-      <!-- Step 2: Riepilogo Piano -->
-      <div class="sponsor-step-content" id="sponsorStep2" style="display: none;">
-        <div class="sponsor-summary" id="sponsorSummary">
-          <!-- Generated by JS -->
-        </div>
-        <button class="btn btn-primary btn-block btn-lg" onclick="nextSponsorStep(3)" style="margin-top: 1.5rem;">
-          <i class="fas fa-credit-card"></i> Procedi al pagamento
-        </button>
-      </div>
-
-      <!-- Step 3: Pagamento -->
-      <div class="sponsor-step-content" id="sponsorStep3" style="display: none;">
-        <div class="payment-methods">
-          <div class="payment-method active" onclick="selectPayment(this, 'card')">
-            <i class="fas fa-credit-card"></i>
-            <span>Carta di Credito</span>
-          </div>
-          <div class="payment-method" onclick="selectPayment(this, 'paypal')">
-            <i class="fab fa-paypal"></i>
-            <span>PayPal</span>
-          </div>
-          <div class="payment-method" onclick="selectPayment(this, 'satispay')">
-            <i class="fas fa-mobile-alt"></i>
-            <span>Satispay</span>
-          </div>
-          <div class="payment-method" onclick="selectPayment(this, 'crypto')">
-            <i class="fas fa-coins"></i>
-            <span>Crypto</span>
-          </div>
-        </div>
-        <div class="payment-form">
-          <div class="form-group">
-            <label>Numero Carta</label>
-            <input type="text" class="form-control" placeholder="1234 5678 9012 3456" maxlength="19">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Scadenza</label>
-              <input type="text" class="form-control" placeholder="MM/AA">
-            </div>
-            <div class="form-group">
-              <label>CVV</label>
-              <input type="text" class="form-control" placeholder="123">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Intestatario</label>
-            <input type="text" class="form-control" placeholder="Mario Rossi">
-          </div>
-        </div>
-        <button class="btn btn-primary btn-block btn-lg" onclick="nextSponsorStep(4)" style="margin-top: 1rem;">
-          <i class="fas fa-lock"></i> Paga €<span id="sponsorPayAmount">4.95</span>
-        </button>
-        <p style="color: var(--text-muted); font-size: 0.75rem; text-align: center; margin-top: 0.8rem;">
-          <i class="fas fa-lock"></i> Pagamento sicuro • Crittografia SSL
-        </p>
-      </div>
-
-      <!-- Step 4: Conferma -->
-      <div class="sponsor-step-content" id="sponsorStep4" style="display: none;">
-        <div class="sponsor-confirm">
-          <div class="confirm-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <h3>Pagamento confermato! 🎉</h3>
-          <p>Il tuo annuncio è ora in vetrina.</p>
-          <div class="confirm-details" id="confirmDetails"></div>
-          <button class="btn btn-primary btn-lg" onclick="closeSponsor()">
-            <i class="fas fa-check"></i> Perfetto!
-          </button>
-        </div>
+      <div class="ads-grid" id="allAdsGrid">
+        <div class="loading"><i class="fas fa-spinner"></i></div>
       </div>
     </div>
-  </div>
-
-  <!-- ============================================================
-  SHOP MODAL — CREDITI E ADDONS
-  ============================================================ -->
-  <div class="modal-overlay" id="shopModal">
-    <div class="modal-content shop-modal-content">
-      <button class="modal-close" onclick="closeShop()">&times;</button>
-      <div class="modal-icon">
-        <i class="fas fa-shopping-bag"></i>
-      </div>
-      <h2 class="modal-title">Negozio</h2>
-      <p class="modal-subtitle">Acquista crediti e potenzia i tuoi annunci</p>
-      <div id="shopContent" style="margin-top:24px">
-        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  ADDON PURCHASE MODAL
-  ============================================================ -->
-  <div class="modal-overlay" id="addonPurchaseModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeAddonPurchase()">&times;</button>
-      <h2 class="modal-title">Scegli l'annuncio</h2>
-      <p class="modal-subtitle">Su quale annuncio vuoi applicare questo addon?</p>
-      <div id="addonAdsList" style="margin-top:16px">
-        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  SUPPORT MODAL
-  ============================================================ -->
-  <div class="modal-overlay" id="supportModal">
-    <div class="modal-content" style="max-width:500px">
-      <button class="modal-close" onclick="closeSupport()">&times;</button>
-      <div class="modal-icon">
-        <i class="fas fa-headset"></i>
-      </div>
-      <h2 class="modal-title">Supporto</h2>
-      <p class="modal-subtitle">Invia un messaggio all'amministratore</p>
-      <form onsubmit="sendSupportMessage(event)" style="margin-top:20px">
-        <div class="form-group">
-          <label>La tua email</label>
-          <input type="email" id="supportEmail" class="form-control" placeholder="tua@email.com">
-        </div>
-        <div class="form-group">
-          <label>Messaggio</label>
-          <textarea id="supportMessage" class="form-control" rows="5" placeholder="Descrivi il tuo problema..." required></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="supportBtn">
-          <i class="fas fa-paper-plane"></i> Invia messaggio
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ============================================================
-  HERO SECTION
-  ============================================================ -->
-  <section class="hero home-section" id="home">
-    <div class="hero-bg">
-      <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=1920&h=1080&fit=crop&auto=format&q=80" 
-           alt="" class="hero-bg-image" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.3;">
-      <div style="position:absolute;inset:0;background:linear-gradient(135deg, rgba(10,10,26,0.95) 0%, rgba(10,10,26,0.7) 50%, rgba(10,10,26,0.95) 100%);"></div>
-    </div>
-    <div class="hero-particles" id="particles"></div>
     
-    <div class="container">
-      <div class="hero-content">
-        <div class="hero-badge" data-aos="fade-up" data-aos-delay="100">
-          <i class="fas fa-crown"></i>
-          <span>Portale Incontri Premium #1 in Italia</span>
-        </div>
-        
-        <h1 class="hero-title" data-aos="fade-up" data-aos-delay="200">
-          Il tuo <span class="gradient-text">desiderio</span><br>
-          la nostra <span class="gradient-text">passione</span>
-        </h1>
-        
-        <p class="hero-subtitle" data-aos="fade-up" data-aos-delay="300">
-          Scopri annunci esclusivi nella tua città. Persone reali, esperienze autentiche,<br class="d-none d-md-block">
-          discrezione assoluta. Benvenuto nell'élite degli incontri.
-        </p>
-
-        <div class="hero-actions" data-aos="fade-up" data-aos-delay="400">
-          <button class="btn btn-primary btn-lg" onclick="openSearch()">
-            <i class="fas fa-search"></i> Esplora Annunci
-          </button>
-          <button class="btn btn-outline btn-lg" onclick="openPublish()">
-            <i class="fas fa-plus-circle"></i> Pubblica Gratis
-          </button>
-        </div>
-
-        <div class="hero-stats" data-aos="fade-up" data-aos-delay="500">
-          <div class="hero-stat">
-            <span class="hero-stat-number" id="statAds">0</span>
-            <span class="hero-stat-label">Annunci Attivi</span>
-          </div>
-          <div class="hero-stat-divider"></div>
-          <div class="hero-stat">
-            <span class="hero-stat-number" id="statPremium">0</span>
-            <span class="hero-stat-label">Annunci Premium</span>
-          </div>
-          <div class="hero-stat-divider"></div>
-          <div class="hero-stat">
-            <span class="hero-stat-number" id="statCities">0</span>
-            <span class="hero-stat-label">Città</span>
-          </div>
-          <div class="hero-stat-divider"></div>
-          <div class="hero-stat">
-            <span class="hero-stat-number" id="statVerified">0</span>
-            <span class="hero-stat-label">Verificati</span>
-          </div>
-        </div>
+    <!-- My Ads Page -->
+    <div id="myAdsPage" class="ads-section hidden">
+      <div class="ads-header">
+        <h2 class="section-title" style="margin:0">I tuoi <span>annunci</span></h2>
+        <button class="btn btn-primary" onclick="openModal('publishModal')">
+          <i class="fas fa-plus"></i> Nuovo annuncio
+        </button>
+      </div>
+      <div class="ads-grid" id="myAdsGrid">
+        <div class="loading"><i class="fas fa-spinner"></i></div>
       </div>
     </div>
-
-    <div class="hero-scroll">
-      <span>Scorri per scoprire</span>
-      <i class="fas fa-chevron-down"></i>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  CATEGORIES SECTION
-  ============================================================ -->
-  <section class="section categories-section home-section" id="categories">
-    <div class="container">
-      <div class="section-header" data-aos="fade-up">
-        <span class="section-badge">Categorie</span>
-        <h2 class="section-title">Scegli la tua <span class="gradient-text">passione</span></h2>
-        <p class="section-desc">Ogni desiderio ha la sua categoria. Trova quella che fa per te.</p>
+    
+    <!-- Profile Page -->
+    <div id="profilePage" class="ads-section hidden">
+      <div class="ads-header">
+        <h2 class="section-title" style="margin:0">Il tuo <span>profilo</span></h2>
       </div>
-
-      <div class="categories-grid" id="categoriesGrid">
-        <!-- Generate by JS -->
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  FEATURED ADS SECTION
-  ============================================================ -->
-  <section class="section ads-section home-section" id="annunci">
-    <div class="container">
-      <div class="section-header" data-aos="fade-up">
-        <span class="section-badge">In Evidenza</span>
-        <h2 class="section-title">Annunci <span class="gradient-text">Premium</span></h2>
-        <p class="section-desc">I migliori profili selezionati per te. Esperienze esclusive garantite.</p>
-      </div>
-
-      <div class="ads-filters" data-aos="fade-up">
-        <button class="filter-btn active" data-filter="all">Tutti</button>
-        <button class="filter-btn" data-filter="donna-cerca-uomo">Donna cerca Uomo</button>
-        <button class="filter-btn" data-filter="uomo-cerca-donna">Uomo cerca Donna</button>
-        <button class="filter-btn" data-filter="donna-cerca-donna">Donna cerca Donna</button>
-        <button class="filter-btn" data-filter="uomo-cerca-uomo">Uomo cerca Uomo</button>
-        <button class="filter-btn" data-filter="coppie">Coppie</button>
-        <button class="filter-btn" data-filter="trans">Trans</button>
-        <button class="filter-btn" data-filter="cerco-amici">Cerco Amici</button>
-        <button class="filter-btn" data-filter="anima-gemella">Anima Gemella</button>
-      </div>
-
-      <div class="ads-grid" id="adsGrid">
-        <!-- Generate by JS -->
-      </div>
-
-      <div class="section-footer" data-aos="fade-up">
-        <button class="btn btn-outline btn-lg" onclick="openSearch()">
-          <i class="fas fa-search"></i> Vedi tutti gli annunci
+      <div style="max-width: 500px; margin: 0 auto;">
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" id="profileName" disabled>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="profileEmail" disabled>
+        </div>
+        <div class="form-group">
+          <label>Telefono</label>
+          <input type="tel" id="profilePhone">
+        </div>
+        <div class="form-group">
+          <label>Città</label>
+          <input type="text" id="profileCity">
+        </div>
+        <div class="form-group">
+          <label>Crediti</label>
+          <input type="text" id="profileCredits" disabled>
+        </div>
+        <button class="btn btn-primary" onclick="updateProfile()" style="margin-top:15px">
+          <i class="fas fa-save"></i> Salva modifiche
         </button>
       </div>
     </div>
-  </section>
-
-  <!-- ============================================================
-  STATS SECTION
-  ============================================================ -->
-  <section class="section stats-section home-section" id="stats">
-    <div class="container">
-      <div class="stats-grid">
-        <div class="stat-card" data-aos="fade-up" data-aos-delay="0">
-          <div class="stat-icon"><i class="fas fa-heart"></i></div>
-          <div class="stat-number" data-target="15000">0</div>
-          <div class="stat-label">Incontri Riusciti</div>
+    
+    <!-- Credits Page -->
+    <div id="creditsPage" class="ads-section hidden">
+      <div class="ads-header">
+        <h2 class="section-title" style="margin:0">Acquista <span>crediti</span></h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto;">
+        <div class="category-card" onclick="buyCredits(50, 9.90)">
+          <i class="fas fa-coins" style="font-size:3rem"></i>
+          <h3>50 Crediti</h3>
+          <p style="color:var(--primary);font-size:1.5rem;font-weight:700">€9.90</p>
+          <p style="color:#888;margin-top:10px">Solo €0.20 per credito</p>
         </div>
-        <div class="stat-card" data-aos="fade-up" data-aos-delay="100">
-          <div class="stat-icon"><i class="fas fa-user-check"></i></div>
-          <div class="stat-number" data-target="8920">0</div>
-          <div class="stat-label">Utenti Verificati</div>
+        <div class="category-card" onclick="buyCredits(100, 14.90)" style="border-color:var(--primary)">
+          <i class="fas fa-fire" style="color:#f59e0b"></i>
+          <h3>100 Crediti</h3>
+          <p style="color:var(--primary);font-size:1.5rem;font-weight:700">€14.90</p>
+          <p style="color:#888;margin-top:10px">Risparmia 25%</p>
         </div>
-        <div class="stat-card" data-aos="fade-up" data-aos-delay="200">
-          <div class="stat-icon"><i class="fas fa-city"></i></div>
-          <div class="stat-number" data-target="105">0</div>
-          <div class="stat-label">Città Coperte</div>
-        </div>
-        <div class="stat-card" data-aos="fade-up" data-aos-delay="300">
-          <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
-          <div class="stat-number" data-target="100">0</div>
-          <div class="stat-label">Discrezione Garantita</div>
+        <div class="category-card" onclick="buyCredits(200, 24.90)">
+          <i class="fas fa-gem" style="color:#8b5cf6"></i>
+          <h3>200 Crediti</h3>
+          <p style="color:var(--primary);font-size:1.5rem;font-weight:700">€24.90</p>
+          <p style="color:#888;margin-top:10px">Miglior rapporto!</p>
         </div>
       </div>
     </div>
-  </section>
-
-  <!-- ============================================================
-  FEATURES SECTION
-  ============================================================ -->
-  <section class="section features-section home-section">
-    <div class="container">
-      <div class="section-header" data-aos="fade-up">
-        <span class="section-badge">Perché Noi</span>
-        <h2 class="section-title">Un'esperienza <span class="gradient-text">superiore</span></h2>
+    
+    <!-- Admin Panel -->
+    <div id="adminPage" class="admin-panel">
+      <h2 class="section-title"><i class="fas fa-shield-alt"></i> Pannello <span>Admin</span></h2>
+      
+      <div class="admin-stats" id="adminStats">
+        <div class="stat-card">
+          <h3 id="statUsers">0</h3>
+          <p>Utenti</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statAds">0</h3>
+          <p>Annunci</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statActive">0</h3>
+          <p>Attivi</p>
+        </div>
       </div>
-
-      <div class="features-grid">
-        <div class="feature-card" data-aos="fade-up" data-aos-delay="0">
-          <div class="feature-icon"><i class="fas fa-shield-haltered"></i></div>
-          <h3>Discrezione Totale</h3>
-          <p>Privacy garantita con crittografia end-to-end e dati protetti. Nessuna informazione condivisa senza il tuo consenso.</p>
-        </div>
-        <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
-          <div class="feature-icon"><i class="fas fa-badge-check"></i></div>
-          <h3>Profili Verificati</h3>
-          <p>Tutti gli utenti sono verificati con documento d'identità. Niente fake, solo persone reali per esperienze autentiche.</p>
-        </div>
-        <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
-          <div class="feature-icon"><i class="fas fa-gem"></i></div>
-          <h3>Annunci Premium</h3>
-          <p>Profili esclusivi con foto in alta qualità, video presentazioni e dettagli verificati per un'esperienza di alto livello.</p>
-        </div>
-        <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
-          <div class="feature-icon"><i class="fas fa-headset"></i></div>
-          <h3>Supporto 24/7</h3>
-          <p>Assistenza clienti sempre disponibile. Team di professionisti pronti ad aiutarti in qualsiasi momento.</p>
-        </div>
+      
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="showAdminTab('users')">Utenti</button>
+        <button class="admin-tab" onclick="showAdminTab('ads')">Annunci</button>
+      </div>
+      
+      <div class="admin-content" id="adminContent">
+        <div id="adminUsersTable"></div>
+        <div id="adminAdsTable" class="hidden"></div>
       </div>
     </div>
-  </section>
+    
+  </main>
 
-  <!-- ============================================================
-  VETRINA — SPONSORIZZAZIONE ANNUNCI
-  ============================================================ -->
-  <section class="section vetrina-section home-section" id="vetrina">
-    <div class="container">
-      <div class="section-header" data-aos="fade-up">
-        <span class="section-badge">Sponsorizzazione</span>
-        <h2 class="section-title">Metti il tuo annuncio in <span class="gradient-text">vetrina</span></h2>
-        <p class="section-desc">Fai vedere il tuo annuncio a più persone! Scegli la durata e spicca tra gli altri con la sponsorizzazione premium.</p>
-      </div>
-
-      <!-- Vantaggi Vetrina -->
-      <div class="vetrina-benefits" data-aos="fade-up">
-        <div class="benefit-item">
-          <i class="fas fa-star"></i>
-          <span>In prima pagina</span>
-        </div>
-        <div class="benefit-item">
-          <i class="fas fa-bolt"></i>
-          <span>Più visualizzazioni</span>
-        </div>
-        <div class="benefit-item">
-          <i class="fas fa-badge-check"></i>
-          <span>Badge Premium</span>
-        </div>
-        <div class="benefit-item">
-          <i class="fas fa-tag"></i>
-          <span>Tag personalizzati</span>
-        </div>
-        <div class="benefit-item">
-          <i class="fas fa-chart-line"></i>
-          <span>Statistiche in tempo reale</span>
-        </div>
-        <div class="benefit-item">
-          <i class="fas fa-phone"></i>
-          <span>Contatto diretto</span>
-        </div>
-      </div>
-
-      <!-- Pricing Cards -->
-      <div class="vetrina-pricing" data-aos="fade-up" data-aos-delay="100">
-        
-        <!-- Piano 1 giorno -->
-        <div class="pricing-card" data-plan="1day" onclick="selectPlan('1day')">
-          <div class="pricing-badge">BASE</div>
-          <div class="pricing-icon">
-            <i class="fas fa-sun"></i>
-          </div>
-          <h3 class="pricing-name">Vetrina Express</h3>
-          <div class="pricing-duration">1 Giorno</div>
-          <div class="pricing-price">
-            <span class="price">€4,<span class="price-dec">95</span></span>
-          </div>
-          <ul class="pricing-features">
-            <li><i class="fas fa-check"></i> Annuncio in prima pagina</li>
-            <li><i class="fas fa-check"></i> Badge "In Vetrina"</li>
-            <li><i class="fas fa-check"></i> Priorità nei risultati</li>
-            <li><i class="fas fa-check"></i> +300% visualizzazioni</li>
-            <li class="no"><i class="fas fa-times"></i> Tag personalizzati</li>
-            <li class="no"><i class="fas fa-times"></i> Statistiche avanzate</li>
-          </ul>
-          <button class="btn btn-outline btn-block" onclick="openSponsor('1day')">
-            <i class="fas fa-crown"></i> Sponsorizza ora
-          </button>
-        </div>
-
-        <!-- Piano 3 giorni -->
-        <div class="pricing-card popular" data-plan="3days" onclick="selectPlan('3days')">
-          <div class="pricing-badge popular-badge">PIÙ SCELTO</div>
-          <div class="pricing-icon">
-            <i class="fas fa-fire"></i>
-          </div>
-          <h3 class="pricing-name">Vetrina Plus</h3>
-          <div class="pricing-duration">3 Giorni</div>
-          <div class="pricing-price">
-            <span class="price">€9,<span class="price-dec">95</span></span>
-            <span class="price-old">€14,85</span>
-          </div>
-          <ul class="pricing-features">
-            <li><i class="fas fa-check"></i> Annuncio in prima pagina</li>
-            <li><i class="fas fa-check"></i> Badge "In Vetrina"</li>
-            <li><i class="fas fa-check"></i> Priorità nei risultati</li>
-            <li><i class="fas fa-check"></i> +500% visualizzazioni</li>
-            <li><i class="fas fa-check"></i> Tag personalizzati</li>
-            <li class="no"><i class="fas fa-times"></i> Statistiche avanzate</li>
-          </ul>
-          <button class="btn btn-primary btn-block" onclick="openSponsor('3days')">
-            <i class="fas fa-crown"></i> Sponsorizza ora
-          </button>
-        </div>
-
-        <!-- Piano 7 giorni -->
-        <div class="pricing-card" data-plan="7days" onclick="selectPlan('7days')">
-          <div class="pricing-badge">PREMIUM</div>
-          <div class="pricing-icon">
-            <i class="fas fa-gem"></i>
-          </div>
-          <h3 class="pricing-name">Vetrina Premium</h3>
-          <div class="pricing-duration">7 Giorni</div>
-          <div class="pricing-price">
-            <span class="price">€19,<span class="price-dec">95</span></span>
-            <span class="price-old">€34,65</span>
-          </div>
-          <ul class="pricing-features">
-            <li><i class="fas fa-check"></i> Annuncio in prima pagina</li>
-            <li><i class="fas fa-check"></i> Badge "In Vetrina"</li>
-            <li><i class="fas fa-check"></i> Priorità nei risultati</li>
-            <li><i class="fas fa-check"></i> +800% visualizzazioni</li>
-            <li><i class="fas fa-check"></i> Tag personalizzati</li>
-            <li><i class="fas fa-check"></i> Statistiche avanzate</li>
-          </ul>
-          <button class="btn btn-outline btn-block" onclick="openSponsor('7days')">
-            <i class="fas fa-crown"></i> Sponsorizza ora
-          </button>
-        </div>
-
-      </div>
-
-      <!-- Extra: Piano Gold Mensile -->
-      <div class="vetrina-gold" data-aos="fade-up" data-aos-delay="200">
-        <div class="gold-card">
-          <div class="gold-content">
-            <div class="gold-badge"><i class="fas fa-crown"></i> TOP</div>
-            <h3>Vetrina Gold — 30 Giorni</h3>
-            <p>La massima esposizione possibile. Il tuo annuncio sempre in cima, 24 ore su 24, per un mese intero.</p>
-            <div class="gold-price">
-              <span class="price">€49,<span class="price-dec">95</span></span>
-              <span class="price-old">€99,90</span>
-              <span class="price-save">Risparmi il 50%!</span>
-            </div>
-            <button class="btn btn-primary btn-lg" onclick="openSponsor('30days')">
-              <i class="fas fa-crown"></i> Scegli Gold
-            </button>
-          </div>
-          <div class="gold-features">
-            <div class="gold-feature"><i class="fas fa-check-circle"></i> Annuncio sempre in prima posizione</div>
-            <div class="gold-feature"><i class="fas fa-check-circle"></i> Badge Gold esclusivo</div>
-            <div class="gold-feature"><i class="fas fa-check-circle"></i> Tag personalizzati illimitati</div>
-            <div class="gold-feature"><i class="fas fa-check-circle"></i> Statistiche avanzate e report</div>
-            <div class="gold-feature"><i class="fas fa-check-circle"></i> Supporto premium prioritario</div>
-            <div class="gold-feature"><i class="fas fa-check-circle"></i> Foto e video in evidenza</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Testimonianze -->
-      <div class="vetrina-testimonials" data-aos="fade-up">
-        <div class="section-header" style="margin-bottom: 30px;">
-          <span class="section-badge">Cosa dicono</span>
-          <h2 class="section-title" style="font-size: 1.8rem;">Chi ha scelto la <span class="gradient-text">Vetrina</span></h2>
-        </div>
-        <div class="testimonials-grid">
-          <div class="testimonial-card">
-            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-            <p class="testimonial-text">"Ho scelto la Vetrina Plus per 3 giorni e ho ricevuto più di 50 messaggi in 48 ore! Mai avuto così tante richieste. Vale ogni centesimo!"</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar">S</div>
-              <div>
-                <strong>Sofia</strong>
-                <span>Napoli • Vetrina Plus</span>
-              </div>
-            </div>
-          </div>
-          <div class="testimonial-card">
-            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-            <p class="testimonial-text">"Con la Vetrina Premium il mio annuncio era sempre tra i primi risultati. La qualità dei contatti è aumentata tantissimo. Consigliatissimo!"</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar">A</div>
-              <div>
-                <strong>Alessandro</strong>
-                <span>Milano • Vetrina Premium</span>
-              </div>
-            </div>
-          </div>
-          <div class="testimonial-card">
-            <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-            <p class="testimonial-text">"Il piano Gold mensile è la scelta migliore per chi vuole continuità. Il mio annuncio è sempre in prima pagina e ricevo contatti ogni giorno."</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar">M</div>
-              <div>
-                <strong>Martina</strong>
-                <span>Roma • Vetrina Gold</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ============================================================
-  CITIES SECTION
-  ============================================================ -->
-  <section class="section cities-section home-section">
-    <div class="container">
-      <div class="section-header" data-aos="fade-up">
-        <span class="section-badge">Città</span>
-        <h2 class="section-title">Trova annunci nella tua <span class="gradient-text">città</span></h2>
-      </div>
-
-      <div class="cities-grid" id="citiesGrid">
-        <!-- Generate by JS -->
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  CTA SECTION
-  ============================================================ -->
-  <section class="cta-section home-section">
-    <div class="container">
-      <div class="cta-card" data-aos="fade-up">
-        <div class="cta-content">
-          <h2 class="cta-title">Pronto per <span class="gradient-text">incontrare</span> qualcuno di speciale?</h2>
-          <p class="cta-text">Pubblica il tuo annuncio gratis e inizia subito a ricevere messaggi. La tua prossima esperienza ti aspetta.</p>
-          <div class="cta-actions">
-            <button class="btn btn-primary btn-lg" onclick="openPublish()">
-              <i class="fas fa-feather-alt"></i> Pubblica Annuncio
-            </button>
-            <button class="btn btn-outline btn-lg" onclick="openSearch()">
-              <i class="fas fa-search"></i> Esplora
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  CATEGORY PAGE
-  ============================================================ -->
-  <section class="section page-section" id="categoryPage" style="display:none;padding-top:120px">
-    <div class="container">
-      <div style="margin-bottom:24px">
-        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
-      </div>
-      <h1 class="section-title gradient-text" id="pageTitle"></h1>
-      <div class="ads-grid" id="categoryAdsGrid" style="margin-top:24px"></div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  ADMIN PAGE
-  ============================================================ -->
-  <section class="section page-section" id="adminPage" style="display:none;padding-top:120px">
-    <div class="container">
-      <div style="margin-bottom:24px">
-        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
-      </div>
-      <h1 class="section-title gradient-text"><i class="fas fa-shield-alt"></i> Admin Panel</h1>
-      <div class="admin-tabs" id="adminNav"></div>
-      <div id="adminContent" style="margin-top:24px">
-        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  AD DETAIL PAGE
-  ============================================================ -->
-  <section class="section page-section" id="adDetailPage" style="display:none;padding-top:120px">
-    <div class="container">
-      <div style="margin-bottom:24px">
-        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Indietro</button>
-      </div>
-      <div id="adDetailContent"></div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  PROFILE PAGE
-  ============================================================ -->
-  <section class="section page-section" id="profilePage" style="display:none;padding-top:120px">
-    <div class="container">
-      <div style="margin-bottom:24px">
-        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
-      </div>
-      <h1 class="section-title gradient-text">Il Mio Profilo</h1>
-      <div id="profileContent" style="margin-top:24px"></div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  MY ADS PAGE
-  ============================================================ -->
-  <section class="section page-section" id="myAdsPage" style="display:none;padding-top:120px">
-    <div class="container">
-      <div style="margin-bottom:24px">
-        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
-        <button class="btn btn-primary" onclick="openPublish()" style="float:right"><i class="fas fa-plus"></i> Nuovo annuncio</button>
-      </div>
-      <h1 class="section-title gradient-text">I Miei Annunci</h1>
-      <div class="ads-grid" id="myAdsContent" style="margin-top:24px"></div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  CONTACTS PAGE (Rubrica)
-  ============================================================ -->
-  <section class="section page-section" id="contactsPage" style="display:none;padding-top:120px">
-    <div class="container">
-      <div style="margin-bottom:24px">
-        <button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button>
-      </div>
-      <h1 class="section-title gradient-text">Rubrica Contatti</h1>
-      <div class="ads-grid" id="contactsContent" style="margin-top:24px"></div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-  FOOTER
-  ============================================================ -->
+  <!-- Footer -->
   <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <a href="/" class="footer-logo">
-            <i class="fas fa-heart"></i>
-            <span>IncontriDiBakeka</span>
-          </a>
-          <p>Il portale premium di annunci incontri in Italia. Esperienze autentiche, persone reali, discrezione assoluta.</p>
-          <div class="footer-social">
-            <a href="#"><i class="fab fa-instagram"></i></a>
-            <a href="#"><i class="fab fa-telegram"></i></a>
-            <a href="#"><i class="fab fa-whatsapp"></i></a>
-            <a href="#"><i class="fab fa-twitter"></i></a>
-          </div>
-        </div>
-        <div class="footer-links">
-          <h4>Categorie</h4>
-          <a href="#">Donna Cerca Uomo</a>
-          <a href="#">Uomo Cerca Donna</a>
-          <a href="#">Uomo Cerca Uomo</a>
-          <a href="#">Donna Cerca Donna</a>
-          <a href="#">Coppie</a>
-          <a href="#">Trans</a>
-        </div>
-        <div class="footer-links">
-          <h4>Città</h4>
-          <a href="#">Napoli</a>
-          <a href="#">Roma</a>
-          <a href="#">Milano</a>
-          <a href="#">Torino</a>
-          <a href="#">Firenze</a>
-          <a href="#">Bologna</a>
-        </div>
-        <div class="footer-links">
-          <h4>Info</h4>
-          <a href="#">Termini e Condizioni</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Cookie Policy</a>
-          <a href="#">Contattaci</a>
-          <a href="#">FAQ</a>
-          <a href="#vetrina" onclick="closeSponsor()">Promuovi Annuncio</a>
-        </div>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>Bakeca Incontri</h4>
+        <a href="#">Chi siamo</a>
+        <a href="#">Contattaci</a>
+        <a href="#">FAQ</a>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 IncontriDiBakeka — Tutti i diritti riservati. Make Love, Not War ❤️</p>
-        <p class="footer-disclaimer">Portale per adulti. Vietato ai minori di 18 anni.</p>
+      <div class="footer-section">
+        <h4>Categorie</h4>
+        <a href="#">Escort</a>
+        <a href="#">Trans</a>
+        <a href="#">Uomo cerca uomo</a>
+        <a href="#">Incontri</a>
       </div>
+      <div class="footer-section">
+        <h4>Città</h4>
+        <a href="#">Milano</a>
+        <a href="#">Roma</a>
+        <a href="#">Napoli</a>
+        <a href="#">Torino</a>
+      </div>
+      <div class="footer-section">
+        <h4>Legale</h4>
+        <a href="#">Termini e Condizioni</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Cookie Policy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Bakeca Incontri - Tutti i diritti riservati</p>
+      <p style="margin-top:5px;font-size:0.75rem">Questo sito contiene materiale per adulti. Vietato ai minori di 18 anni.</p>
     </div>
   </footer>
 
-  <!-- ============================================================
-  SCRIPTS
-  ============================================================ -->
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <script src="app.js"></script>
+  <!-- Login Modal -->
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-sign-in-alt"></i> Accedi</h2>
+        <button class="modal-close" onclick="closeModal('loginModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">
+            <i class="fas fa-sign-in-alt"></i> Accedi
+          </button>
+        </form>
+        <div class="auth-divider">o</div>
+        <p style="text-align:center;color:#888">
+          Non hai un account? 
+          <a href="#" onclick="closeModal('loginModal');openModal('registerModal')" style="color:var(--primary)">Registrati</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div class="modal" id="registerModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-user-plus"></i> Registrati</h2>
+        <button class="modal-close" onclick="closeModal('registerModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label>Nome *</label>
+            <input type="text" id="regName" required>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="regEmail" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Password *</label>
+              <input type="password" id="regPassword" minlength="6" required>
+            </div>
+            <div class="form-group">
+              <label>Telefono</label>
+              <input type="tel" id="regPhone">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Città</label>
+              <input type="text" id="regCity">
+            </div>
+            <div class="form-group">
+              <label>Età</label>
+              <input type="number" id="regAge" min="18" max="99">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="regTerms" required style="width:auto;margin-right:8px">
+              Accetto i <a href="#" style="color:var(--primary)">Termini e Condizioni</a> *
+            </label>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">
+            <i class="fas fa-user-plus"></i> Registrati
+          </button>
+        </form>
+        <div class="auth-divider">o</div>
+        <p style="text-align:center;color:#888">
+          Hai già un account? 
+          <a href="#" onclick="closeModal('registerModal');openModal('loginModal')" style="color:var(--primary)">Accedi</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Publish Modal -->
+  <div class="modal" id="publishModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-plus-circle"></i> Pubblica annuncio</h2>
+        <button class="modal-close" onclick="closeModal('publishModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="handlePublish(event)">
+          <div class="form-group">
+            <label>Titolo *</label>
+            <input type="text" id="pubTitle" placeholder="Es: Escort discinta Milano Centro" required>
+          </div>
+          <div class="form-group">
+            <label>Categoria *</label>
+            <select id="pubCategory" required>
+              <option value="">Seleziona...</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Città *</label>
+              <select id="pubCity" required>
+                <option value="">Seleziona...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Età</label>
+              <input type="number" id="pubAge" min="18" max="99">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Telefono/WhatsApp *</label>
+            <input type="tel" id="pubPhone" placeholder="+39 333 1234567" required>
+          </div>
+          <div class="form-group">
+            <label>Descrizione *</label>
+            <textarea id="pubDescription" placeholder="Descrivi te stessa, i tuoi servizi, disponibilità..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Prezzo (€) - opzionale</label>
+            <input type="number" id="pubPrice" placeholder="Es: 50">
+          </div>
+          <div class="form-group">
+            <label>URL Foto (opzionale)</label>
+            <input type="url" id="pubImage" placeholder="https://...">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">
+            <i class="fas fa-paper-plane"></i> Pubblica
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let currentUser = null;
+    let authToken = localStorage.getItem('authToken');
+    let categories = [];
+    let cities = [];
+    
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadCategories();
+      await loadCities();
+      loadRecentAds();
+      loadFilters();
+      
+      if (authToken) {
+        await checkAuth();
+      }
+      
+      // Check payment result
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('payment') === 'success') {
+        showToast('✅ Pagamento completato!', 'success');
+        window.history.replaceState({}, '', '/');
+      }
+    });
+    
+    // ============================================================
+    // API HELPERS
+    // ============================================================
+    async function api(url, options = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      
+      const res = await fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Errore');
+      return data;
+    }
+    
+    // ============================================================
+    // AUTH
+    // ============================================================
+    async function handleLogin(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        const data = await api('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (data.success) {
+          currentUser = data.user;
+          authToken = data.token;
+          localStorage.setItem('authToken', authToken);
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          
+          closeModal('loginModal');
+          updateAuthUI();
+          showToast('✅ Benvenuto, ' + currentUser.name + '!', 'success');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    async function handleRegister(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const phone = document.getElementById('regPhone').value;
+      const city = document.getElementById('regCity').value;
+      const age = document.getElementById('regAge').value;
+      const acceptTerms = document.getElementById('regTerms').checked;
+      
+      if (!acceptTerms) {
+        showToast('❌ Devi accettare i termini', 'error');
+        return;
+      }
+      
+      try {
+        const data = await api('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ name, email, password, phone, city, age, acceptTerms })
+        });
+        
+        if (data.success) {
+          currentUser = data.user;
+          authToken = data.token;
+          localStorage.setItem('authToken', authToken);
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+          
+          closeModal('registerModal');
+          updateAuthUI();
+          showToast('✅ Registrazione completata!', 'success');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    async function checkAuth() {
+      try {
+        const data = await api('/api/auth/me');
+        if (data.success) {
+          currentUser = data.user;
+          updateAuthUI();
+        }
+      } catch (err) {
+        logout();
+      }
+    }
+    
+    function logout() {
+      currentUser = null;
+      authToken = null;
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      updateAuthUI();
+      showPage('home');
+      showToast('👋 Arrivederci!', 'success');
+    }
+    
+    function updateAuthUI() {
+      const authArea = document.getElementById('authArea');
+      const userArea = document.getElementById('userArea');
+      const adminLink = document.getElementById('adminLink');
+      
+      if (currentUser) {
+        authArea.classList.add('hidden');
+        userArea.classList.remove('hidden');
+        document.getElementById('userName').textContent = currentUser.name;
+        document.getElementById('dropdownName').textContent = currentUser.name;
+        document.getElementById('dropdownEmail').textContent = currentUser.email;
+        
+        // Check admin
+        api('/api/auth/me').then(data => {
+          if (data.user && data.user.role === 'admin') {
+            adminLink.classList.remove('hidden');
+          }
+        }).catch(() => {});
+      } else {
+        authArea.classList.remove('hidden');
+        userArea.classList.add('hidden');
+        adminLink.classList.add('hidden');
+      }
+    }
+    
+    function toggleUserMenu() {
+      document.getElementById('userDropdown').classList.toggle('active');
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.user-menu')) {
+        document.getElementById('userDropdown')?.classList.remove('active');
+      }
+    });
+    
+    // ============================================================
+    // DATA LOADING
+    // ============================================================
+    async function loadCategories() {
+      try {
+        categories = await api('/api/categories');
+        renderCategories();
+        populateCategorySelects();
+      } catch (err) {
+        console.error('Load categories error:', err);
+      }
+    }
+    
+    async function loadCities() {
+      try {
+        cities = await api('/api/cities');
+        populateCitySelects();
+      } catch (err) {
+        console.error('Load cities error:', err);
+      }
+    }
+    
+    async function loadRecentAds() {
+      const grid = document.getElementById('recentAdsGrid');
+      grid.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i></div>';
+      
+      try {
+        const ads = await api('/api/ads?limit=12');
+        renderAds(ads, grid);
+      } catch (err) {
+        grid.innerHTML = '<div class="empty-state"><p>Errore caricamento annunci</p></div>';
+      }
+    }
+    
+    async function loadAds() {
+      const grid = document.getElementById('allAdsGrid');
+      grid.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i></div>';
+      
+      const category = document.getElementById('filterCategory').value;
+      const city = document.getElementById('filterCity').value;
+      
+      let url = '/api/ads?limit=50';
+      if (category) url += `&category=${category}`;
+      if (city) url += `&city=${city}`;
+      
+      try {
+        const ads = await api(url);
+        renderAds(ads, grid);
+      } catch (err) {
+        grid.innerHTML = '<div class="empty-state"><p>Errore caricamento annunci</p></div>';
+      }
+    }
+    
+    async function loadMyAds() {
+      const grid = document.getElementById('myAdsGrid');
+      grid.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i></div>';
+      
+      if (!authToken) {
+        grid.innerHTML = '<div class="empty-state"><p>Accedi per vedere i tuoi annunci</p></div>';
+        return;
+      }
+      
+      try {
+        const ads = await api('/api/my-ads');
+        renderAds(ads, grid, true);
+      } catch (err) {
+        grid.innerHTML = '<div class="empty-state"><p>Errore caricamento annunci</p></div>';
+      }
+    }
+    
+    // ============================================================
+    // RENDER
+    // ============================================================
+    function renderCategories() {
+      const grid = document.getElementById('categoriesGrid');
+      
+      const mainCats = categories.slice(0, 4);
+      const mainCities = ['Milano', 'Roma', 'Napoli', 'Torino'];
+      
+      grid.innerHTML = mainCats.map(cat => `
+        <div class="category-card" onclick="filterByCategory('${cat.slug}')">
+          <i class="fas ${cat.icon || 'fa-venus'}"></i>
+          <h3>${cat.name}</h3>
+          <p>${cat.description || 'Scopri gli annunci'}</p>
+          <div class="cities">
+            ${mainCities.map(c => `<a href="#">${c}</a>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function renderAds(ads, container, showDelete = false) {
+      if (!ads || ads.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>Nessun annuncio trovato</p></div>';
+        return;
+      }
+      
+      container.innerHTML = ads.map(ad => `
+        <div class="ad-card">
+          ${ad.image ? `<img src="${ad.image}" alt="${ad.title}" class="ad-image" onerror="this.style.display='none'">` : '<div class="ad-image" style="display:flex;align-items:center;justify-content:center;background:#222"><i class="fas fa-user" style="font-size:3rem;color:#444"></i></div>'}
+          <div class="ad-content">
+            <h3 class="ad-title">${ad.title}</h3>
+            <div class="ad-info">
+              <p><i class="fas fa-map-marker-alt"></i> ${ad.city || 'N/A'}</p>
+              ${ad.age ? `<p><i class="fas fa-birthday-cake"></i> ${ad.age} anni</p>` : ''}
+            </div>
+            ${ad.price ? `<p class="ad-price">€${ad.price}/h</p>` : ''}
+            <div class="ad-actions">
+              <a href="https://wa.me/${(ad.whatsapp || ad.phone || '').replace(/[^0-9]/g, '')}" target="_blank" class="btn btn-whatsapp">
+                <i class="fab fa-whatsapp"></i> WhatsApp
+              </a>
+              ${showDelete ? `<button class="btn btn-outline" onclick="deleteAd('${ad.id}')" style="color:#ef4444;border-color:#ef4444"><i class="fas fa-trash"></i></button>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function populateCategorySelects() {
+      const selects = ['searchCategory', 'filterCategory', 'pubCategory'];
+      selects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Tutte le categorie</option>' + 
+          categories.map(c => `<option value="${c.slug}">${c.name}</option>`).join('');
+        sel.value = currentVal;
+      });
+    }
+    
+    function populateCitySelects() {
+      const selects = ['searchCity', 'filterCity', 'pubCity'];
+      selects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Tutte le città</option>' + 
+          cities.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        sel.value = currentVal;
+      });
+    }
+    
+    function loadFilters() {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get('cat');
+      const city = params.get('city');
+      
+      if (cat) {
+        document.getElementById('searchCategory').value = cat;
+        showPage('ads');
+      }
+    }
+    
+    // ============================================================
+    // PUBLISH
+    // ============================================================
+    async function handlePublish(e) {
+      e.preventDefault();
+      
+      if (!authToken) {
+        showToast('❌ Devi accedere per pubblicare', 'error');
+        closeModal('publishModal');
+        openModal('loginModal');
+        return;
+      }
+      
+      const data = {
+        title: document.getElementById('pubTitle').value,
+        category: document.getElementById('pubCategory').value,
+        city: document.getElementById('pubCity').value,
+        phone: document.getElementById('pubPhone').value,
+        age: document.getElementById('pubAge').value || null,
+        description: document.getElementById('pubDescription').value,
+        price: document.getElementById('pubPrice').value || null,
+        images: document.getElementById('pubImage').value ? [document.getElementById('pubImage').value] : []
+      };
+      
+      try {
+        await api('/api/ads', { method: 'POST', body: JSON.stringify(data) });
+        showToast('✅ Annuncio pubblicato!', 'success');
+        closeModal('publishModal');
+        document.getElementById('publishModal').querySelector('form').reset();
+        
+        if (document.getElementById('myAdsPage').classList.contains('hidden') === false) {
+          loadMyAds();
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    async function deleteAd(id) {
+      if (!confirm('Eliminare questo annuncio?')) return;
+      
+      try {
+        await api(`/api/ads/${id}`, { method: 'DELETE' });
+        showToast('✅ Annuncio eliminato', 'success');
+        loadMyAds();
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    // ============================================================
+    // CREDITS / STRIPE
+    // ============================================================
+    async function buyCredits(credits, price) {
+      if (!authToken) {
+        showToast('❌ Devi accedere per acquistare crediti', 'error');
+        openModal('loginModal');
+        return;
+      }
+      
+      try {
+        const data = await api('/api/create-checkout', {
+          method: 'POST',
+          body: JSON.stringify({ credits, price })
+        });
+        
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    // ============================================================
+    // PROFILE
+    // ============================================================
+    function showProfilePage() {
+      if (!currentUser) {
+        showToast('❌ Accedi per vedere il profilo', 'error');
+        openModal('loginModal');
+        return;
+      }
+      
+      document.getElementById('profileName').value = currentUser.name || '';
+      document.getElementById('profileEmail').value = currentUser.email || '';
+      document.getElementById('profilePhone').value = currentUser.phone || '';
+      document.getElementById('profileCity').value = currentUser.city || '';
+      document.getElementById('profileCredits').value = currentUser.credits || 0;
+    }
+    
+    async function updateProfile() {
+      // Simplified - just show toast
+      showToast('⚠️ Funzione in fase di sviluppo', 'success');
+    }
+    
+    // ============================================================
+    // ADMIN
+    // ============================================================
+    async function loadAdminStats() {
+      try {
+        const stats = await api('/api/admin/stats');
+        document.getElementById('statUsers').textContent = stats.users;
+        document.getElementById('statAds').textContent = stats.ads;
+        document.getElementById('statActive').textContent = stats.activeAds;
+      } catch (err) {
+        console.error('Admin stats error:', err);
+      }
+    }
+    
+    async function loadAdminUsers() {
+      const container = document.getElementById('adminUsersTable');
+      container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i></div>';
+      
+      try {
+        const users = await api('/api/admin/users');
+        
+        container.innerHTML = `
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Città</th>
+                <th>Premium</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${users.map(u => `
+                <tr>
+                  <td>${u.name || 'N/A'}</td>
+                  <td>${u.email}</td>
+                  <td>${u.city || 'N/A'}</td>
+                  <td>${u.is_premium ? '✅' : '❌'}</td>
+                  <td>
+                    <button class="btn btn-outline btn-sm" onclick="togglePremium('${u.id}', ${!u.is_premium})">
+                      ${u.is_premium ? 'Rimuovi Premium' : 'Assegna Premium'}
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (err) {
+        container.innerHTML = '<p style="color:#ef4444">Errore caricamento utenti</p>';
+      }
+    }
+    
+    async function loadAdminAds() {
+      const container = document.getElementById('adminAdsTable');
+      container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i></div>';
+      
+      try {
+        const ads = await api('/api/admin/ads');
+        
+        container.innerHTML = `
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Titolo</th>
+                <th>Città</th>
+                <th>Categoria</th>
+                <th>Attivo</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ads.map(a => `
+                <tr>
+                  <td>${a.title}</td>
+                  <td>${a.city || 'N/A'}</td>
+                  <td>${a.category || 'N/A'}</td>
+                  <td>${a.is_active ? '✅' : '❌'}</td>
+                  <td>
+                    <button class="btn btn-outline btn-sm" onclick="deleteAdAdmin('${a.id}')" style="color:#ef4444;border-color:#ef4444">
+                      Elimina
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (err) {
+        container.innerHTML = '<p style="color:#ef4444">Errore caricamento annunci</p>';
+      }
+    }
+    
+    async function togglePremium(userId, makePremium) {
+      try {
+        await api(`/api/admin/users/${userId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_premium: makePremium })
+        });
+        showToast('✅ Aggiornato', 'success');
+        loadAdminUsers();
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    async function deleteAdAdmin(adId) {
+      if (!confirm('Eliminare questo annuncio?')) return;
+      
+      try {
+        await api(`/api/admin/ads/${adId}`, { method: 'DELETE' });
+        showToast('✅ Eliminato', 'success');
+        loadAdminAds();
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+    
+    function showAdminTab(tab) {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (tab === 'users') {
+        document.getElementById('adminUsersTable').classList.remove('hidden');
+        document.getElementById('adminAdsTable').classList.add('hidden');
+        loadAdminUsers();
+      } else {
+        document.getElementById('adminUsersTable').classList.add('hidden');
+        document.getElementById('adminAdsTable').classList.remove('hidden');
+        loadAdminAds();
+      }
+    }
+    
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
+    function showPage(page) {
+      document.getElementById('homePage').classList.add('hidden');
+      document.getElementById('adsPage').classList.add('hidden');
+      document.getElementById('myAdsPage').classList.add('hidden');
+      document.getElementById('profilePage').classList.add('hidden');
+      document.getElementById('creditsPage').classList.add('hidden');
+      document.getElementById('adminPage').classList.remove('active');
+      
+      switch (page) {
+        case 'home':
+          document.getElementById('homePage').classList.remove('hidden');
+          break;
+        case 'ads':
+          document.getElementById('adsPage').classList.remove('hidden');
+          loadAds();
+          break;
+        case 'my-ads':
+          document.getElementById('myAdsPage').classList.remove('hidden');
+          loadMyAds();
+          break;
+        case 'profile':
+          document.getElementById('profilePage').classList.remove('hidden');
+          showProfilePage();
+          break;
+        case 'credits':
+          document.getElementById('creditsPage').classList.remove('hidden');
+          break;
+        case 'admin':
+          if (!authToken) {
+            showToast('❌ Accedi come admin', 'error');
+            openModal('loginModal');
+            return;
+          }
+          document.getElementById('adminPage').classList.add('active');
+          loadAdminStats();
+          loadAdminUsers();
+          break;
+      }
+      
+      window.scrollTo(0, 0);
+    }
+    
+    function searchAds() {
+      const category = document.getElementById('searchCategory').value;
+      const city = document.getElementById('searchCity').value;
+      
+      document.getElementById('filterCategory').value = category;
+      document.getElementById('filterCity').value = city;
+      showPage('ads');
+    }
+    
+    function filterByCategory(cat) {
+      document.getElementById('searchCategory').value = cat;
+      showPage('ads');
+    }
+    
+    // ============================================================
+    // MODALS
+    // ============================================================
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+    
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+    
+    // Close modal on background click
+    document.querySelectorAll('.modal').forEach(m => {
+      m.addEventListener('click', (e) => {
+        if (e.target === m) m.classList.remove('active');
+      });
+    });
+    
+    // ============================================================
+    // TOAST
+    // ============================================================
+    function showToast(msg, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
+    }
+  </script>
 </body>
 </html>
