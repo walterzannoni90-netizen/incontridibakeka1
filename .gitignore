@@ -9,3 +9,4 @@ database.sqlite-wal
 database.sqlite-shm
 dist/
 bun.lock
+supabase/.temp/
