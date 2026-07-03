@@ -10,11 +10,15 @@ import AdminPanel from "./pages/AdminPanel";
 import Shop from "./pages/Shop";
 import MyAds from "./pages/MyAds";
 
+// Supporta deploy su GitHub Pages (sottopercorso) e custom domain (root).
+// import.meta.env.BASE_URL e gestito da Vite: "/" su custom domain,
+// "/nome-repo/" su GitHub Pages.
+const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path={"/"} component={Home} />
       <Route path={"/ad"} component={AdDetail} />
       <Route path={"/ad/:slug"} component={AdDetail} />
       <Route path={"/shop"} component={Shop} />

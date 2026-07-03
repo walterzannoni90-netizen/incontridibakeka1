@@ -1,12 +1,27 @@
 import { useLocation } from "wouter";
 import { useCallback } from "react";
 
+// Base path: "/" su custom domain, "/nome-repo/" su GitHub Pages
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function withBase(path: string): string {
+  if (!BASE || path.startsWith(BASE + "/")) return path;
+  return BASE + (path.startsWith("/") ? path : "/" + path);
+}
+
+function stripBase(path: string): string {
+  if (BASE && path.startsWith(BASE + "/")) {
+    return path.slice(BASE.length) || "/";
+  }
+  return path;
+}
+
 export function useRouter() {
   const [location, setLocation] = useLocation();
 
   const navigate = useCallback(
     (path: string) => {
-      setLocation(path);
+      setLocation(withBase(path));
     },
     [setLocation]
   );
@@ -32,6 +47,6 @@ export function useRouter() {
     navigate,
     getQueryParam,
     getAllQueryParams,
-    currentPath: location,
+    currentPath: stripBase(location),
   };
 }

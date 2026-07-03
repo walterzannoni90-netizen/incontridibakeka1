@@ -575,5 +575,22 @@ CREATE POLICY "ads_private_storage_delete" ON storage.objects
   FOR DELETE USING (bucket_id = 'ads_private' AND owner = auth.uid());
 
 -- ============================================
+-- FUNZIONE: increment_credits()
+-- Incrementa atomicamente i crediti di un utente e imposta has_paid = true.
+-- Usata dal webhook Stripe per accreditare i crediti dopo un pagamento.
+-- ============================================
+CREATE OR REPLACE FUNCTION increment_credits(p_user_id UUID, p_credits INTEGER)
+RETURNS void AS $$
+BEGIN
+  UPDATE profiles
+  SET 
+    credits = credits + p_credits,
+    has_paid = true,
+    updated_at = NOW()
+  WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
 -- FINE SCHEMA
 -- ============================================

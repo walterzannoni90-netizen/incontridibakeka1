@@ -42,6 +42,7 @@ jobs:
           VITE_STRIPE_PRICE_30: ${{ secrets.VITE_STRIPE_PRICE_30 }}
           VITE_STRIPE_PRICE_70: ${{ secrets.VITE_STRIPE_PRICE_70 }}
           VITE_STRIPE_PRICE_150: ${{ secrets.VITE_STRIPE_PRICE_150 }}
+          VITE_BASE_PATH: ${{ format('/{0}/', github.event.repository.name) }}
         run: pnpm build
 
       - name: Upload artifact
