@@ -32,12 +32,12 @@ interface CurrentUser {
 }
 
 const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", icon: "👩" },
-  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", icon: "👨" },
-  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", icon: "👨‍❤️‍👨" },
-  { id: "donna-cerca-donna", name: "Donna Cerca Donna", icon: "👩‍❤️‍👩" },
-  { id: "coppie", name: "Coppie", icon: "💑" },
-  { id: "cerco-amici", name: "Cerco Amici", icon: "🤝" },
+  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "/manus-storage/category-donna-cerca-uomo_6d2456f1.jpg" },
+  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "/manus-storage/category-uomo-cerca-donna_ee7e6f45.jpg" },
+  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "/manus-storage/category-uomo-cerca-uomo_12c1957b.jpg" },
+  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "/manus-storage/category-donna-cerca-donna_9bed84ff.jpg" },
+  { id: "coppie", name: "Coppie", image: "/manus-storage/category-coppie_c929881b.jpg" },
+  { id: "cerco-amici", name: "Cerco Amici", image: "/manus-storage/category-cerco-amici_8ac7b395.jpg" },
 ];
 
 export default function Home() {
@@ -225,10 +225,19 @@ export default function Home() {
             {CATEGORIES.map((cat) => (
               <Card
                 key={cat.id}
-                className="p-4 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all"
+                className="overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all group"
               >
-                <div className="text-4xl mb-2">{cat.icon}</div>
-                <p className="text-sm font-medium">{cat.name}</p>
+                <div className="relative h-40 overflow-hidden bg-muted">
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all" />
+                </div>
+                <div className="p-3 text-center">
+                  <p className="text-xs font-bold text-white">{cat.name}</p>
+                </div>
               </Card>
             ))}
           </div>
