@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/hooks/useRouter";
 import { useAuth } from "@/hooks/useAuth";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X } from "lucide-react";
+import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -56,10 +57,18 @@ export default function Home() {
     price: "",
   });
   const [busy, setBusy] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState("IT");
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   useEffect(() => {
     loadAds();
     handlePaymentCallback();
+    if (!localStorage.getItem("ageAccepted")) {
+      setShowDisclaimer(true);
+    }
   }, []);
 
   const handlePaymentCallback = async () => {
@@ -277,11 +286,55 @@ export default function Home() {
         String(value || "").toLowerCase().includes(query)
       );
     const matchesCategory = !categoryFilter || ad.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesCity = !selectedCity || ad.city?.toLowerCase() === selectedCity.toLowerCase();
+    return matchesSearch && matchesCategory && matchesCity;
   });
 
   return (
     <div className="min-h-screen bg-background">
+      {/* 18+ DISCLAIMER */}
+      {showDisclaimer && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 md:p-8 text-center shadow-2xl">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+              <span className="text-3xl font-bold text-destructive">18+</span>
+            </div>
+            <h2 className="text-xl font-bold mb-3 font-poppins">Avviso di Età</h2>
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+              Questo sito contiene contenuti destinati esclusivamente a un pubblico adulto. Accedendo dichiari di avere almeno 18 anni e di accettare i nostri Termini e Condizioni d'uso.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  localStorage.setItem("ageAccepted", "true");
+                  setShowDisclaimer(false);
+                }}
+              >
+                ACCETTO
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  window.location.href = "https://www.google.com";
+                }}
+              >
+                Rifiuto
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING PUBLISH BUTTON (mobile) */}
+      <button
+        className="md:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+        onClick={openPublish}
+        aria-label="Pubblica annuncio"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border shadow-sm">
         <div className="container flex items-center justify-between h-16">
@@ -292,10 +345,65 @@ export default function Home() {
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            {/* City selector */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+                onClick={() => { setCityDropdownOpen(!cityDropdownOpen); setCountryDropdownOpen(false); }}
+              >
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                {selectedCity || "Tutte le città"}
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+              {cityDropdownOpen && (
+                <div className="absolute top-full right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-white border border-border rounded-lg shadow-lg z-50 py-1">
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                    onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
+                  >
+                    🇮🇹 Tutte le città
+                  </button>
+                  {ITALIAN_CITIES.map((city) => (
+                    <button
+                      key={city}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                      onClick={() => { setSelectedCity(city); setCityDropdownOpen(false); }}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Country selector */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+                onClick={() => { setCountryDropdownOpen(!countryDropdownOpen); setCityDropdownOpen(false); }}
+              >
+                {COUNTRIES.find(c => c.code === selectedCountry)?.flag} {COUNTRIES.find(c => c.code === selectedCountry)?.name}
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+              {countryDropdownOpen && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-72 overflow-y-auto bg-white border border-border rounded-lg shadow-lg z-50 py-1">
+                  {COUNTRIES.map((c) => (
+                    <button
+                      key={c.code}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                      onClick={() => { setSelectedCountry(c.code); setCountryDropdownOpen(false); }}
+                    >
+                      <span>{c.flag}</span> {c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <Input
               placeholder="Cerca annunci..."
-              className="w-56"
+              className="w-48"
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -362,7 +470,68 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border bg-white">
             <div className="container py-4 space-y-3">
-              {/* Search */}
+                {/* City selector mobile */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Città</label>
+                  <button
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border text-sm"
+                    onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      {selectedCity || "Tutte le città"}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  {cityDropdownOpen && (
+                    <div className="mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg py-1">
+                      <button
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                        onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
+                      >
+                        Tutte le città
+                      </button>
+                      {ITALIAN_CITIES.map((city) => (
+                        <button
+                          key={city}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                          onClick={() => { setSelectedCity(city); setCityDropdownOpen(false); }}
+                        >
+                          {city}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Country selector mobile */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Paese</label>
+                  <button
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border text-sm"
+                    onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {COUNTRIES.find(c => c.code === selectedCountry)?.flag} {COUNTRIES.find(c => c.code === selectedCountry)?.name}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  {countryDropdownOpen && (
+                    <div className="mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg py-1">
+                      {COUNTRIES.map((c) => (
+                        <button
+                          key={c.code}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                          onClick={() => { setSelectedCountry(c.code); setCountryDropdownOpen(false); }}
+                        >
+                          <span>{c.flag}</span> {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Search */}
               <Input
                 placeholder="Cerca annunci..."
                 type="search"
@@ -553,7 +722,7 @@ export default function Home() {
               <Card
                 key={ad.id}
                 className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1"
-                onClick={() => navigate(`/ad?id=${ad.id}`)}
+                onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
               >
                   <div className="relative h-36 md:h-48 bg-muted overflow-hidden">
                     {ad.image ? (
@@ -667,7 +836,7 @@ export default function Home() {
                       setAuthModal("login");
                       return;
                     }
-                    navigate(`/ad?id=${selectedAd.id}`);
+                    navigate(`/ad/${slugify(selectedAd.title)}-${selectedAd.id}`);
                   }}
                 >
                   💬 Contatta
@@ -816,71 +985,71 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="bg-muted/50 border-t border-border py-8 md:py-12 mt-8 md:mt-16">
-        <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-bold mb-4">Incontri di Bakeka</h4>
-              <p className="text-sm text-muted-foreground">
-                Il marketplace più affidabile per connessioni autentiche.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Link Utili</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <a href="#" className="hover:text-primary">
-                    Chi Siamo
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary">
-                    Contatti
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary">
-                    Blog
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Legale</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <a href="#" className="hover:text-primary">
-                    Termini e Condizioni
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary">
-                    Cookie Policy
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Seguici</h4>
-              <div className="flex gap-4">
-                <a href="#" className="text-primary hover:text-primary-foreground">
-                  Facebook
-                </a>
-                <a href="#" className="text-primary hover:text-primary-foreground">
-                  Instagram
-                </a>
+          <div className="container">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+              <div>
+                <h4 className="font-bold mb-4">Incontri di Bakeka</h4>
+                <p className="text-sm text-muted-foreground">
+                  Il marketplace più affidabile per connessioni autentiche.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-bold mb-4">Link Utili</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li><a href="#" className="hover:text-primary">Chi Siamo</a></li>
+                  <li><a href="#" className="hover:text-primary">Contatti</a></li>
+                  <li><a href="#" className="hover:text-primary">Blog</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold mb-4">Legale</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li><a href="#" className="hover:text-primary">Termini e Condizioni</a></li>
+                  <li><a href="#" className="hover:text-primary">Privacy Policy</a></li>
+                  <li><a href="#" className="hover:text-primary">Cookie Policy</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold mb-4">Seguici</h4>
+                <div className="flex gap-4">
+                  <a href="#" className="text-primary hover:text-primary-foreground">Facebook</a>
+                  <a href="#" className="text-primary hover:text-primary-foreground">Instagram</a>
+                </div>
               </div>
             </div>
+
+            {/* Cities grid */}
+            <div className="border-t border-border pt-6 mb-6">
+              <h4 className="font-bold mb-3 text-sm">Città in Evidenza</h4>
+              <div className="flex flex-wrap gap-2">
+                {ITALIAN_CITIES.slice(0, 40).map((city) => (
+                  <button
+                    key={city}
+                    className="text-xs text-muted-foreground hover:text-primary px-2 py-1 rounded hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setSelectedCity(city);
+                      document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    {city}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Pubblica annuncio bar */}
+            <div className="border-t border-border pt-6 mb-6 text-center">
+              <Button onClick={openPublish} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Pubblica il tuo Annuncio
+              </Button>
+            </div>
+
+            <div className="border-t border-border pt-6 text-center text-sm text-muted-foreground">
+              <p>&copy; 2026 Incontri di Bakeka. Tutti i diritti riservati.</p>
+            </div>
           </div>
-          <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2026 Incontri di Bakeka. Tutti i diritti riservati.</p>
-          </div>
-        </div>
-      </footer>
+        </footer>
     </div>
   );
 }

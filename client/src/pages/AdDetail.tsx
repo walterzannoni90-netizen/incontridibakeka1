@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useRouter } from "@/hooks/useRouter";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useAuth } from "@/hooks/useAuth";
+import { slugify } from "@shared/data";
 import {
   MapPin,
   Star,
@@ -12,6 +13,8 @@ import {
   ArrowLeft,
   Phone,
   Mail,
+  ChevronRight,
+  Home as HomeIcon,
 } from "lucide-react";
 
 interface Ad {
@@ -43,7 +46,7 @@ interface Profile {
 }
 
 export default function AdDetail() {
-  const { getQueryParam, navigate } = useRouter();
+  const { getQueryParam, navigate, currentPath } = useRouter();
   const { get, post, patch } = useSupabase();
   const { user, token: authToken } = useAuth();
 
@@ -53,7 +56,19 @@ export default function AdDetail() {
   const [mainImage, setMainImage] = useState<string>("");
   const [saved, setSaved] = useState(false);
 
-  const adId = getQueryParam("id");
+  // Support both /ad?id=xxx and /ad/slug-id formats
+  const adId = getQueryParam("id") || (() => {
+    const match = currentPath.match(/^\/ad\/(.+)$/);
+    if (match) {
+      const slug = match[1];
+      // Extract ID from slug (last segment after last dash, if it looks like a UUID/nanoid)
+      const parts = slug.split("-");
+      const lastPart = parts[parts.length - 1];
+      if (lastPart && lastPart.length >= 8) return lastPart;
+      return slug;
+    }
+    return null;
+  })();
 
   useEffect(() => {
     if (!adId) {
@@ -202,6 +217,20 @@ export default function AdDetail() {
           </h1>
           <div className="w-16 flex-shrink-0" />
         </div>
+        {/* Breadcrumb */}
+        <div className="container py-2 border-t border-border/50">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground overflow-x-auto whitespace-nowrap">
+            <button onClick={() => navigate("/")} className="hover:text-primary flex items-center gap-1">
+              <HomeIcon className="w-3 h-3" /> Home
+            </button>
+            <ChevronRight className="w-3 h-3" />
+            <button onClick={() => navigate("/")} className="hover:text-primary capitalize">
+              {ad.category?.replace(/-/g, " ") || "Categoria"}
+            </button>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-foreground font-medium truncate">{ad.city}</span>
+          </div>
+        </div>
       </div>
 
       <div className="container py-6 md:py-8">
@@ -316,17 +345,31 @@ export default function AdDetail() {
             </Card>
 
             {/* Contact Card */}
-            <Card className="p-6 mb-6">
+            <Card className="p-4 md:p-6 mb-6">
               <h3 className="font-bold mb-4 font-poppins">Contatta</h3>
               <div className="space-y-3">
                 {profile?.phone && (
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => handleContact("whatsapp")}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    WhatsApp
-                  </Button>
+                  <>
+                    <Button
+                      className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleContact("whatsapp")}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => {
+                        if (profile.phone) {
+                          window.location.href = `tel:${profile.phone}`;
+                        }
+                      }}
+                    >
+                      <Phone className="w-4 h-4" />
+                      {profile.phone}
+                    </Button>
+                  </>
                 )}
                 <Button
                   variant="outline"
