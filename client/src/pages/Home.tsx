@@ -32,12 +32,12 @@ interface CurrentUser {
 }
 
 const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "/manus-storage/category-donna-cerca-uomo_6d2456f1.jpg" },
-  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "/manus-storage/category-uomo-cerca-donna_ee7e6f45.jpg" },
-  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "/manus-storage/category-uomo-cerca-uomo_12c1957b.jpg" },
-  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "/manus-storage/category-donna-cerca-donna_9bed84ff.jpg" },
-  { id: "coppie", name: "Coppie", image: "/manus-storage/category-coppie_c929881b.jpg" },
-  { id: "cerco-amici", name: "Cerco Amici", image: "/manus-storage/category-cerco-amici_8ac7b395.jpg" },
+  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop" },
+  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
+  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop" },
+  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop" },
+  { id: "coppie", name: "Coppie", image: "https://images.unsplash.com/photo-1516214104703-3e8c20108eaa?w=400&h=400&fit=crop" },
+  { id: "cerco-amici", name: "Cerco Amici", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=400&fit=crop" },
 ];
 
 export default function Home() {
@@ -96,11 +96,7 @@ export default function Home() {
       <nav className="sticky top-0 z-50 bg-white border-b border-border shadow-sm">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
-            <img
-              src="/manus-storage/logo-bakeka_15393e4f.png"
-              alt="Bakeka"
-              className="w-8 h-8"
-            />
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold">B</div>
             <span className="text-xl font-bold text-primary">Bakeka</span>
           </div>
 
@@ -191,7 +187,7 @@ export default function Home() {
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage: "url(/manus-storage/hero-background_d3388cb4.png)",
+            backgroundImage: "url(https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=400&fit=crop)",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
