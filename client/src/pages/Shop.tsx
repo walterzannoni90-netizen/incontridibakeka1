@@ -17,7 +17,7 @@ export default function Shop() {
   const { user } = useAuth();
   const { createCheckoutSession } = useStripe();
   const { navigate } = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loadingPack, setLoadingPack] = useState<number | null>(null);
 
   if (!user) {
     return (
@@ -35,12 +35,12 @@ export default function Shop() {
 
   const handleBuyCredits = async (credits: number) => {
     try {
-      setLoading(true);
+      setLoadingPack(credits);
       await createCheckoutSession(user.id, credits);
     } catch (error) {
       console.error("Errore acquisto:", error);
       alert("Errore durante l'acquisto. Riprova.");
-      setLoading(false);
+      setLoadingPack(null);
     }
   };
 
@@ -112,10 +112,10 @@ export default function Shop() {
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleBuyCredits(pack.credits)}
-                  disabled={loading}
+                  disabled={loadingPack !== null}
                   variant={pack.popular ? "default" : "outline"}
                 >
-                  {loading ? (
+                  {loadingPack === pack.credits ? (
                     <>
                       <span className="animate-spin">⏳</span>
                       Elaborazione...

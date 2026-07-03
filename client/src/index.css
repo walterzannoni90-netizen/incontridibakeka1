@@ -135,6 +135,10 @@
 }
 
 @layer components {
+  .font-poppins {
+    font-family: "Poppins", sans-serif;
+  }
+
   /**
    * Custom container utility that centers content and adds responsive padding.
    *

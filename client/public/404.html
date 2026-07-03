@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Incontri di Bakeka</title>
+    <script>
+      // GitHub Pages SPA fallback: redirect to index.html preserving the path
+      // GitHub Pages serves this 404.html for any unknown path
+      // We convert the path to a query segment so the SPA can restore it
+      var pathSegmentsToKeep = 1; // Adjust if deployed to a deeper subpath
+
+      var l = window.location;
+      var repoMatch = l.pathname.match(/^\/([^/]+)\//);
+      var repo = repoMatch ? repoMatch[1] : "";
+
+      // Check if we're on a GitHub Pages subpath (username.github.io/repo/)
+      if (repo && repo !== "index.html") {
+        pathSegmentsToKeep = 1;
+      } else {
+        pathSegmentsToKeep = 0;
+      }
+
+      l.replace(
+        l.protocol + "//" + l.hostname + (l.port ? ":" + l.port : "") +
+        l.pathname.split("/").slice(0, 1 + pathSegmentsToKeep).join("/") + "/?/" +
+        l.pathname.slice(1).split("/").slice(pathSegmentsToKeep).join("/").replace(/&/g, "~and~") +
+        (l.search ? "&" + l.search.slice(1).replace(/&/g, "~and~") : "") +
+        l.hash
+      );
+    </script>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+  </body>
+</html>

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/hooks/useRouter";
+import { useAuth } from "@/hooks/useAuth";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -24,14 +25,6 @@ interface Ad {
   is_sponsored: boolean;
 }
 
-interface CurrentUser {
-  id: string;
-  email: string;
-  name: string;
-  is_admin: boolean;
-  credits?: number;
-}
-
 const CATEGORIES = [
   { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop" },
   { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
@@ -41,27 +34,10 @@ const CATEGORIES = [
   { id: "cerco-amici", name: "Cerco Amici", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=400&fit=crop" },
 ];
 
-const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-function persistSession(token: string, user: CurrentUser) {
-  localStorage.setItem("authToken", token);
-  localStorage.setItem("currentUser", JSON.stringify(user));
-  localStorage.setItem(
-    "authSession",
-    JSON.stringify({ savedAt: Date.now(), expiresAt: Date.now() + AUTH_SESSION_TTL_MS })
-  );
-}
-
-function clearSession() {
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("currentUser");
-  localStorage.removeItem("authSession");
-}
-
 export default function Home() {
   const { navigate } = useRouter();
+  const { user: currentUser, login, logout } = useAuth();
   const [ads, setAds] = useState<Ad[]>([]);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -83,7 +59,6 @@ export default function Home() {
 
   useEffect(() => {
     loadAds();
-    checkAuth();
     handlePaymentCallback();
   }, []);
 
@@ -110,16 +85,14 @@ export default function Home() {
         try {
           const stored = localStorage.getItem("currentUser");
           const localUser = stored ? JSON.parse(stored) : null;
-          const token = localStorage.getItem("authToken");
-          if (localUser && token && localUser.id === userId) {
+          const authToken = localStorage.getItem("authToken");
+          if (localUser && authToken && localUser.id === userId) {
             const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=credits&id=eq.${userId}`, {
-              headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+              headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${authToken}` },
             });
             const profiles = await resp.json();
             if (profiles?.[0]) {
-              const updated = { ...localUser, credits: profiles[0].credits };
-              setCurrentUser(updated);
-              localStorage.setItem("currentUser", JSON.stringify(updated));
+              login({ ...localUser, credits: profiles[0].credits }, authToken);
             }
           }
         } catch (e) {
@@ -148,30 +121,6 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const checkAuth = () => {
-    const token = localStorage.getItem("authToken");
-    const user = localStorage.getItem("currentUser");
-    const session = localStorage.getItem("authSession");
-    if (token && user) {
-      try {
-        const sessionData = session ? JSON.parse(session) : null;
-        if (sessionData?.expiresAt && Date.now() > sessionData.expiresAt) {
-          clearSession();
-          return;
-        }
-        setCurrentUser(JSON.parse(user));
-      } catch (e) {
-        console.error("Errore parsing user:", e);
-        clearSession();
-      }
-    }
-  };
-
-  const logout = () => {
-    clearSession();
-    setCurrentUser(null);
   };
 
   const runSearch = () => {
@@ -223,11 +172,11 @@ export default function Home() {
         return;
       }
 
-      const profile: CurrentUser = {
+      const profile = {
         id: authUser.id,
         email: authUser.email || authForm.email,
         name: authForm.name || authUser.user_metadata?.name || authForm.email.split("@")[0],
-        is_admin: authForm.email.toLowerCase() === "walterzannoni90@outlook.it",
+        is_admin: false,
         credits: authModal === "register" ? 20 : 0,
       };
 
@@ -250,8 +199,7 @@ export default function Home() {
         if (profiles?.[0]) Object.assign(profile, profiles[0]);
       }
 
-      persistSession(token, profile);
-      setCurrentUser(profile);
+      login(profile, token);
       setAuthModal(null);
       setAuthForm({ name: "", email: "", password: "" });
     } catch (error) {
@@ -485,9 +433,9 @@ export default function Home() {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all" />
-                </div>
-                <div className="p-3 text-center">
-                  <p className="text-xs font-bold text-white">{cat.name}</p>
+                  <div className="absolute inset-x-0 bottom-0 p-3 text-center">
+                    <p className="text-xs font-bold text-white drop-shadow">{cat.name}</p>
+                  </div>
                 </div>
               </Card>
             ))}

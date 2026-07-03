@@ -13,6 +13,30 @@
   </head>
 
   <body>
+    <script>
+      // GitHub Pages SPA redirect receiver: restores the original path from the 404.html redirect
+      (function () {
+        var l = window.location;
+        if (l.search[1] === "/") {
+          var decoded = l.search
+            .slice(1)
+            .split("&")
+            .map(function (s) {
+              return s.replace(/~and~/g, "&");
+            })
+            .join("?");
+          var path = decoded.split("?")[0];
+          var search = decoded.split("?")[1] || "";
+          var hash = l.hash;
+
+          history.replaceState(
+            null,
+            null,
+            l.pathname + (path ? path : "/") + (search ? "?" + search : "") + hash
+          );
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
