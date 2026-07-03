@@ -281,11 +281,13 @@ export default function AdDetail() {
           {/* Gallery */}
           <div className="lg:col-span-2">
             <Card className="overflow-hidden mb-4 border-0 shadow-md">
-              <div className="relative aspect-[4/3] md:aspect-video bg-muted flex items-center justify-center">
+              <div className="relative aspect-[4/3] md:aspect-video bg-gradient-to-br from-primary/20 to-purple-300/20 flex items-center justify-center">
                 {mainImage ? (
-                  <img src={mainImage} alt={ad.title} className="w-full h-full object-cover" />
+                  <img src={mainImage} alt={ad.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
-                  <div className="text-6xl">👤</div>
+                  <div className="text-6xl">
+                    {ad.category === "uomo-cerca-donna" ? "👨" : ad.category === "trans" ? "⚧️" : "👤"}
+                  </div>
                 )}
                 {ad.is_sponsored && (
                   <div className="absolute top-3 right-3 bg-accent text-accent-foreground px-3 py-1 rounded-lg text-sm font-bold shadow-lg">
@@ -368,7 +370,7 @@ export default function AdDetail() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-foreground">
                   <MapPin className="w-5 h-5 text-primary" />
-                  <span className="font-medium">{ad.city}</span>
+                  <span className="font-medium">{ad.city || "Italia"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-foreground">
                   <span className="text-muted-foreground">👤</span>

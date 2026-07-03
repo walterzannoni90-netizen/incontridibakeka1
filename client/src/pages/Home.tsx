@@ -31,12 +31,9 @@ interface Ad {
 }
 
 const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=600&fit=crop", count: "1.2k annunci" },
-  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop", count: "890 annunci" },
-  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=600&fit=crop", count: "650 annunci" },
-  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop", count: "420 annunci" },
-  { id: "coppie", name: "Coppie", image: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=600&h=600&fit=crop", count: "310 annunci" },
-  { id: "cerco-amici", name: "Cerco Amici", image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop", count: "540 annunci" },
+  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=600&fit=crop", count: "180+ annunci" },
+  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop", count: "20+ annunci" },
+  { id: "trans", name: "Trans", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop", count: "15+ annunci" },
 ];
 
 // No demo data - real data only from Supabase
@@ -219,6 +216,7 @@ export default function Home() {
         email: authUser.email || authForm.email,
         name: authForm.name || authUser.user_metadata?.name || authForm.email.split("@")[0],
         is_admin: false,
+        role: "user",
         credits: authModal === "register" ? 20 : 0,
       };
 
@@ -733,7 +731,7 @@ export default function Home() {
             Sfoglia per Categoria
           </h2>
           <p className="text-center text-muted-foreground mb-6 md:mb-12">Trova esattamente quello che cerchi</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {CATEGORIES.map((cat) => (
               <Card
                 key={cat.id}
@@ -836,17 +834,18 @@ export default function Home() {
                   } ${ad.is_premium ? "ring-1 ring-primary/30" : ""}`}
                   onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
                 >
-                    <div className="relative h-36 md:h-52 bg-muted overflow-hidden">
+                    <div className="relative h-36 md:h-52 bg-gradient-to-br from-primary/20 to-purple-300/20 overflow-hidden">
                       {ad.image ? (
                         <img
                           src={ad.image}
                           alt={ad.title}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                           loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl">
-                          👤
+                        <div className="w-full h-full flex items-center justify-center text-5xl">
+                          {ad.category === "uomo-cerca-donna" ? "👨" : ad.category === "trans" ? "⚧️" : "👤"}
                         </div>
                       )}
                       {ad.is_sponsored && (
@@ -887,11 +886,11 @@ export default function Home() {
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <MapPin className="w-3 h-3" />
-                          <span className="truncate max-w-[60px]">{ad.city}</span>
+                          <span className="truncate max-w-[60px]">{ad.city || "Italia"}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Star className="w-3 h-3 fill-accent text-accent" />
-                          <span className="font-medium">{ad.rating}</span>
+                          <span className="font-medium">{ad.rating > 0 ? ad.rating : "Nuovo"}</span>
                         </div>
                       </div>
                       {ad.price && (

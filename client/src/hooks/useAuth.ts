@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 
-const ADMIN_EMAILS = ["walterzannoni90@outlook.it"];
 const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface User {
@@ -9,11 +8,11 @@ export interface User {
   name: string;
   is_admin: boolean;
   credits?: number;
+  role?: string;
 }
 
-function isAdminEmail(email: string): boolean {
-  const lower = email.toLowerCase();
-  return ADMIN_EMAILS.some((e) => e.toLowerCase() === lower);
+function isAdminUser(user: any): boolean {
+  return user?.role === "admin" || user?.is_admin === true;
 }
 
 export function useAuth() {
@@ -21,7 +20,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
-  // Carica l'utente dal localStorage al mount
   useEffect(() => {
     const storedToken = localStorage.getItem("authToken");
     const storedUser = localStorage.getItem("currentUser");
@@ -29,7 +27,6 @@ export function useAuth() {
 
     if (storedToken && storedUser) {
       try {
-        // Check session expiry
         const session = storedSession ? JSON.parse(storedSession) : null;
         if (session?.expiresAt && Date.now() > session.expiresAt) {
           localStorage.removeItem("authToken");
@@ -40,8 +37,8 @@ export function useAuth() {
         }
 
         const parsedUser = JSON.parse(storedUser);
-        const isAdmin = isAdminEmail(parsedUser.email);
-        setUser({ ...parsedUser, is_admin: isAdmin });
+        const admin = isAdminUser(parsedUser);
+        setUser({ ...parsedUser, is_admin: admin });
         setToken(storedToken);
       } catch (e) {
         console.error("Errore parsing user:", e);
@@ -54,8 +51,8 @@ export function useAuth() {
   }, []);
 
   const login = useCallback((userData: User, authToken: string) => {
-    const isAdmin = isAdminEmail(userData.email);
-    const userWithAdmin = { ...userData, is_admin: isAdmin };
+    const admin = isAdminUser(userData);
+    const userWithAdmin = { ...userData, is_admin: admin };
     setUser(userWithAdmin);
     setToken(authToken);
     localStorage.setItem("authToken", authToken);
