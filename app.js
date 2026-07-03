@@ -11,10 +11,114 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Stripe — Chiave pubblicabile + Edge Function
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1';
 const EDGE_FUNCTION_URL = 'https://rdqsmfgpbuswzilgbjyr.functions.supabase.co';
+const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const ADMIN_ALERT_EMAIL = 'system@incontridibakeka.local';
 
 // ============================================================
 // SUPABASE HELPERS
 // ============================================================
+function getAuthSession() {
+  try { return JSON.parse(localStorage.getItem('authSession') || '{}'); } catch { return {}; }
+}
+
+function isAuthSessionExpired() {
+  const session = getAuthSession();
+  if (!session.expiresAt) {
+    if (localStorage.getItem('authToken')) {
+      localStorage.setItem('authSession', JSON.stringify({ savedAt: Date.now(), expiresAt: Date.now() + AUTH_SESSION_TTL_MS }));
+    }
+    return false;
+  }
+  return Date.now() > session.expiresAt;
+}
+
+function clearAuthSession() {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('authSession');
+  currentUser = null;
+}
+
+function persistUserSession(token, user, refreshToken) {
+  if (token) localStorage.setItem('authToken', token);
+  if (user) localStorage.setItem('currentUser', JSON.stringify(user));
+  localStorage.setItem('authSession', JSON.stringify({
+    savedAt: Date.now(),
+    expiresAt: Date.now() + AUTH_SESSION_TTL_MS,
+    refreshToken: refreshToken || getAuthSession().refreshToken || ''
+  }));
+}
+
+function getAuthToken() {
+  const token = localStorage.getItem('authToken') || '';
+  if (!token) return '';
+  if (isAuthSessionExpired()) {
+    clearAuthSession();
+    return '';
+  }
+  return token;
+}
+
+function getCachedUser() {
+  if (isAuthSessionExpired()) return null;
+  try { return JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; }
+}
+
+function formatAlertDetails(details = {}) {
+  return Object.entries(details)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value).slice(0, 600) : String(value).slice(0, 600)}`)
+    .join('\n');
+}
+
+function reportAdminAlert(level, title, details = {}) {
+  const key = `${level}:${title}:${details.status || ''}:${details.path || details.url || ''}`;
+  const now = Date.now();
+  try {
+    const last = JSON.parse(sessionStorage.getItem('lastAdminAlert') || '{}');
+    if (last.key === key && now - last.at < 60000) return;
+    sessionStorage.setItem('lastAdminAlert', JSON.stringify({ key, at: now }));
+  } catch {}
+
+  const detailText = formatAlertDetails({
+    ...details,
+    page: location.href,
+    user: currentUser?.email || currentUser?.id || 'guest',
+    userAgent: navigator.userAgent
+  });
+  const message = `[ALERT:${level.toUpperCase()}] ${title}${detailText ? '\n' + detailText : ''}`;
+
+  fetch(`${SUPABASE_URL}/rest/v1/support_messages`, {
+    method: 'POST',
+    headers: { ...sbHeaders(getAuthToken()), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      user_id: currentUser?.id || null,
+      email: ADMIN_ALERT_EMAIL,
+      message,
+      is_read: false,
+      created_at: new Date().toISOString()
+    })
+  }).catch(() => {});
+}
+
+function initErrorReporting() {
+  window.addEventListener('error', event => {
+    reportAdminAlert('error', event.message || 'Errore JavaScript', {
+      source: event.filename,
+      line: event.lineno,
+      column: event.colno,
+      stack: event.error?.stack
+    });
+  });
+  window.addEventListener('unhandledrejection', event => {
+    const reason = event.reason || {};
+    reportAdminAlert('error', reason.message || 'Promise non gestita', {
+      stack: reason.stack,
+      reason: typeof reason === 'string' ? reason : ''
+    });
+  });
+}
+
 function sbHeaders(token) {
   return { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
 }
@@ -25,24 +129,36 @@ async function sbRead(r) {
 }
 async function sbGet(table, query, token) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: sbHeaders(token) });
-  if (!r.ok) throw new Error(`GET ${table}: ${r.status}`);
+  if (!r.ok) {
+    reportAdminAlert('error', `GET ${table}: ${r.status}`, { table, query, status: r.status });
+    throw new Error(`GET ${table}: ${r.status}`);
+  }
   return sbRead(r);
 }
 async function sbPost(table, data, token) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: { ...sbHeaders(token), 'Prefer': 'return=representation' }, body: JSON.stringify(data) });
-  if (!r.ok) throw new Error(`POST ${table}: ${r.status}`);
+  if (!r.ok) {
+    reportAdminAlert('error', `POST ${table}: ${r.status}`, { table, status: r.status, data });
+    throw new Error(`POST ${table}: ${r.status}`);
+  }
   return sbRead(r);
 }
 async function sbPatch(table, data, match, token) {
   const q = Object.entries(match).map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, { method: 'PATCH', headers: { ...sbHeaders(token), 'Prefer': 'return=representation' }, body: JSON.stringify(data) });
-  if (!r.ok) throw new Error(`PATCH ${table}: ${r.status}`);
+  if (!r.ok) {
+    reportAdminAlert('error', `PATCH ${table}: ${r.status}`, { table, match, status: r.status, data });
+    throw new Error(`PATCH ${table}: ${r.status}`);
+  }
   return sbRead(r);
 }
 async function sbDelete(table, match, token) {
   const q = Object.entries(match).map(([k, v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${q}`, { method: 'DELETE', headers: sbHeaders(token) });
-  if (!r.ok) throw new Error(`DELETE ${table}: ${r.status}`);
+  if (!r.ok) {
+    reportAdminAlert('error', `DELETE ${table}: ${r.status}`, { table, match, status: r.status });
+    throw new Error(`DELETE ${table}: ${r.status}`);
+  }
   return sbRead(r);
 }
 async function sbAuth(method, body, token) {
@@ -56,7 +172,11 @@ async function sbCount(table, filter) {
 }
 async function sbUpload(path, file, token) {
   const r = await fetch(`${SUPABASE_URL}/storage/v1/object/ad-photos/${path}`, { method: 'POST', headers: { 'Authorization': `Bearer ${token || SUPABASE_ANON_KEY}`, 'Content-Type': file.type, 'x-upsert': 'true' }, body: file });
-  if (!r.ok) throw new Error(`Upload fallito: ${await r.text()}`);
+  if (!r.ok) {
+    const text = await r.text();
+    reportAdminAlert('error', `Upload foto fallito: ${r.status}`, { path, status: r.status, response: text });
+    throw new Error(`Upload fallito: ${text}`);
+  }
   return r.json();
 }
 
@@ -73,6 +193,8 @@ let savedAdsList = [];
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+  initErrorReporting();
+  markHomeSections();
   initPreloader();
   initNavbar();
   initParticles();
@@ -83,11 +205,27 @@ document.addEventListener('DOMContentLoaded', () => {
   initFilters();
   initAOS();
   initAuth();
+  initFooterLinks();
   loadAddons();
   setTimeout(initRouter, 150);
   loadCityList();
   setTimeout(loadHottestAds, 300);
 });
+
+function markHomeSections() {
+  document.querySelectorAll('body > section:not(.page-section)').forEach(section => {
+    section.classList.add('home-section');
+  });
+}
+
+function hideHomeAndPages(pageId) {
+  document.querySelectorAll('.home-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('section.page-section').forEach(s => s.style.display = 'none');
+  const page = document.getElementById(pageId);
+  if (page) page.style.display = 'block';
+  window.scrollTo(0, 0);
+  return page;
+}
 
 // ============================================================
 // PRELOADER
@@ -96,7 +234,7 @@ function initPreloader() {
   setTimeout(() => {
     document.getElementById('preloader')?.classList.add('hidden');
     document.body.style.overflow = 'visible';
-  }, 1800);
+  }, 850);
 }
 
 // ============================================================
@@ -104,6 +242,25 @@ function initPreloader() {
 // ============================================================
 function initNavbar() {
   window.addEventListener('scroll', () => document.getElementById('navbar')?.classList.toggle('scrolled', window.scrollY > 80));
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+      const section = link.dataset.section;
+      const targetId = link.getAttribute('href')?.replace('#', '');
+      if (section === 'home') {
+        e.preventDefault();
+        backToHome();
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        return;
+      }
+      if (!targetId) return;
+      e.preventDefault();
+      backToHome();
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+      setTimeout(() => document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth' }), 50);
+    });
+  });
 }
 function toggleMenu() {
   document.getElementById('hamburger')?.classList.toggle('active');
@@ -125,7 +282,7 @@ function initParticles() {
   for (let i = 0; i < 30; i++) {
     const p = document.createElement('div');
     p.className = 'particle';
-    const colors = ['#8b5cf6', '#ec4899', '#f59e0b', '#3b82f6', '#10b981'];
+    const colors = ['#2563eb', '#0ea5e9', '#f59e0b', '#3b82f6', '#10b981'];
     p.style.cssText = `left:${Math.random() * 100}%;width:${Math.random() * 4 + 2}px;height:${Math.random() * 4 + 2}px;animation-duration:${Math.random() * 20 + 15}s;animation-delay:${Math.random() * 10}s;opacity:${Math.random() * 0.3 + 0.1};background:${colors[Math.floor(Math.random() * 5)]}`;
     c.appendChild(p);
   }
@@ -141,7 +298,7 @@ async function initCategories() {
   if (!grid) return;
   
   grid.innerHTML = '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px">' +
-    Array(8).fill('<div class="category-card skeleton" style="height:220px;background:rgba(255,255,255,0.03);border-radius:16px;animation:pulse 1.5s infinite"></div>').join('') + '</div>';
+    Array(8).fill('<div class="category-card skeleton" style="height:220px;background:rgba(15,23,42,0.08);border-radius:16px;animation:pulse 1.5s infinite"></div>').join('') + '</div>';
 
   try {
     const data = await fetch('/api/categories').then(r => r.json());
@@ -168,10 +325,10 @@ async function initCategories() {
   };
 
   let cats = categoriesList.length > 0
-    ? categoriesList.map(c => ({ id: c.slug, name: c.name, icon: icons[c.slug] || 'fa-tag', color: c.color || '#8b5cf6', desc: c.description }))
+    ? categoriesList.map(c => ({ id: c.slug, name: c.name, icon: icons[c.slug] || 'fa-tag', color: c.color || '#2563eb', desc: c.description }))
     : Object.keys(fallbackImages).map(id => ({
         id, name: id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        icon: icons[id] || 'fa-tag', color: '#8b5cf6', desc: ''
+        icon: icons[id] || 'fa-tag', color: '#2563eb', desc: ''
       }));
   
   grid.innerHTML = '';
@@ -321,7 +478,7 @@ function renderCityPills(grid) {
     pill.className = 'city-pill';
     pill.textContent = city;
     pill.setAttribute('data-aos', 'fade-up');
-    pill.onclick = () => navigateTo('/?page=category&slug=donna-cerca-uomo&city=' + encodeURIComponent(city));
+    pill.onclick = () => navigateTo('/?page=city&city=' + encodeURIComponent(city));
     grid.appendChild(pill);
   });
 }
@@ -402,6 +559,11 @@ async function quickSearch(query) {
 
   const cm = { 'donna cerca uomo': 'donna-cerca-uomo', 'donna-cerca-uomo': 'donna-cerca-uomo', 'uomo cerca donna': 'uomo-cerca-donna', 'uomo-cerca-donna': 'uomo-cerca-donna', 'uomo cerca uomo': 'uomo-cerca-uomo', 'uomo-cerca-uomo': 'uomo-cerca-uomo', 'donna cerca donna': 'donna-cerca-donna', 'donna-cerca-donna': 'donna-cerca-donna', 'coppie': 'coppie', 'coppia': 'coppie', 'trans': 'trans', 'amici': 'cerco-amici', 'anima gemella': 'anima-gemella' };
   if (cm[query.toLowerCase()]) { filterByCategory(cm[query.toLowerCase()]); return; }
+  const matchedCity = citiesList.find(city => city.toLowerCase() === query.toLowerCase());
+  if (matchedCity) {
+    navigateTo('/?page=city&city=' + encodeURIComponent(matchedCity));
+    return;
+  }
 
   const grid = document.getElementById('adsGrid');
   if (!grid) return;
@@ -427,7 +589,7 @@ document.addEventListener('keydown', e => {
 // AUTH
 // ============================================================
 async function initAuth() {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   if (!token) return;
   try {
     const data = await sbAuth('user', {}, token);
@@ -444,8 +606,8 @@ async function initAuth() {
       };
       updateUIForLoggedUser();
       loadSavedContacts();
-    } else { localStorage.removeItem('authToken'); }
-  } catch (e) { localStorage.removeItem('authToken'); }
+    } else { clearAuthSession(); }
+  } catch (e) { clearAuthSession(); }
 }
 
 function openLogin() {
@@ -485,6 +647,24 @@ function socialLogin(provider) {
   showToast('Accesso con ' + provider + ' non ancora configurato. Usa email e password.', 'warning');
 }
 
+function openAccount() {
+  if (currentUser) navigateTo('/?page=profile');
+  else openLogin();
+}
+
+async function recoverPassword() {
+  const currentEmail = document.getElementById('loginEmail')?.value.trim() || '';
+  const email = prompt('Inserisci la tua email per ricevere il link di reset:', currentEmail);
+  if (!email) return;
+  try {
+    const data = await sbAuth('recover', { email });
+    if (data?.error) throw new Error(data.error_description || data.error);
+    showToast('Link di reset inviato se l’email è registrata.', 'success');
+  } catch (e) {
+    showToast('Reset password non disponibile: ' + (e.message || 'riprova'), 'error');
+  }
+}
+
 function checkPasswordStrength(pw) {
   const fill = document.getElementById('strengthFill');
   const text = document.getElementById('strengthText');
@@ -518,8 +698,7 @@ async function handleLogin(e) {
     const prof = p?.[0] || {};
     const userEmail = data.user.email || prof.email || '';
     currentUser = { id: data.user.id, name: prof.name || '', surname: prof.surname || '', email: userEmail, city: prof.city || '', credits: prof.credits || 0, isVerified: !!prof.is_verified, isPremium: !!prof.is_premium, role: prof.role || 'user', isAdmin: isAdmin(userEmail) };
-    localStorage.setItem('authToken', data.access_token);
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    persistUserSession(data.access_token, currentUser, data.refresh_token);
     closeLogin();
     updateUIForLoggedUser();
     loadSavedContacts();
@@ -529,11 +708,12 @@ async function handleLogin(e) {
 }
 
 // Admin emails
-const ADMIN_EMAILS = ['walterzannoni90@outlook.it', 'walterzannoni90@gmail.com', 'Lucianopoleselli@icloud.com'];
+const ADMIN_EMAILS = ['walterzannoni90@outlook.it', 'walterzannoni90@gmail.com', 'lucianopoleselli@icloud.com'];
 
 function isAdmin(email) {
   // Controlla sia la lista hardcoded che il ruolo nel profilo
-  if (ADMIN_EMAILS.includes((email || '').toLowerCase())) return true;
+  const normalizedEmail = (email || '').toLowerCase();
+  if (ADMIN_EMAILS.map(e => e.toLowerCase()).includes(normalizedEmail)) return true;
   if (currentUser?.role === 'admin') return true;
   return false;
 }
@@ -629,8 +809,7 @@ async function handleRegister(e) {
       isAdmin: userIsAdmin
     };
     
-    if (data.access_token) localStorage.setItem('authToken', data.access_token);
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    persistUserSession(data.access_token || '', currentUser, data.refresh_token);
     closeRegister();
     updateUIForLoggedUser();
     
@@ -710,9 +889,7 @@ function userAction(action) {
 }
 
 function logout() {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('currentUser');
-  currentUser = null;
+  clearAuthSession();
   const authBtns = document.getElementById('authButtons');
   const userMenu = document.getElementById('userMenu');
   if (authBtns) authBtns.style.display = 'flex';
@@ -834,7 +1011,7 @@ async function submitAd(e) {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pubblicazione...';
 
   try {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
     let imageUrls = [];
     if (selectedPhotos.length > 0) {
       for (let i = 0; i < selectedPhotos.length; i++) {
@@ -876,7 +1053,7 @@ let editingAdId = null;
 
 function editAd(adId) {
   editingAdId = adId;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbGet('ads', 'select=*&id=eq.' + adId, token).then(ads => {
     if (!ads || ads.length === 0) { showToast('Annuncio non trovato', 'error'); return; }
     const ad = ads[0];
@@ -949,7 +1126,7 @@ async function submitAd(e) {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvataggio...';
 
   try {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
     let imageUrls = [];
     
     // Handle photos: keep existing + upload new
@@ -1013,7 +1190,7 @@ async function submitAd(e) {
 // ============================================================
 function deleteAd(adId) {
   if (!confirm('❌ Sei sicuro di voler eliminare questo annuncio?\n\nQuesta azione non può essere annullata.')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbDelete('ads', { id: adId }, token).then(() => {
     showToast('Annuncio eliminato', 'success');
     if (document.getElementById('myAdsPage')?.style.display !== 'none') showMyAdsPage();
@@ -1149,7 +1326,7 @@ async function loadAddonAds(addon) {
   if (!list) return;
   list.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
   try {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
     const ads = await sbGet('ads', `select=id,title,image,city&is_active=eq.true&user_id=eq.${currentUser.id}&limit=20`, token);
     list.innerHTML = '';
     if (!ads || ads.length === 0) {
@@ -1171,7 +1348,7 @@ async function loadAddonAds(addon) {
         this.querySelector('.fa-check-circle').style.color = 'var(--primary)';
 
         // Applica addon
-        const token = localStorage.getItem('authToken');
+        const token = getAuthToken();
         try {
           await sbPost('ad_addons', {
             ad_id: ad.id, addon_code: addon.code,
@@ -1221,7 +1398,7 @@ function showToast(message, type = 'success') {
 // ============================================================
 async function toggleSaveAd(adId) {
   if (!currentUser) { showToast('Accedi per salvare i contatti', 'warning'); openLogin(); return; }
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   try {
     const existing = await sbGet('saved_contacts', `select=id&user_id=eq.${currentUser.id}&ad_id=eq.${adId}`, token);
     if (existing && existing.length > 0) {
@@ -1237,11 +1414,39 @@ async function toggleSaveAd(adId) {
 
 async function loadSavedContacts() {
   if (!currentUser) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   try {
     const contacts = await sbGet('saved_contacts', `select=ad_id&user_id=eq.${currentUser.id}&order=created_at.desc&limit=50`, token);
     savedAdsList = contacts.map(c => c.ad_id) || [];
   } catch (e) { savedAdsList = []; }
+}
+
+async function contactAd(adId, ownerId) {
+  if (!currentUser) {
+    showToast('Accedi per contattare questo annuncio', 'warning');
+    openLogin();
+    return;
+  }
+  const token = getAuthToken();
+  try {
+    await sbPost('ad_contacts', {
+      ad_id: adId,
+      contact_type: 'message',
+      user_id: currentUser.id
+    }, token);
+    if (ownerId && ownerId !== currentUser.id) {
+      await sbPost('messages', {
+        sender_id: currentUser.id,
+        receiver_id: ownerId,
+        ad_id: adId,
+        subject: 'Nuovo contatto dal tuo annuncio',
+        body: (currentUser.name || 'Un utente') + ' vuole contattarti per il tuo annuncio.'
+      }, token).catch(() => null);
+    }
+    showToast('Contatto inviato e registrato.', 'success');
+  } catch (e) {
+    showToast('Errore contatto: ' + (e.message || 'riprova'), 'error');
+  }
 }
 
 // ============================================================
@@ -1264,6 +1469,11 @@ function selectPlan(planId) {
 }
 
 function openSponsor(planId) {
+  if (!currentUser) {
+    showToast('Accedi prima di sponsorizzare un annuncio', 'warning');
+    openLogin();
+    return;
+  }
   selectedPlan = planId || '3days';
   selectedAdId = null;
   document.getElementById('sponsorModal')?.classList.add('active');
@@ -1283,7 +1493,8 @@ async function loadSponsorAds() {
   if (!list) return;
   list.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Caricamento...</div>';
   try {
-    const ads = await sbGet('ads', 'select=*&is_active=eq.true&limit=6');
+    const token = getAuthToken();
+    const ads = await sbGet('ads', 'select=*&is_active=eq.true&user_id=eq.' + currentUser.id + '&limit=20', token);
     list.innerHTML = '';
     if (!ads || ads.length === 0) {
       list.innerHTML = '<div style="padding:20px;color:var(--text-muted)">Nessun annuncio. <a href="#" onclick="closeSponsor();openPublish();return false;" style="color:var(--primary-light)">Pubblica ora</a></div>';
@@ -1321,6 +1532,48 @@ function showSponsorStep(step) {
 }
 function nextSponsorStep(step) { showSponsorStep(step); }
 
+async function completeSponsor() {
+  if (!selectedAdId) {
+    showToast('Seleziona prima un annuncio', 'warning');
+    showSponsorStep(1);
+    return;
+  }
+  const plan = sponsorPlans[selectedPlan];
+  if (!plan) return;
+  const payBtn = document.getElementById('sponsorPayBtn');
+  if (payBtn) {
+    payBtn.disabled = true;
+    payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Attivazione...';
+  }
+  try {
+    const token = getAuthToken();
+    const days = parseInt(selectedPlan, 10) || 30;
+    const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
+    await sbPatch('ads', {
+      is_premium: true,
+      is_sponsored: true,
+      sponsor_plan: selectedPlan,
+      sponsor_expires_at: expiresAt
+    }, { id: selectedAdId }, token);
+    const details = document.getElementById('confirmDetails');
+    if (details) {
+      details.innerHTML = `
+        <div class="summary-row"><span class="summary-label">Piano</span><span class="summary-value">${plan.name}</span></div>
+        <div class="summary-row"><span class="summary-label">Durata</span><span class="summary-value">${plan.duration}</span></div>
+        <div class="summary-row"><span class="summary-label">Scadenza</span><span class="summary-value">${new Date(expiresAt).toLocaleDateString('it-IT')}</span></div>`;
+    }
+    showSponsorStep(4);
+    initAds();
+  } catch (e) {
+    showToast('Errore sponsorizzazione: ' + (e.message || 'riprova'), 'error');
+  } finally {
+    if (payBtn) {
+      payBtn.disabled = false;
+      payBtn.innerHTML = '<i class="fas fa-lock"></i> Paga €<span id="sponsorPayAmount">' + (plan?.price || 0).toFixed(2) + '</span>';
+    }
+  }
+}
+
 function updateSponsorSummary() {
   const plan = sponsorPlans[selectedPlan];
   if (!plan) return;
@@ -1354,6 +1607,9 @@ function initRouter() {
     const cat = params.get('slug') || 'donna-cerca-uomo';
     const city = params.get('city') || '';
     showCategoryPage(cat, city);
+  } else if (page === 'city') {
+    const city = params.get('city') || '';
+    showCategoryPage('', city);
   } else if (page === 'ad') {
     const id = params.get('id');
     if (id) showAdDetail(id);
@@ -1368,6 +1624,8 @@ function initRouter() {
   } else if (page === 'settings') {
     if (currentUser) showSettingsPage();
     else { showToast('Accedi prima', 'warning'); navigateTo('/'); }
+  } else if (page === 'info') {
+    showInfoPage(params.get('type') || 'terms');
   }
 }
 
@@ -1384,23 +1642,154 @@ function backToHome() {
   window.scrollTo(0, 0);
 }
 
+function openInfoPage(type) {
+  navigateTo('/?page=info&type=' + encodeURIComponent(type));
+}
+
+function showInfoPage(type) {
+  const pages = {
+    terms: {
+      title: 'Termini e Condizioni',
+      icon: 'fa-file-contract',
+      body: [
+        'L’uso del portale è consentito solo a persone maggiorenni.',
+        'Gli utenti sono responsabili dei contenuti pubblicati e devono rispettare le leggi applicabili.',
+        'Annunci falsi, offensivi, illegali o non autorizzati possono essere rimossi senza preavviso.'
+      ]
+    },
+    privacy: {
+      title: 'Privacy Policy',
+      icon: 'fa-shield-alt',
+      body: [
+        'Raccogliamo solo i dati necessari per account, annunci, pagamenti e assistenza.',
+        'I dati non vengono venduti a terzi. Le integrazioni esterne sono usate solo per servizi tecnici come pagamenti e autenticazione.',
+        'Puoi richiedere supporto o cancellazione dati tramite il modulo Contattaci.'
+      ]
+    },
+    cookies: {
+      title: 'Cookie Policy',
+      icon: 'fa-cookie-bite',
+      body: [
+        'Il sito usa cookie tecnici e memoria locale per login, preferenze e sicurezza.',
+        'Servizi esterni come Stripe, Supabase e librerie CDN possono usare cookie propri quando necessari.',
+        'Puoi cancellare cookie e dati locali dalle impostazioni del browser.'
+      ]
+    },
+    faq: {
+      title: 'FAQ',
+      icon: 'fa-circle-question',
+      body: [
+        'Per pubblicare un annuncio devi accedere e completare il form di pubblicazione.',
+        'La Vetrina è disponibile dalla sezione dedicata e si applica a uno dei tuoi annunci attivi.',
+        'La Rubrica salva gli annunci preferiti e il supporto è disponibile dal modulo Contattaci.'
+      ]
+    }
+  };
+  const page = pages[type] || pages.terms;
+  let section = document.getElementById('infoPage');
+  if (!section) {
+    section = document.createElement('section');
+    section.className = 'section page-section';
+    section.id = 'infoPage';
+    section.style.cssText = 'display:none;padding-top:120px';
+    document.querySelector('.footer')?.before(section);
+  }
+  section.innerHTML = `
+    <div class="container">
+      <div style="margin-bottom:24px"><button class="btn btn-outline" onclick="backToHome()"><i class="fas fa-arrow-left"></i> Home</button></div>
+      <h1 class="section-title gradient-text"><i class="fas ${page.icon}"></i> ${page.title}</h1>
+      <div class="info-page-card">
+        ${page.body.map(text => `<p>${text}</p>`).join('')}
+        <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="openSupport()"><i class="fas fa-headset"></i> Contattaci</button>
+          <button class="btn btn-outline" onclick="openPublish()"><i class="fas fa-plus"></i> Pubblica annuncio</button>
+        </div>
+      </div>
+    </div>`;
+  hideHomeAndPages('infoPage');
+}
+
+function initFooterLinks() {
+  const categoryMap = {
+    'donna cerca uomo': 'donna-cerca-uomo',
+    'uomo cerca donna': 'uomo-cerca-donna',
+    'uomo cerca uomo': 'uomo-cerca-uomo',
+    'donna cerca donna': 'donna-cerca-donna',
+    'coppie': 'coppie',
+    'trans': 'trans'
+  };
+  const infoMap = {
+    'termini e condizioni': 'terms',
+    'privacy policy': 'privacy',
+    'cookie policy': 'cookies',
+    'faq': 'faq'
+  };
+  const knownCities = new Set([...citiesList, 'Napoli', 'Roma', 'Milano', 'Torino', 'Firenze', 'Bologna', 'Palermo', 'Bari', 'Genova', 'Catania', 'Verona', 'Venezia', 'Lecce', 'Salerno', 'Bergamo', 'Cagliari'].map(c => c.toLowerCase()));
+  document.querySelectorAll('.footer a, .terms-link').forEach(link => {
+    const text = link.textContent.trim().toLowerCase();
+    if (categoryMap[text]) {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        navigateTo('/?page=category&slug=' + categoryMap[text]);
+      });
+    } else if (knownCities.has(text) || link.closest('.footer-city-links')) {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        navigateTo('/?page=city&city=' + encodeURIComponent(link.textContent.trim()));
+      });
+    } else if (infoMap[text]) {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        closeLogin();
+        closeRegister();
+        openInfoPage(infoMap[text]);
+      });
+    } else if (text === 'contattaci') {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        closeLogin();
+        closeRegister();
+        openSupport();
+      });
+    } else if (text === 'promuovi annuncio') {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        backToHome();
+        setTimeout(() => document.getElementById('vetrina')?.scrollIntoView({ behavior: 'smooth' }), 50);
+      });
+    } else if (link.closest('.footer-social')) {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        openSupport();
+        const msg = document.getElementById('supportMessage');
+        const label = link.getAttribute('aria-label') || link.querySelector('i')?.className || 'social';
+        if (msg) msg.value = 'Vorrei informazioni sul canale ' + label + '.';
+      });
+    } else if (link.closest('.footer-countries')) {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        showToast('Area ' + link.textContent.trim() + ' in preparazione. Puoi usare il supporto per richieste internazionali.', 'info');
+      });
+    }
+  });
+}
+
 // ============================================================
 // CATEGORY PAGE
 // ============================================================
 function showCategoryPage(category, city) {
-  document.querySelectorAll('.home-section').forEach(s => s.style.display = 'none');
-  document.querySelectorAll('section.page-section').forEach(s => s.style.display = 'none');
-  document.getElementById('categoryPage').style.display = 'block';
+  hideHomeAndPages('categoryPage');
   const title = document.getElementById('pageTitle');
-  if (title) title.textContent = category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + (city ? ' a ' + city : '');
+  const categoryLabel = category ? category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Annunci';
+  if (title) title.textContent = categoryLabel + (city ? ' a ' + city : '');
 
   const grid = document.getElementById('categoryAdsGrid');
   if (!grid) return;
   grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i></div>';
 
   let query = 'select=*&is_active=eq.true&order=is_sponsored.desc.nullslast,is_premium.desc.nullslast,created_at.desc.nullslast';
-  if (category) query += '&category=eq.' + category;
-  if (city) query += '&city=ilike.' + city;
+  if (category) query += '&category=eq.' + encodeURIComponent(category);
+  if (city) query += '&city=ilike.' + encodeURIComponent(city);
 
   sbGet('ads', query).then(ads => {
     grid.innerHTML = '';
@@ -1433,7 +1822,7 @@ async function showAdDetail(adId) {
     // Track view
     try {
       const newViews = (ad.views || 0) + 1;
-      const token = localStorage.getItem('authToken');
+      const token = getAuthToken();
       await sbPatch('ads', { views: newViews }, { id: adId }, token || undefined);
     } catch (e) {}
 
@@ -1472,7 +1861,7 @@ async function showAdDetail(adId) {
           </div>
           <div class="ad-detail-actions">
             ${currentUser
-              ? `<button class="btn btn-primary" onclick="showToast('Messaggio inviato!', 'success')"><i class="fas fa-envelope"></i> Contatta</button>
+              ? `<button class="btn btn-primary" onclick="contactAd('${ad.id}', '${ad.user_id || ad.profile_id || ''}')"><i class="fas fa-envelope"></i> Contatta</button>
                  <button class="btn btn-outline" onclick="toggleSaveAd('${ad.id}')"><i class="fas fa-bookmark"></i> Salva</button>`
               : `<button class="btn btn-primary" onclick="openLogin()"><i class="fas fa-lock"></i> Accedi per contattare</button>`}
             <button class="btn btn-outline" onclick="showToast('Segnalazione inviata', 'success')"><i class="fas fa-flag"></i> Segnala</button>
@@ -1491,7 +1880,7 @@ async function showAdDetail(adId) {
         Annuncio #${ad.id.slice(0,8)} • Pubblicato il ${new Date(ad.created_at).toLocaleDateString('it-IT')}
         ${ad.category ? ` • <a href="/?page=category&slug=${ad.category}" onclick="event.preventDefault();navigateTo('/?page=category&slug=${ad.category}')" style="color:var(--primary-light)">Altri in ${ad.category.replace(/-/g, ' ')}</a>` : ''}
       </div>
-      <div id="relatedAds" style="margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06)"></div>`;
+      <div id="relatedAds" style="margin-top:32px;padding-top:24px;border-top:1px solid rgba(15,23,42,0.08)"></div>`;
 
     // Related ads in same category
     if (ad.category) {
@@ -1542,8 +1931,10 @@ function showProfilePage() {
       <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
         <button class="btn btn-primary" onclick="openShop()"><i class="fas fa-coins"></i> Acquista crediti</button>
         <button class="btn btn-outline" onclick="navigateTo('/?page=myads')"><i class="fas fa-list"></i> I miei annunci</button>
+        <button class="btn btn-outline" onclick="editProfile()"><i class="fas fa-edit"></i> Modifica</button>
       </div>
-    </div>`;
+    </div>
+    <div id="profileDashboard" style="margin-top:24px"></div>`;
   loadDashboardStats();
 }
 
@@ -1558,7 +1949,7 @@ function showMyAdsPage() {
   if (!container) return;
   container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
   if (!currentUser) { container.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Devi effettuare il login</h3></div>'; return; }
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbGet('ads', 'select=*&user_id=eq.' + currentUser.id + '&order=created_at.desc', token).then(ads => {
     container.innerHTML = '';
     if (!ads || ads.length === 0) {
@@ -1580,7 +1971,7 @@ function showContactsPage() {
   if (!container) return;
   container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
   if (!currentUser) { container.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Devi effettuare il login</h3></div>'; return; }
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbGet('saved_contacts', 'select=ad_id&user_id=eq.' + currentUser.id + '&order=created_at.desc', token).then(async contacts => {
     if (!contacts || contacts.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="fas fa-bookmark"></i><h3>Rubrica vuota</h3><p>Salva gli annunci che ti interessano</p></div>';
@@ -1623,7 +2014,7 @@ async function sendSupportMessage(e) {
   
   try {
     // Per ora salviamo su una tabella support_messages
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
     await sbPost('support_messages', {
       user_id: currentUser?.id || null,
       email: email,
@@ -1678,9 +2069,9 @@ function renderAdminNav() {
     { id: 'dashboard', icon: 'fa-chart-bar', label: 'Dashboard', color: 'var(--primary)' },
     { id: 'users', icon: 'fa-users', label: 'Utenti', color: '#10b981' },
     { id: 'ads', icon: 'fa-newspaper', label: 'Annunci', color: '#f59e0b' },
-    { id: 'categories', icon: 'fa-tags', label: 'Categorie', color: '#8b5cf6' },
+    { id: 'categories', icon: 'fa-tags', label: 'Categorie', color: '#2563eb' },
     { id: 'cities', icon: 'fa-city', label: 'Città', color: '#06b6d4' },
-    { id: 'photos', icon: 'fa-images', label: 'Foto', color: '#ec4899' },
+    { id: 'photos', icon: 'fa-images', label: 'Foto', color: '#0ea5e9' },
     { id: 'support', icon: 'fa-headset', label: 'Supporto', color: '#f97316' },
     { id: 'transactions', icon: 'fa-coins', label: 'Transazioni', color: '#eab308' },
     { id: 'settings', icon: 'fa-cog', label: 'Impostazioni', color: '#a1a1aa' }
@@ -1705,7 +2096,7 @@ function loadAdminData() {
   if (!container) return;
   container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Caricamento...</div>';
   
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   
   switch(adminState.tab) {
     case 'dashboard': loadAdminDashboard(container, token); break;
@@ -1733,6 +2124,7 @@ function loadAdminDashboard(container, token) {
     const totalAds = ads?.length || 0;
     const totalVerified = profiles?.filter(p => p.is_verified).length || 0;
     const totalPending = messages?.filter(m => !m.is_read).length || 0;
+    const totalAlerts = messages?.filter(m => (m.message || '').startsWith('[ALERT:') && !m.is_read).length || 0;
     const totalCreditsSold = transactions?.filter(t => t.type === 'purchase').reduce((s, t) => s + Math.abs(t.amount), 0) || 0;
     const totalRevenue = (totalCreditsSold * 0.5).toFixed(0);
     
@@ -1750,14 +2142,14 @@ function loadAdminDashboard(container, token) {
         <div class="admin-stat-card" style="border-color:#10b981"><i class="fas fa-check-circle"></i><strong>${totalVerified}</strong><span>Profili verificati</span></div>
         <div class="admin-stat-card" style="border-color:var(--accent)"><i class="fas fa-coins"></i><strong>€${totalRevenue}</strong><span>Vendite crediti</span></div>
         <div class="admin-stat-card" style="border-color:#f59e0b"><i class="fas fa-headset"></i><strong>${totalPending}</strong><span>Messaggi in sospeso</span></div>
-        <div class="admin-stat-card" style="border-color:#ef4444"><i class="fas fa-chart-line"></i><strong>${totalCreditsSold}</strong><span>Crediti acquistati</span></div>
+        <div class="admin-stat-card" style="border-color:#ef4444"><i class="fas fa-triangle-exclamation"></i><strong>${totalAlerts}</strong><span>Alert tecnici</span></div>
       </div>
       
       <div class="admin-charts-row">
         <div class="admin-chart-card">
           <h4><i class="fas fa-tags"></i> Annunci per categoria</h4>
           <div style="margin-top:12px">${topCats.map(([cat, count]) => 
-            `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.85rem">
+            `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(15,23,42,0.08);font-size:0.85rem">
               <span style="color:var(--text-secondary);text-transform:capitalize">${cat.replace(/-/g, ' ')}</span>
               <span style="color:var(--text-primary);font-weight:600">${count}</span>
             </div>`
@@ -1766,7 +2158,7 @@ function loadAdminDashboard(container, token) {
         <div class="admin-chart-card">
           <h4><i class="fas fa-clock"></i> Ultimi messaggi supporto</h4>
           <div style="margin-top:12px">${(messages || []).slice(0, 5).map(m => 
-            `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:0.8rem">
+            `<div style="padding:8px 0;border-bottom:1px solid rgba(15,23,42,0.08);font-size:0.8rem">
               <div style="display:flex;justify-content:space-between">
                 <span style="color:var(--text-muted)">${m.email || 'Anonimo'}</span>
                 <span style="color:${m.is_read ? 'var(--text-muted)' : '#f59e0b'};font-size:0.65rem">${m.is_read ? 'Letto' : 'Nuovo!'}</span>
@@ -1855,7 +2247,7 @@ function adminFilterUsers(filter) {
 }
 
 function adminViewUser(userId) {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   Promise.all([
     sbGet('profiles', 'select=*&id=eq.' + userId, token),
     sbGet('ads', 'select=*&profile_id=eq.' + userId + '&order=created_at.desc', token),
@@ -1896,7 +2288,7 @@ function adminViewUser(userId) {
 function adminAddCredits(userId, userName) {
   const amount = prompt('💰 Quanti crediti vuoi aggiungere a ' + userName + '?', '20');
   if (!amount || isNaN(parseInt(amount)) || parseInt(amount) <= 0) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
     const cur = (profiles?.[0]?.credits || 0);
     const newCredits = cur + parseInt(amount);
@@ -1910,7 +2302,7 @@ function adminAddCredits(userId, userName) {
 
 function adminToggleVerify(userId, current) {
   if (!confirm((current ? '❌ Rimuovere' : '✅ Confermare') + ' la verifica per questo utente?')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPatch('profiles', { is_verified: !current }, { id: userId }, token).then(() => {
     showToast('✅ Verifica ' + (!current ? 'attivata' : 'rimossa'), 'success');
     loadAdminData();
@@ -1919,7 +2311,7 @@ function adminToggleVerify(userId, current) {
 
 function adminDeleteUser(userId, userName) {
   if (!confirm('⚠️ ELIMINARE PERMANENTEMENTE ' + userName + '?\n\nTutti i suoi annunci, transazioni e contatti salvati verranno eliminati.\nQuesta azione è IRREVERSIBILE.')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   showToast('🗑️ Eliminazione in corso...', 'info');
   Promise.all([
     sbDelete('ads', { profile_id: userId }, token).catch(() => {}),
@@ -2030,7 +2422,7 @@ function adminViewAd(adId) {
 }
 
 function adminTogglePremium(adId, current) {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPatch('ads', { is_premium: !current }, { id: adId }, token).then(() => {
     showToast('👑 Premium ' + (!current ? 'attivato' : 'disattivato'), 'success');
     loadAdminData();
@@ -2038,7 +2430,7 @@ function adminTogglePremium(adId, current) {
 }
 
 function adminToggleSponsored(adId, current) {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPatch('ads', { is_sponsored: !current }, { id: adId }, token).then(() => {
     showToast('⭐ Sponsor ' + (!current ? 'attivato' : 'disattivato'), 'success');
     loadAdminData();
@@ -2046,7 +2438,7 @@ function adminToggleSponsored(adId, current) {
 }
 
 function adminToggleActive(adId, current) {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPatch('ads', { is_active: !current }, { id: adId }, token).then(() => {
     showToast((!current ? '🟢 Annuncio attivato' : '🔴 Annuncio disattivato'), 'success');
     loadAdminData();
@@ -2055,7 +2447,7 @@ function adminToggleActive(adId, current) {
 
 function adminDeleteAd(adId, title) {
   if (!confirm('⚠️ ELIMINARE l\'annuncio "' + title + '"?\nQuesta azione è irreversibile.')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbDelete('ads', { id: adId }, token).then(() => {
     showToast('🗑️ Annuncio "' + title + '" eliminato', 'success');
     loadAdminData();
@@ -2075,7 +2467,7 @@ function loadAdminCategories(container, token) {
     
     container.innerHTML = `
       <div class="admin-section-header">
-        <h3><i class="fas fa-tags" style="color:#8b5cf6"></i> Gestione Categorie <span class="admin-count-badge">${catList.length}</span></h3>
+        <h3><i class="fas fa-tags" style="color:#2563eb"></i> Gestione Categorie <span class="admin-count-badge">${catList.length}</span></h3>
         <button class="btn btn-primary btn-sm" onclick="adminAddCategory()"><i class="fas fa-plus"></i> Nuova categoria</button>
       </div>
       <div class="admin-toolbar">
@@ -2123,7 +2515,7 @@ function adminAddCategory() {
   const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const desc = prompt('📝 Descrizione:');
   const icon = prompt('📝 Icona FontAwesome (es: fa-female, fa-male):') || 'fa-tag';
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPost('categories', { name, slug, description: desc || '', icon }, token).then(() => {
     showToast('✅ Categoria "' + name + '" creata', 'success');
     loadAdminData();
@@ -2134,7 +2526,7 @@ function adminEditCategory(slug, currentName, currentDesc) {
   const newName = prompt('Modifica nome:', currentName);
   if (!newName) return;
   const newDesc = prompt('Modifica descrizione:', currentDesc);
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPatch('categories', { name: newName, description: newDesc || '' }, { slug }, token).then(() => {
     showToast('✅ Categoria modificata', 'success');
     loadAdminData();
@@ -2143,7 +2535,7 @@ function adminEditCategory(slug, currentName, currentDesc) {
 
 function adminDeleteCategory(slug, name) {
   if (!confirm('⚠️ ELIMINARE la categoria "' + name + '" ("' + slug + '")?\nGli annunci in questa categoria NON verranno eliminati.')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbDelete('categories', { slug }, token).then(() => {
     showToast('🗑️ Categoria "' + name + '" eliminata', 'success');
     loadAdminData();
@@ -2199,7 +2591,7 @@ function adminAddCity() {
   const name = prompt('📝 Nome città:');
   if (!name) return;
   const region = prompt('📝 Regione:');
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   const slug = name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   sbPost('cities', { name, slug, region: region || '' }, token).then(() => {
     showToast('✅ Città "' + name + '" aggiunta', 'success');
@@ -2209,7 +2601,7 @@ function adminAddCity() {
 
 function adminDeleteCity(name) {
   if (!confirm('⚠️ ELIMINARE la città "' + name + '"?')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbDelete('cities', { name }, token).then(() => {
     showToast('🗑️ Città "' + name + '" eliminata', 'success');
     loadAdminData();
@@ -2222,7 +2614,7 @@ function loadAdminPhotos(container, token) {
     const photoAds = ads?.filter(a => a.image) || [];
     container.innerHTML = `
       <div class="admin-section-header">
-        <h3><i class="fas fa-images" style="color:#ec4899"></i> Revisione Foto <span class="admin-count-badge">${photoAds.length}</span></h3>
+        <h3><i class="fas fa-images" style="color:#0ea5e9"></i> Revisione Foto <span class="admin-count-badge">${photoAds.length}</span></h3>
         <div class="admin-quick-stats">
           <span class="mini-stat">🔞 ${photoAds.filter(a => a.photo_classification === 'hard').length} hard</span>
           <span class="mini-stat">🔥 ${photoAds.filter(a => a.photo_classification === 'hot').length} hot</span>
@@ -2305,19 +2697,25 @@ function adminAddAdmin() {
 function loadAdminSupport(container, token) {
   sbGet('support_messages', 'select=*&order=created_at.desc', token).then(msgs => {
     const mList = msgs || [];
+    const alertCount = mList.filter(m => (m.message || '').startsWith('[ALERT:')).length;
     container.innerHTML = `
       <div class="admin-toolbar">
         <span style="color:var(--text-muted);font-size:0.85rem">${mList.length} messaggi</span>
+        <button class="btn btn-sm btn-outline" onclick="adminFilterSupport('all')"><i class="fas fa-inbox"></i> Tutti</button>
+        <button class="btn btn-sm btn-outline" onclick="adminFilterSupport('alerts')"><i class="fas fa-triangle-exclamation"></i> Alert/Errori ${alertCount}</button>
+        <button class="btn btn-sm btn-outline" onclick="adminFilterSupport('unread')"><i class="fas fa-bell"></i> Non letti</button>
         <button class="btn btn-sm btn-outline" onclick="adminMarkAllRead()"><i class="fas fa-check-double"></i> Segna tutti letti</button>
       </div>
       <div class="admin-table-wrapper">
         <table class="admin-table">
           <thead><tr><th>Email</th><th>Messaggio</th><th>Data</th><th>Stato</th><th>Azioni</th></tr></thead>
           <tbody>
-            ${mList.map(m => `
-              <tr style="${m.is_read ? '' : 'background:rgba(245,158,11,0.05)'}">
+            ${mList.map(m => {
+              const isAlert = (m.message || '').startsWith('[ALERT:');
+              return `
+              <tr class="admin-support-row" data-alert="${isAlert ? '1' : '0'}" data-read="${m.is_read ? '1' : '0'}" style="${isAlert ? 'background:rgba(239,68,68,0.06)' : (m.is_read ? '' : 'background:rgba(245,158,11,0.05)')}">
                 <td><small>${m.email || 'Anonimo'}</small></td>
-                <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(m.message || '').slice(0, 80)}</td>
+                <td style="max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isAlert ? '<span class="admin-alert-pill">ALERT</span> ' : ''}${(m.message || '').replace('[ALERT:ERROR]', '').replace('[ALERT:WARNING]', '').slice(0, 110)}</td>
                 <td style="font-size:0.75rem">${new Date(m.created_at).toLocaleDateString('it-IT') + ' ' + new Date(m.created_at).toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'})}</td>
                 <td>${m.is_read ? '✅ Letto' : '🆕 Nuovo'}</td>
                 <td>
@@ -2328,7 +2726,7 @@ function loadAdminSupport(container, token) {
                   </div>
                 </td>
               </tr>
-            `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nessun messaggio</td></tr>'}
+            `; }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nessun messaggio</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -2338,13 +2736,21 @@ function loadAdminSupport(container, token) {
   });
 }
 
+function adminFilterSupport(filter) {
+  document.querySelectorAll('.admin-support-row').forEach(row => {
+    if (filter === 'all') row.style.display = '';
+    else if (filter === 'alerts') row.style.display = row.dataset.alert === '1' ? '' : 'none';
+    else if (filter === 'unread') row.style.display = row.dataset.read === '0' ? '' : 'none';
+  });
+}
+
 function adminMarkRead(msgId, current) {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbPatch('support_messages', { is_read: !current }, { id: msgId }, token).then(() => loadAdminData());
 }
 
 function adminMarkAllRead() {
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbGet('support_messages', 'select=id&is_read=eq.false', token).then(msgs => {
     Promise.all((msgs || []).map(m => sbPatch('support_messages', { is_read: true }, { id: m.id }, token)))
       .then(() => { showToast('✅ Tutti segnati come letti', 'success'); loadAdminData(); });
@@ -2353,7 +2759,7 @@ function adminMarkAllRead() {
 
 function adminDeleteMessage(msgId) {
   if (!confirm('Eliminare questo messaggio?')) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   sbDelete('support_messages', { id: msgId }, token).then(() => {
     showToast('🗑️ Messaggio eliminato', 'success');
     loadAdminData();
@@ -2376,7 +2782,7 @@ function loadAdminTransactions(container, token) {
               <tr>
                 <td><small>${t.user_id?.slice(0, 10) || '?'}...</small></td>
                 <td style="color:${(t.amount || 0) > 0 ? '#10b981' : '#ef4444'};font-weight:700">${(t.amount || 0) > 0 ? '+' : ''}${t.amount}</td>
-                <td><span class="admin-type-badge" style="background:${t.type === 'purchase' ? 'rgba(16,185,129,0.15)' : t.type === 'admin' ? 'rgba(245,158,11,0.15)' : 'rgba(139,92,246,0.15)'};color:${t.type === 'purchase' ? '#10b981' : t.type === 'admin' ? '#f59e0b' : '#8b5cf6'}">${t.type || '?'}</span></td>
+                <td><span class="admin-type-badge" style="background:${t.type === 'purchase' ? 'rgba(16,185,129,0.15)' : t.type === 'admin' ? 'rgba(245,158,11,0.15)' : 'rgba(139,92,246,0.15)'};color:${t.type === 'purchase' ? '#10b981' : t.type === 'admin' ? '#f59e0b' : '#2563eb'}">${t.type || '?'}</span></td>
                 <td style="font-size:0.8rem;color:var(--text-secondary)">${t.description || '—'}</td>
                 <td style="font-size:0.75rem">${new Date(t.created_at).toLocaleDateString('it-IT')}</td>
               </tr>
@@ -2423,7 +2829,7 @@ function showSettingsPage() {
         <p><strong>Email:</strong> ${currentUser.email || '—'}</p>
         <p><strong>Città:</strong> ${currentUser.city || '—'}</p>
         <p><strong>Crediti:</strong> ${currentUser.credits || 0}</p>
-        <button class="btn btn-sm btn-outline" onclick="showToast('Modifica profilo in arrivo!', 'success')"><i class="fas fa-edit"></i> Modifica</button>
+        <button class="btn btn-sm btn-outline" onclick="editProfile()"><i class="fas fa-edit"></i> Modifica</button>
       </div>
       <div class="admin-settings-card">
         <h4><i class="fas fa-bell"></i> Notifiche</h4>
@@ -2441,6 +2847,31 @@ function showSettingsPage() {
       </div>
     </div>
   `;
+}
+
+async function editProfile() {
+  if (!currentUser) { openLogin(); return; }
+  const name = prompt('Nome:', currentUser.name || '');
+  if (name === null) return;
+  const surname = prompt('Cognome:', currentUser.surname || '');
+  if (surname === null) return;
+  const city = prompt('Città:', currentUser.city || '');
+  if (city === null) return;
+  const token = getAuthToken();
+  try {
+    await sbPatch('profiles', {
+      name: name.trim(),
+      surname: surname.trim(),
+      city: city.trim()
+    }, { id: currentUser.id }, token);
+    currentUser = { ...currentUser, name: name.trim(), surname: surname.trim(), city: city.trim() };
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    updateUIForLoggedUser();
+    showProfilePage();
+    showToast('Profilo aggiornato.', 'success');
+  } catch (e) {
+    showToast('Errore aggiornamento profilo: ' + (e.message || 'riprova'), 'error');
+  }
 }
 
 // ============================================================
@@ -2482,14 +2913,10 @@ async function loadHottestAds() {
 // CITY SWITCHER
 // ============================================================
 function switchCity(city) {
-  const section = document.getElementById('annunci');
-  if (section) section.scrollIntoView({ behavior: 'smooth' });
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  const cityBtn = document.querySelector(`.filter-btn[data-city="${city}"]`);
-  const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
-  if (cityBtn) cityBtn.click();
-  else if (allBtn) allBtn.click();
-  showToast('Annunci a ' + city.charAt(0).toUpperCase() + city.slice(1), 'success');
+  if (!city) return;
+  const normalized = city.charAt(0).toUpperCase() + city.slice(1).toLowerCase();
+  navigateTo('/?page=city&city=' + encodeURIComponent(normalized));
+  showToast('Annunci a ' + normalized, 'success');
 }
 
 // ============================================================
@@ -2498,15 +2925,15 @@ function switchCity(city) {
 async function loadDashboardStats() {
   const container = document.getElementById('profileDashboard');
   if (!container || !currentUser) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   try {
-    const [ads, views, contacts, messages] = await Promise.all([
-      sbGet('ads', 'select=id,views,is_active&user_id=eq.' + currentUser.id, token),
-      sbGet('ad_views', 'select=id&user_id=eq.' + currentUser.id + '&limit=1000', token),
-      sbGet('ad_contacts', 'select=id&ad_id=in.(select id from ads where user_id=eq.' + currentUser.id + ')&limit=1000', token),
-      sbGet('messages', 'select=id,is_read&receiver_id=eq.' + currentUser.id, token)
+    const ads = await sbGet('ads', 'select=id,views,is_active&user_id=eq.' + currentUser.id, token);
+    const adIds = (ads || []).map(ad => ad.id).filter(Boolean);
+    const [contacts, messages] = await Promise.all([
+      adIds.length ? sbGet('ad_contacts', 'select=id&ad_id=in.(' + adIds.join(',') + ')&limit=1000', token).catch(() => []) : [],
+      sbGet('messages', 'select=id,is_read&receiver_id=eq.' + currentUser.id, token).catch(() => [])
     ]);
-    const totalViews = views?.length || 0;
+    const totalViews = (ads || []).reduce((sum, ad) => sum + (parseInt(ad.views, 10) || 0), 0);
     const totalContacts = contacts?.length || 0;
     const unreadMessages = messages?.filter(m => !m.is_read).length || 0;
     const activeAds = ads?.filter(a => a.is_active).length || 0;
@@ -2534,7 +2961,11 @@ async function loadDashboardStats() {
           <div class="dashboard-card-label">Messaggi ${unreadMessages > 0 ? '🆕' : ''}</div>
         </div>
       </div>`;
-  } catch (e) {}
+  } catch (e) {
+    container.innerHTML = `
+      <h3 style="margin-bottom:16px"><i class="fas fa-chart-bar"></i> La tua Dashboard</h3>
+      <div class="empty-state"><p>Statistiche non disponibili al momento.</p></div>`;
+  }
 }
 
 // ============================================================
@@ -2560,7 +2991,7 @@ function applyAgeBlur(container, photoClass) {
 // ============================================================
 async function saveContactNote(adId, note) {
   if (!currentUser) return;
-  const token = localStorage.getItem('authToken');
+  const token = getAuthToken();
   try {
     const existing = await sbGet('saved_contacts', 'select=id&user_id=eq.' + currentUser.id + '&ad_id=eq.' + adId, token);
     if (existing && existing.length > 0) {
@@ -2584,7 +3015,7 @@ window.addEventListener('popstate', () => initRouter());
     const userId = sessionStorage.getItem('stripeUserId');
     
     if (userId && credits > 0 && currentUser && currentUser.id === userId) {
-      const token = localStorage.getItem('authToken');
+      const token = getAuthToken();
       sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
         const cur = (profiles?.[0]?.credits || 0);
         sbPatch('profiles', { credits: cur + credits }, { id: userId }, token).then(() => {
@@ -2610,7 +3041,7 @@ handleLogin = async function(e) {
     const credits = parseInt(params.get('credits')) || 0;
     const userId = sessionStorage.getItem('stripeUserId');
     if (userId && credits > 0 && currentUser && currentUser.id === userId) {
-      const token = localStorage.getItem('authToken');
+      const token = getAuthToken();
       sbGet('profiles', 'select=credits&id=eq.' + userId, token).then(profiles => {
         const cur = (profiles?.[0]?.credits || 0);
         sbPatch('profiles', { credits: cur + credits }, { id: userId }, token);

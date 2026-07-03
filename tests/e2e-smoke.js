@@ -55,12 +55,14 @@ async function waitForServer() {
     const page = await browser.newPage();
     await mockSupabase(page);
     for (let i = 1; i <= 50; i++) {
-      await page.goto(BASE);
+      await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('#preloader.hidden', { timeout: 5000 });
       await page.evaluate(user => {
         localStorage.setItem('authToken', `token-${user}`);
         localStorage.setItem('currentUser', JSON.stringify({ id: `user-${user}`, name: `User ${user}`, email: `user${user}@example.test`, city: 'Roma', credits: 50 }));
       }, i);
-      await page.reload();
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('#preloader.hidden', { timeout: 5000 });
       await page.locator('button[onclick="openPublish()"]').first().click();
       await page.fill('#adTitle', `Annuncio test ${i}`);
       await page.selectOption('#adCategory', categories[i % categories.length]);
@@ -68,8 +70,9 @@ async function waitForServer() {
       await page.fill('#adAge', String(18 + (i % 35)));
       await page.fill('#adDescription', `Descrizione annuncio generata dal test ${i}`);
       await page.setInputFiles('#fileInput', { name: `photo-${i}.jpg`, mimeType: 'image/jpeg', buffer: Buffer.from([255, 216, 255, 217]) });
+      await page.waitForSelector('#photoPreview .thumb', { timeout: 5000 });
       await page.click('#publishBtn');
-      await page.waitForFunction(() => !document.querySelector('#publishModal')?.classList.contains('active'));
+      await page.waitForFunction(() => !document.querySelector('#publishModal')?.classList.contains('active'), null, { timeout: 5000 });
     }
     if (ads.length !== 50) throw new Error(`Annunci creati: ${ads.length}, attesi: 50`);
     await browser.close();
