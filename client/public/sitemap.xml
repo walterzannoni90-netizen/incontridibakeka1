@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://incontridibakeka.it/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://incontridibakeka.it/shop</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://incontridibakeka.it/admin</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <!-- Categorie -->
+  <url><loc>https://incontridibakeka.it/?cat=donna-cerca-uomo</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://incontridibakeka.it/?cat=uomo-cerca-donna</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://incontridibakeka.it/?cat=uomo-cerca-uomo</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://incontridibakeka.it/?cat=donna-cerca-donna</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://incontridibakeka.it/?cat=coppie</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://incontridibakeka.it/?cat=cerco-amici</loc><changefreq>daily</changefreq><priority>0.6</priority></url>
+</urlset>

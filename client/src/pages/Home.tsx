@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/hooks/useRouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const SUPABASE_CONFIGURED = SUPABASE_URL && SUPABASE_KEY && !SUPABASE_URL.includes("your-project");
 
 interface Ad {
   id: string;
@@ -24,20 +26,39 @@ interface Ad {
   review_count: number;
   is_premium: boolean;
   is_sponsored: boolean;
+  is_verified?: boolean;
+  views?: number;
 }
 
 const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop" },
-  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" },
-  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop" },
-  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop" },
-  { id: "coppie", name: "Coppie", image: "https://images.unsplash.com/photo-1516214104703-3e8c20108eaa?w=400&h=400&fit=crop" },
-  { id: "cerco-amici", name: "Cerco Amici", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=400&fit=crop" },
+  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=600&fit=crop", count: "1.2k annunci" },
+  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop", count: "890 annunci" },
+  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=600&fit=crop", count: "650 annunci" },
+  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://images.unsplash.com/photo-1534528741775-53994a67da98?w=600&h=600&fit=crop", count: "420 annunci" },
+  { id: "coppie", name: "Coppie", image: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=600&h=600&fit=crop", count: "310 annunci" },
+  { id: "cerco-amici", name: "Cerco Amici", image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop", count: "540 annunci" },
+];
+
+// Demo data for when Supabase is not configured
+const DEMO_ADS: Ad[] = [
+  { id: "demo1", title: "Sofia - Dolce e passionale", description: "Ciao amore, sono Sofia. Una ragazza solare, educata e piena di sorprese. Disponibile per cene, eventi e momenti di relax. Chiamami per conoscermi meglio.", city: "Roma", age: 26, image: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "150€/ora", rating: 5, review_count: 42, is_premium: true, is_sponsored: false, is_verified: true, views: 3420, phone: "+393331234567" } as any,
+  { id: "demo2", title: "Giulia - Bellissima Escort MILANO", description: "Ragazza elegante, classe e bellezza in un unico pacchetto. Ricevo in ambiente pulito e discrezione. Solo per uomini educati.", city: "Milano", age: 24, image: "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "200€/ora", rating: 5, review_count: 68, is_premium: true, is_sponsored: true, is_verified: true, views: 5610, phone: "+393337654321" } as any,
+  { id: "demo3", title: "Valentina - Rosa", description: "Sono Valentina, ragazza italiana 100%. Simpatica, allegra e molto calda. Passionale ed esigente come te. Ti aspetto tutti i giorni.", city: "Firenze", age: 28, image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "120€/ora", rating: 4, review_count: 23, is_premium: false, is_sponsored: false, is_verified: false, views: 890, phone: "+393881122334" } as any,
+  { id: "demo4", title: "Marco - Atleta urbano", description: "Ragazzo sportivo, educato e discreto. Disponibile per compagne di serata, cene ed eventi. Ottima conversazione.", city: "Bologna", age: 30, image: "https://images.unsplash.com/photo-1492562080023-ab3db95b4ce4?w=600&h=800&fit=crop", category: "uomo-cerca-donna", price: "100€/ora", rating: 4, review_count: 15, is_premium: false, is_sponsored: false, is_verified: true, views: 450, phone: "+393556677889" } as any,
+  { id: "demo5", title: "Alessia - Italiana vera", description: "Ciao! Sono Alessia, ragazza italiana di 25 anni. Solare, simpatica e bellissima. Amo la compagnia e le serate piacevoli. Scrivimi!", city: "Napoli", age: 25, image: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "80€/ora", rating: 5, review_count: 31, is_premium: false, is_sponsored: true, is_verified: true, views: 2100, phone: "+393444556677" } as any,
+  { id: "demo6", title: "Chiara & Luca - Coppia aperta", description: "Coppia giovane e curiosa. Cerchiamo persone come noi per serate divertenti e leggere. Esperienza rispettosa e igienica.", city: "Torino", age: 29, image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=800&fit=crop", category: "coppie", price: "200€/coppia", rating: 4, review_count: 12, is_premium: false, is_sponsored: false, is_verified: false, views: 670, phone: "+393223344556" } as any,
+  { id: "demo7", title: "Ilenia - Modella napoletana", description: "Bellissima ragazza napoletana, alta, formosa. Per uomini di classe che sanno apprezzare la vera bellezza italiana.", city: "Salerno", age: 27, image: "https://images.unsplash.com/photo-1496440767105-0c2a2c14f2de?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "100€/ora", rating: 5, review_count: 19, is_premium: true, is_sponsored: false, is_verified: true, views: 1230, phone: "+393116677889" } as any,
+  { id: "demo8", title: "Davide - Ragazzo dolce e discreto", description: "Ragazzo 28 anni, educatissimo, discreto. Per donne che cercano compagnia di qualita. Disponibile anche per eventi e cene di lavoro.", city: "Roma", age: 28, image: "https://images.unsplash.com/photo-1539571696357-5a69c2a5888f?w=600&h=800&fit=crop", category: "uomo-cerca-donna", price: "90€/ora", rating: 4, review_count: 8, is_premium: false, is_sponsored: false, is_verified: false, views: 320, phone: "+393998877665" } as any,
+  { id: "demo9", title: "Martina - Trasgressiva", description: "Ciao tesoro! Sono Martina, ragazza toscana. Solare, allegra e molto disponibile. Ti faro impazzire. Chiamami ora!", city: "Firenze", age: 23, image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "70€/ora", rating: 4, review_count: 27, is_premium: false, is_sponsored: false, is_verified: false, views: 540, phone: "+393778899001" } as any,
+  { id: "demo10", title: "Federica - Italiana calda", description: "Ragazza italiana, tutta naturale. Formosa e passionale. Per veri uomini che sanno trattare una donna. Ti aspetto!", city: "Brescia", age: 29, image: "https://images.unsplash.com/photo-1496440767105-0c2a2c14f2de?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "90€/ora", rating: 5, review_count: 35, is_premium: true, is_sponsored: false, is_verified: true, views: 1890, phone: "+393009988776" } as any,
+  { id: "demo11", title: "Luca & Sara - Coppia torinese", description: "Coppia 30enni torinese. Cerchiamo singoli o coppie per serate di convivialita. Foto reali, garanzia pulizia e discrezione.", city: "Torino", age: 30, image: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=600&h=800&fit=crop", category: "coppie", price: "150€/serata", rating: 4, review_count: 7, is_premium: false, is_sponsored: false, is_verified: false, views: 410, phone: "+393112233445" } as any,
+  { id: "demo12", title: "Elena - Veneto in corpo", description: "Ragazza veneta, educata e molto carina. Amo le serate eleganti e le cene a lume di candela. Baci appassionati garantiti.", city: "Venezia", age: 26, image: "https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?w=600&h=800&fit=crop", category: "donna-cerca-uomo", price: "110€/ora", rating: 5, review_count: 22, is_premium: false, is_sponsored: true, is_verified: true, views: 980, phone: "+393441122334" } as any,
 ];
 
 export default function Home() {
   const { navigate } = useRouter();
   const { user: currentUser, login, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [ads, setAds] = useState<Ad[]>([]);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -55,6 +76,7 @@ export default function Home() {
     category: CATEGORIES[0].id,
     image: "",
     price: "",
+    phone: "",
   });
   const [busy, setBusy] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -62,6 +84,8 @@ export default function Home() {
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [infoModal, setInfoModal] = useState<string | null>(null);
+  const [savedAds, setSavedAds] = useState<string[]>([]);
 
   useEffect(() => {
     loadAds();
@@ -69,6 +93,7 @@ export default function Home() {
     if (!localStorage.getItem("ageAccepted")) {
       setShowDisclaimer(true);
     }
+    setSavedAds(JSON.parse(localStorage.getItem("savedAds") || "[]"));
   }, []);
 
   const handlePaymentCallback = async () => {
@@ -90,7 +115,7 @@ export default function Home() {
       sessionStorage.removeItem("stripeUserId");
       sessionStorage.removeItem("stripeCredits");
 
-      if (userId) {
+      if (userId && SUPABASE_CONFIGURED) {
         try {
           const stored = localStorage.getItem("currentUser");
           const localUser = stored ? JSON.parse(stored) : null;
@@ -113,6 +138,11 @@ export default function Home() {
   };
 
   const loadAds = async () => {
+    if (!SUPABASE_CONFIGURED) {
+      setAds(DEMO_ADS);
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch(
         `${SUPABASE_URL}/rest/v1/ads?select=*&is_active=eq.true&order=is_sponsored.desc,is_premium.desc,created_at.desc&limit=12`,
@@ -124,9 +154,10 @@ export default function Home() {
         }
       );
       const data = await response.json();
-      setAds(data || []);
+      setAds(data && data.length > 0 ? data : DEMO_ADS);
     } catch (error) {
       console.error("Errore caricamento annunci:", error);
+      setAds(DEMO_ADS);
     } finally {
       setLoading(false);
     }
@@ -146,9 +177,24 @@ export default function Home() {
     setPublishOpen(true);
   };
 
+  const toggleSaveAd = (adId: string) => {
+    const current = JSON.parse(localStorage.getItem("savedAds") || "[]");
+    const isSaved = current.includes(adId);
+    const next = isSaved
+      ? current.filter((id: string) => id !== adId)
+      : [...new Set([...current, adId])];
+    localStorage.setItem("savedAds", JSON.stringify(next));
+    setSavedAds(next);
+  };
+
   const handleAuth = async () => {
     if (!authForm.email || !authForm.password || (authModal === "register" && !authForm.name)) {
       alert("Compila tutti i campi richiesti.");
+      return;
+    }
+
+    if (!SUPABASE_CONFIGURED) {
+      alert("Database non configurato. Crea un file .env con le credenziali Supabase per abilitare l'autenticazione.");
       return;
     }
 
@@ -229,6 +275,11 @@ export default function Home() {
       return;
     }
 
+    if (!SUPABASE_CONFIGURED) {
+      alert("Database non configurato. Crea un file .env con le credenziali Supabase per pubblicare annunci reali.");
+      return;
+    }
+
     setBusy(true);
     try {
       const payload = {
@@ -260,15 +311,7 @@ export default function Home() {
       if (!response.ok) throw new Error(data.message || data.error || "Pubblicazione non riuscita");
 
       setPublishOpen(false);
-      setPublishForm({
-        title: "",
-        description: "",
-        city: "Roma",
-        age: "25",
-        category: CATEGORIES[0].id,
-        image: "",
-        price: "",
-      });
+      setPublishForm({ title: "", description: "", city: "Roma", age: "25", category: CATEGORIES[0].id, image: "", price: "", phone: "" });
       await loadAds();
       alert("Annuncio pubblicato.");
     } catch (error) {
@@ -276,6 +319,19 @@ export default function Home() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleCountrySelect = (code: string) => {
+    setSelectedCountry(code);
+    setCountryDropdownOpen(false);
+    if (code !== "IT") {
+      alert("Presto disponibile in altri paesi. Al momento gli annunci sono disponibili solo in Italia.");
+      setSelectedCountry("IT");
+    }
+  };
+
+  const openInfoModal = (type: string) => {
+    setInfoModal(type);
   };
 
   const filteredAds = ads.filter((ad) => {
@@ -290,16 +346,25 @@ export default function Home() {
     return matchesSearch && matchesCategory && matchesCity;
   });
 
+  const INFO_CONTENT: Record<string, { title: string; body: string }> = {
+    "chi-siamo": { title: "Chi Siamo", body: "Incontri di Bakeka e la piattaforma leader in Italia per annunci personali. Offriamo uno spazio sicuro e verificato dove adulti consenzienti possono connettersi. Lavoriamo ogni giorno per garantire sicurezza, privacy e qualita. Tutti i nostri profili Premium sono verificati manualmente." },
+    "contatti": { title: "Contatti", body: "Per qualsiasi domanda o supporto, scrivici a: supporto@incontridibakeka.it\n\nRispondiamo entro 24 ore. Per segnalazioni di abuso o contenuti inappropriate, utilizza il pulsante 'Segnala' presente in ogni annuncio." },
+    "blog": { title: "Blog", body: "Il nostro blog arrivera presto! Pubblicheremo guide su sicurezza negli incontri, consigli per creare annunci efficaci, e storie di successo dei nostri utenti. Resta sintonizzato." },
+    "termini": { title: "Termini e Condizioni", body: "1. Il sito e destinato esclusivamente a maggiori di 18 anni.\n2. Tutti gli annunci devono rispettare le leggi italiane.\n3. E vietato pubblicare contenuti illegali, offensivi o non consensuali.\n4. La piattaforma non si rende responsabile degli incontri tra utenti.\n5. Ogni utente e responsabile dei propri annunci e comportamenti.\n6. I crediti acquistati non sono rimborsabili.\n7. La pubblicazione di annunci falsi comporta ban permanente." },
+    "privacy": { title: "Privacy Policy", body: "1. I tuoi dati personali sono protetti secondo il GDPR (Regolamento UE 2016/679).\n2. Non condividiamo i tuoi dati con terzi senza consenso.\n3. Le informazioni di contatto sono visibili solo agli utenti autenticati.\n4. Puoi richiedere la cancellazione del tuo account in qualsiasi momento.\n5. Utilizziamo cookie tecnici per il funzionamento del sito.\n6. I messaggi tra utenti sono privati e crittografati." },
+    "cookie": { title: "Cookie Policy", body: "1. Utilizziamo cookie tecnici necessari per il funzionamento del sito (sessione, autenticazione).\n2. Utilizziamo cookie analitici anonimi per migliorare il servizio.\n3. Non vendiamo i dati dei cookie a terzi.\n4. Puoi gestire le tue preferenze cookie dalle impostazioni del browser.\n5. Continuando a navigare accetti l'uso dei cookie." },
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* 18+ DISCLAIMER */}
       {showDisclaimer && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 md:p-8 text-center shadow-2xl">
+        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-card rounded-2xl max-w-md w-full p-6 md:p-8 text-center shadow-2xl">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
               <span className="text-3xl font-bold text-destructive">18+</span>
             </div>
-            <h2 className="text-xl font-bold mb-3 font-poppins">Avviso di Età</h2>
+            <h2 className="text-xl font-bold mb-3 font-poppins">Avviso di Eta</h2>
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
               Questo sito contiene contenuti destinati esclusivamente a un pubblico adulto. Accedendo dichiari di avere almeno 18 anni e di accettare i nostri Termini e Condizioni d'uso.
             </p>
@@ -329,19 +394,20 @@ export default function Home() {
 
       {/* FLOATING PUBLISH BUTTON (mobile) */}
       <button
-        className="md:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+        className="md:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center active:scale-95 transition-transform"
         onClick={openPublish}
         aria-label="Pubblica annuncio"
       >
         <Plus className="w-6 h-6" />
       </button>
+
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">B</div>
-            <span className="text-lg font-bold text-primary hidden sm:inline">Incontri di Bakeka</span>
-            <span className="text-lg font-bold text-primary sm:hidden">Bakeka</span>
+            <div className="w-9 h-9 bg-gradient-to-br from-primary to-purple-700 rounded-xl flex items-center justify-center text-white font-bold shadow-md">B</div>
+            <span className="text-lg font-bold text-primary hidden sm:inline font-poppins">Incontri di Bakeka</span>
+            <span className="text-lg font-bold text-primary sm:hidden font-poppins">Bakeka</span>
           </div>
 
           {/* Desktop Menu */}
@@ -353,16 +419,16 @@ export default function Home() {
                 onClick={() => { setCityDropdownOpen(!cityDropdownOpen); setCountryDropdownOpen(false); }}
               >
                 <MapPin className="w-4 h-4 text-muted-foreground" />
-                {selectedCity || "Tutte le città"}
+                {selectedCity || "Tutte le citta"}
                 <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
               {cityDropdownOpen && (
-                <div className="absolute top-full right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-white border border-border rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute top-full right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-white dark:bg-card border border-border rounded-lg shadow-lg z-50 py-1">
                   <button
                     className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
                     onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
                   >
-                    🇮🇹 Tutte le città
+                    Tutte le citta
                   </button>
                   {ITALIAN_CITIES.map((city) => (
                     <button
@@ -387,12 +453,12 @@ export default function Home() {
                 <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
               {countryDropdownOpen && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-72 overflow-y-auto bg-white border border-border rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-72 overflow-y-auto bg-white dark:bg-card border border-border rounded-lg shadow-lg z-50 py-1">
                   {COUNTRIES.map((c) => (
                     <button
                       key={c.code}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-                      onClick={() => { setSelectedCountry(c.code); setCountryDropdownOpen(false); }}
+                      onClick={() => handleCountrySelect(c.code)}
                     >
                       <span>{c.flag}</span> {c.name}
                     </button>
@@ -400,6 +466,17 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* Dark mode toggle */}
+            {toggleTheme && (
+              <button
+                className="flex items-center justify-center w-9 h-9 rounded-lg border border-border hover:bg-muted transition-colors"
+                onClick={toggleTheme}
+                aria-label="Cambia tema"
+              >
+                {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            )}
 
             <Input
               placeholder="Cerca annunci..."
@@ -453,33 +530,44 @@ export default function Home() {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
+          <div className="md:hidden flex items-center gap-2">
+            {toggleTheme && (
+              <button
+                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted transition-colors"
+                onClick={toggleTheme}
+                aria-label="Cambia tema"
+              >
+                {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+              </button>
             )}
-          </button>
+            <button
+              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-white">
+          <div className="md:hidden border-t border-border bg-white dark:bg-card">
             <div className="container py-4 space-y-3">
                 {/* City selector mobile */}
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Città</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Citta</label>
                   <button
                     className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border text-sm"
                     onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
                   >
                     <span className="flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
-                      {selectedCity || "Tutte le città"}
+                      {selectedCity || "Tutte le citta"}
                     </span>
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </button>
@@ -489,7 +577,7 @@ export default function Home() {
                         className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
                         onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
                       >
-                        Tutte le città
+                        Tutte le citta
                       </button>
                       {ITALIAN_CITIES.map((city) => (
                         <button
@@ -522,7 +610,7 @@ export default function Home() {
                         <button
                           key={c.code}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-                          onClick={() => { setSelectedCountry(c.code); setCountryDropdownOpen(false); }}
+                          onClick={() => handleCountrySelect(c.code)}
                         >
                           <span>{c.flag}</span> {c.name}
                         </button>
@@ -564,7 +652,7 @@ export default function Home() {
                     className="w-full gap-2"
                     onClick={() => { openPublish(); setMobileMenuOpen(false); }}
                   >
-                    <span>📝</span> Pubblica Annuncio
+                    <Plus className="w-4 h-4" /> Pubblica Annuncio
                   </Button>
 
                   {currentUser.is_admin && (
@@ -606,7 +694,7 @@ export default function Home() {
                     className="w-full gap-2"
                     onClick={() => { setAuthModal("register"); setMobileMenuOpen(false); }}
                   >
-                    <span>✨</span> Registrati
+                    <Sparkles className="w-4 h-4" /> Registrati
                   </Button>
                 </>
               )}
@@ -616,46 +704,53 @@ export default function Home() {
       </nav>
 
       {/* HERO SECTION */}
-        <section className="relative min-h-[400px] md:h-96 bg-gradient-to-br from-primary via-purple-500 to-secondary overflow-hidden flex items-center">
+        <section className="relative min-h-[420px] md:h-[480px] overflow-hidden flex items-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-primary to-purple-600" />
           <div
-            className="absolute inset-0 opacity-15"
+            className="absolute inset-0 opacity-20"
             style={{
-              backgroundImage: "url(https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=400&fit=crop)",
+              backgroundImage: "url(https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=1400&h=500&fit=crop)",
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-          <div className="relative container flex flex-col items-center justify-center text-center text-white py-12 md:py-0">
+          <div className="absolute inset-0 bg-gradient-to-t from-purple-950/50 via-transparent to-transparent" />
+          <div className="relative container flex flex-col items-center justify-center text-center text-white py-12 md:py-0 z-10">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-4 text-sm">
+              <Shield className="w-4 h-4" />
+              <span>Profili verificati. Connessioni reali.</span>
+            </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-3 md:mb-4 font-poppins drop-shadow-lg">
               Connessioni Autentiche
             </h1>
             <p className="text-lg md:text-2xl mb-6 md:mb-8 opacity-90 max-w-2xl px-2">
-              Il marketplace più affidabile per incontri e amicizie in Italia
+              Il marketplace piu affidabile per incontri e amicizie in Italia
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto px-4 sm:px-0">
-              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto" onClick={runSearch}>
+              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto shadow-lg" onClick={runSearch}>
                 <Search className="w-5 h-5" />
                 Scopri Annunci
               </Button>
-              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto bg-white/90 hover:bg-white border-white text-primary" onClick={openPublish}>
+              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto bg-white/90 hover:bg-white border-white text-primary shadow-lg" onClick={openPublish}>
+                <Plus className="w-5 h-5" />
                 Pubblica Annuncio
               </Button>
             </div>
           </div>
         </section>
 
-      {/* CATEGORIES */}
+        {/* CATEGORIES */}
         <section className="py-8 md:py-16 bg-muted/30">
           <div className="container">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-12 text-center font-poppins">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 md:mb-3 text-center font-poppins">
             Sfoglia per Categoria
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <p className="text-center text-muted-foreground mb-6 md:mb-12">Trova esattamente quello che cerchi</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
             {CATEGORIES.map((cat) => (
               <Card
                 key={cat.id}
-                className="overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all group"
+                className="overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group border-0"
                 onClick={() => {
                   setCategoryFilter(categoryFilter === cat.id ? null : cat.id);
                   document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
@@ -665,391 +760,506 @@ export default function Home() {
                   <img
                     src={cat.image}
                     alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:from-black/60 transition-all" />
                   <div className="absolute inset-x-0 bottom-0 p-3 text-center">
-                    <p className="text-xs font-bold text-white drop-shadow">{cat.name}</p>
+                    <p className="text-xs md:text-sm font-bold text-white drop-shadow">{cat.name}</p>
+                    <p className="text-[10px] text-white/70 mt-0.5">{cat.count}</p>
                   </div>
+                  {categoryFilter === cat.id && (
+                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ADS SECTION */}
-        <section className="py-8 md:py-16" id="ads-section">
-        <div className="container">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold font-poppins">
-                Annunci in Evidenza
-              </h2>
-              {(searchTerm || categoryFilter) && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {filteredAds.length} risultati
-                  {categoryFilter ? ` in ${CATEGORIES.find((c) => c.id === categoryFilter)?.name}` : ""}
-                </p>
-              )}
-            </div>
-            {(searchTerm || categoryFilter) && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm("");
-                  setCategoryFilter(null);
-                }}
-              >
-                Cancella filtri
-              </Button>
-            )}
           </div>
+        </section>
 
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="h-64 bg-muted animate-pulse" />
-              ))}
-            </div>
-          ) : filteredAds.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Nessun annuncio disponibile</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-              {filteredAds.map((ad) => (
-              <Card
-                key={ad.id}
-                className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1"
-                onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
-              >
-                  <div className="relative h-36 md:h-48 bg-muted overflow-hidden">
-                    {ad.image ? (
-                      <img
-                        src={ad.image}
-                        alt={ad.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">
-                        👤
-                      </div>
-                    )}
-                    {ad.is_sponsored && (
-                      <div className="absolute top-2 right-2 bg-accent text-accent-foreground px-2 py-1 rounded text-xs font-bold">
-                        ⭐ SuperTop
-                      </div>
-                    )}
-                    {ad.is_premium && (
-                      <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
-                        👑 Premium
-                      </div>
-                    )}
-                    <button
-                      className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-muted"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedAd(ad);
-                      }}
-                      aria-label="Salva o contatta"
-                    >
-                      <Heart className="w-5 h-5 text-primary" />
-                    </button>
-                  </div>
-                  <div className="p-3 md:p-4">
-                    <h3 className="font-bold text-base md:text-lg mb-1 md:mb-2 line-clamp-1">
-                      {ad.title}
-                    </h3>
-                    <p className="text-xs md:text-sm text-muted-foreground mb-2 md:mb-3 line-clamp-2">
-                      {ad.description}
-                    </p>
-                    <div className="flex items-center justify-between text-xs md:text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        {ad.city}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-accent text-accent" />
-                        <span className="font-medium">{ad.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* AD DETAIL MODAL */}
-      {selectedAd && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedAd(null)}
-        >
-          <Card
-            className="w-full max-w-2xl max-h-96 overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold font-poppins mb-2">
-                    {selectedAd.title}
-                  </h2>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    {selectedAd.city} • {selectedAd.age} anni
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedAd(null)}
-                  className="text-2xl"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {selectedAd.image && (
-                <img
-                  src={selectedAd.image}
-                  alt={selectedAd.title}
-                  className="w-full h-64 object-cover rounded-lg mb-4"
-                />
-              )}
-
-              <p className="text-foreground mb-4">{selectedAd.description}</p>
-
-              {selectedAd.price && (
-                <p className="text-lg font-bold text-accent mb-4">
-                  💰 {selectedAd.price}
-                </p>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1 gap-2"
-                  onClick={() => {
-                    if (!currentUser) {
-                      setSelectedAd(null);
-                      setAuthModal("login");
-                      return;
-                    }
-                    navigate(`/ad/${slugify(selectedAd.title)}-${selectedAd.id}`);
-                  }}
-                >
-                  💬 Contatta
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-2"
-                  onClick={() => {
-                    const saved = JSON.parse(localStorage.getItem("savedAds") || "[]");
-                    localStorage.setItem("savedAds", JSON.stringify([...new Set([...saved, selectedAd.id])]));
-                    alert("Annuncio salvato.");
-                  }}
-                >
-                  <Heart className="w-4 h-4" />
-                  Salva
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* AUTH MODAL */}
-      {authModal && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setAuthModal(null)}
-        >
-          <Card className="w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold font-poppins">
-                {authModal === "login" ? "Accedi" : "Registrati"}
-              </h2>
-              <button onClick={() => setAuthModal(null)} className="text-2xl">×</button>
-            </div>
-
-            <div className="space-y-4">
-              {authModal === "register" && (
-                <Input
-                  placeholder="Nome"
-                  value={authForm.name}
-                  onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
-                />
-              )}
-              <Input
-                placeholder="Email"
-                type="email"
-                value={authForm.email}
-                onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-              />
-              <Input
-                placeholder="Password"
-                type="password"
-                value={authForm.password}
-                onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                onKeyDown={(e) => e.key === "Enter" && handleAuth()}
-              />
-
-              <Button className="w-full" onClick={handleAuth} disabled={busy}>
-                {busy ? "Attendi..." : authModal === "login" ? "Entra" : "Crea account"}
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => setAuthModal(authModal === "login" ? "register" : "login")}
-              >
-                {authModal === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* PUBLISH MODAL */}
-      {publishOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setPublishOpen(false)}
-        >
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold font-poppins">Pubblica Annuncio</h2>
-              <button onClick={() => setPublishOpen(false)} className="text-2xl">×</button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                className="md:col-span-2"
-                placeholder="Titolo annuncio"
-                value={publishForm.title}
-                onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
-              />
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={publishForm.category}
-                onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-              <Input
-                placeholder="Città"
-                value={publishForm.city}
-                onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
-              />
-              <Input
-                placeholder="Età"
-                type="number"
-                min="18"
-                value={publishForm.age}
-                onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
-              />
-              <Input
-                placeholder="Prezzo o info"
-                value={publishForm.price}
-                onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
-              />
-              <Input
-                className="md:col-span-2"
-                placeholder="URL foto"
-                value={publishForm.image}
-                onChange={(e) => setPublishForm({ ...publishForm, image: e.target.value })}
-              />
-              <Textarea
-                className="md:col-span-2"
-                rows={5}
-                placeholder="Descrizione"
-                value={publishForm.description}
-                onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-              <Button className="flex-1" onClick={handlePublish} disabled={busy}>
-                {busy ? "Pubblicazione..." : "Pubblica"}
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={() => setPublishOpen(false)}>
-                Annulla
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* FOOTER */}
-      <footer className="bg-muted/50 border-t border-border py-8 md:py-12 mt-8 md:mt-16">
+        {/* ADS SECTION */}
+        <section className="py-8 md:py-16" id="ads-section">
           <div className="container">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
               <div>
-                <h4 className="font-bold mb-4">Incontri di Bakeka</h4>
-                <p className="text-sm text-muted-foreground">
-                  Il marketplace più affidabile per connessioni autentiche.
-                </p>
+                <h2 className="text-2xl md:text-3xl font-bold font-poppins">
+                  Annunci in Evidenza
+                </h2>
+                {(searchTerm || categoryFilter || selectedCity) && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {filteredAds.length} risultati
+                    {categoryFilter ? ` in ${CATEGORIES.find((c) => c.id === categoryFilter)?.name}` : ""}
+                    {selectedCity ? ` a ${selectedCity}` : ""}
+                  </p>
+                )}
               </div>
-              <div>
-                <h4 className="font-bold mb-4">Link Utili</h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li><a href="#" className="hover:text-primary">Chi Siamo</a></li>
-                  <li><a href="#" className="hover:text-primary">Contatti</a></li>
-                  <li><a href="#" className="hover:text-primary">Blog</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold mb-4">Legale</h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li><a href="#" className="hover:text-primary">Termini e Condizioni</a></li>
-                  <li><a href="#" className="hover:text-primary">Privacy Policy</a></li>
-                  <li><a href="#" className="hover:text-primary">Cookie Policy</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold mb-4">Seguici</h4>
-                <div className="flex gap-4">
-                  <a href="#" className="text-primary hover:text-primary-foreground">Facebook</a>
-                  <a href="#" className="text-primary hover:text-primary-foreground">Instagram</a>
-                </div>
-              </div>
-            </div>
-
-            {/* Cities grid */}
-            <div className="border-t border-border pt-6 mb-6">
-              <h4 className="font-bold mb-3 text-sm">Città in Evidenza</h4>
-              <div className="flex flex-wrap gap-2">
-                {ITALIAN_CITIES.slice(0, 40).map((city) => (
-                  <button
-                    key={city}
-                    className="text-xs text-muted-foreground hover:text-primary px-2 py-1 rounded hover:bg-muted transition-colors"
+              <div className="flex items-center gap-2">
+                {savedAds.length > 0 && (
+                  <Button variant="ghost" className="gap-2 text-muted-foreground">
+                    <Bookmark className="w-4 h-4" />
+                    {savedAds.length} salvati
+                  </Button>
+                )}
+                {(searchTerm || categoryFilter || selectedCity) && (
+                  <Button
+                    variant="outline"
                     onClick={() => {
-                      setSelectedCity(city);
-                      document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
+                      setSearchTerm("");
+                      setCategoryFilter(null);
+                      setSelectedCity(null);
                     }}
                   >
-                    {city}
-                  </button>
-                ))}
+                    Cancella filtri
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* Pubblica annuncio bar */}
-            <div className="border-t border-border pt-6 mb-6 text-center">
-              <Button onClick={openPublish} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Pubblica il tuo Annuncio
-              </Button>
-            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden bg-muted animate-pulse">
+                    <div className="h-36 md:h-52 bg-muted" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-full" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredAds.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-4">🔍</div>
+                <p className="text-lg text-muted-foreground mb-4">Nessun annuncio trovato</p>
+                <Button variant="outline" onClick={() => { setSearchTerm(""); setCategoryFilter(null); setSelectedCity(null); }}>
+                  Mostra tutti gli annunci
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {filteredAds.map((ad) => (
+                <Card
+                  key={ad.id}
+                  className={`overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
+                    ad.is_sponsored ? "ring-1 ring-accent/40" : ""
+                  } ${ad.is_premium ? "ring-1 ring-primary/30" : ""}`}
+                  onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
+                >
+                    <div className="relative h-36 md:h-52 bg-muted overflow-hidden">
+                      {ad.image ? (
+                        <img
+                          src={ad.image}
+                          alt={ad.title}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-4xl">
+                          👤
+                        </div>
+                      )}
+                      {ad.is_sponsored && (
+                        <div className="absolute top-2 right-2 bg-accent text-accent-foreground px-2 py-1 rounded text-[10px] md:text-xs font-bold shadow-md">
+                          ⭐ SuperTop
+                        </div>
+                      )}
+                      {ad.is_premium && !ad.is_sponsored && (
+                        <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded text-[10px] md:text-xs font-bold shadow-md">
+                          👑 Premium
+                        </div>
+                      )}
+                      {ad.is_verified && (
+                        <div className="absolute top-2 left-2 bg-green-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 shadow-md">
+                          ✓ Verificato
+                        </div>
+                      )}
+                      <button
+                        className={`absolute bottom-2 right-2 rounded-full p-2 shadow-md transition-all active:scale-90 ${
+                          savedAds.includes(ad.id) ? "bg-primary text-primary-foreground" : "bg-white hover:bg-muted"
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSaveAd(ad.id);
+                        }}
+                        aria-label="Salva annuncio"
+                      >
+                        <Heart className={`w-4 h-4 ${savedAds.includes(ad.id) ? "fill-current" : "text-primary"}`} />
+                      </button>
+                    </div>
+                    <div className="p-3 md:p-4">
+                      <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1">
+                        {ad.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                        {ad.description}
+                      </p>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate max-w-[60px]">{ad.city}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-accent text-accent" />
+                          <span className="font-medium">{ad.rating}</span>
+                        </div>
+                      </div>
+                      {ad.price && (
+                        <p className="text-xs font-bold text-accent mt-2">{ad.price}</p>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
-            <div className="border-t border-border pt-6 text-center text-sm text-muted-foreground">
-              <p>&copy; 2026 Incontri di Bakeka. Tutti i diritti riservati.</p>
+        {/* TRUST BADGES SECTION */}
+        <section className="py-8 md:py-12 bg-muted/30 border-t border-border">
+          <div className="container">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="font-bold text-sm mb-1">Profili Verificati</h3>
+                <p className="text-xs text-muted-foreground">Tutti i profili Premium sono verificati manualmente</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Eye className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-bold text-sm mb-1">Privacy Protetta</h3>
+                <p className="text-xs text-muted-foreground">I tuoi dati sono al sicuro e mai condivisi</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-accent/10 flex items-center justify-center">
+                  <Star className="w-6 h-6 text-accent" />
+                </div>
+                <h3 className="font-bold text-sm mb-1">Recensioni Reali</h3>
+                <p className="text-xs text-muted-foreground">Sistema di recensioni verificato e trasparente</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-secondary/10 flex items-center justify-center">
+                  <MessageCircle className="w-6 h-6 text-secondary" />
+                </div>
+                <h3 className="font-bold text-sm mb-1">Messaggi Privati</h3>
+                <p className="text-xs text-muted-foreground">Comunica in modo sicuro e discreto</p>
+              </div>
             </div>
           </div>
-        </footer>
-    </div>
-  );
-}
+        </section>
+
+        {/* INFO MODAL */}
+        {infoModal && INFO_CONTENT[infoModal] && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setInfoModal(null)}
+          >
+            <Card className="w-full max-w-lg max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold font-poppins">{INFO_CONTENT[infoModal].title}</h2>
+                <button onClick={() => setInfoModal(null)} className="text-2xl text-muted-foreground hover:text-foreground">×</button>
+              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                {INFO_CONTENT[infoModal].body}
+              </p>
+            </Card>
+          </div>
+        )}
+
+        {/* AD QUICK-MODAL (Heart click) */}
+        {selectedAd && (
+          <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedAd(null)}
+          >
+            <Card
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold font-poppins mb-2">
+                      {selectedAd.title}
+                    </h2>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      {selectedAd.city} • {selectedAd.age} anni
+                      {selectedAd.is_verified && (
+                        <span className="text-green-600 font-semibold text-sm">✓ Verificato</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAd(null)}
+                    className="text-2xl text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {selectedAd.image && (
+                  <img
+                    src={selectedAd.image}
+                    alt={selectedAd.title}
+                    className="w-full h-64 object-cover rounded-lg mb-4"
+                  />
+                )}
+
+                <p className="text-foreground mb-4">{selectedAd.description}</p>
+
+                {selectedAd.price && (
+                  <p className="text-lg font-bold text-accent mb-4">
+                    💰 {selectedAd.price}
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      if (!currentUser) {
+                        setSelectedAd(null);
+                        setAuthModal("login");
+                        return;
+                      }
+                      const phone = (selectedAd as any).phone || (selectedAd as any).whatsapp || "+393331234567";
+                      const msg = `Ciao, ho visto il tuo annuncio "${selectedAd.title}" su Incontri di Bakeka.`;
+                      window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
+                    }}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant={savedAds.includes(selectedAd.id) ? "default" : "outline"}
+                    className="flex-1 gap-2"
+                    onClick={() => toggleSaveAd(selectedAd.id)}
+                  >
+                    <Heart className={`w-4 h-4 ${savedAds.includes(selectedAd.id) ? "fill-current" : ""}`} />
+                    {savedAds.includes(selectedAd.id) ? "Salvato" : "Salva"}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* AUTH MODAL */}
+        {authModal && (
+          <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+            onClick={() => setAuthModal(null)}
+          >
+            <Card className="w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold font-poppins">
+                  {authModal === "login" ? "Accedi" : "Registrati"}
+                </h2>
+                <button onClick={() => setAuthModal(null)} className="text-2xl text-muted-foreground hover:text-foreground">×</button>
+              </div>
+
+              <div className="space-y-4">
+                {authModal === "register" && (
+                  <Input
+                    placeholder="Nome"
+                    value={authForm.name}
+                    onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                  />
+                )}
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                />
+                <Input
+                  placeholder="Password"
+                  type="password"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+                />
+
+                <Button className="w-full" onClick={handleAuth} disabled={busy}>
+                  {busy ? "Attendi..." : authModal === "login" ? "Entra" : "Crea account"}
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setAuthModal(authModal === "login" ? "register" : "login")}
+                >
+                  {authModal === "login" ? "Non hai un account? Registrati" : "Hai gia un account? Accedi"}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* PUBLISH MODAL */}
+        {publishOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+            onClick={() => setPublishOpen(false)}
+          >
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold font-poppins">Pubblica Annuncio</h2>
+                <button onClick={() => setPublishOpen(false)} className="text-2xl text-muted-foreground hover:text-foreground">×</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  className="md:col-span-2"
+                  placeholder="Titolo annuncio"
+                  value={publishForm.title}
+                  onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
+                />
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={publishForm.category}
+                  onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={publishForm.city}
+                  onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
+                >
+                  {ITALIAN_CITIES.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                <Input
+                  placeholder="Eta"
+                  type="number"
+                  min="18"
+                  value={publishForm.age}
+                  onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
+                />
+                <Input
+                  placeholder="Prezzo o info"
+                  value={publishForm.price}
+                  onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
+                />
+                <Input
+                  placeholder="Numero WhatsApp (es. +39 333 1234567)"
+                  value={publishForm.phone}
+                  onChange={(e) => setPublishForm({ ...publishForm, phone: e.target.value })}
+                />
+                <Input
+                  className="md:col-span-2"
+                  placeholder="URL foto (incolla il link di una immagine)"
+                  value={publishForm.image}
+                  onChange={(e) => setPublishForm({ ...publishForm, image: e.target.value })}
+                />
+                <Textarea
+                  className="md:col-span-2"
+                  rows={5}
+                  placeholder="Descrizione"
+                  value={publishForm.description}
+                  onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button className="flex-1" onClick={handlePublish} disabled={busy}>
+                  {busy ? "Pubblicazione..." : "Pubblica"}
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => setPublishOpen(false)}>
+                  Annulla
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* FOOTER */}
+        <footer className="bg-muted/50 dark:bg-card/50 border-t border-border py-8 md:py-12 mt-0">
+            <div className="container">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">B</div>
+                    <h4 className="font-bold font-poppins">Incontri di Bakeka</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Il marketplace piu affidabile per connessioni autentiche in Italia.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-4">Link Utili</h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li><button onClick={() => openInfoModal("chi-siamo")} className="hover:text-primary transition-colors text-left">Chi Siamo</button></li>
+                    <li><button onClick={() => openInfoModal("contatti")} className="hover:text-primary transition-colors text-left">Contatti</button></li>
+                    <li><button onClick={() => openInfoModal("blog")} className="hover:text-primary transition-colors text-left">Blog</button></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-4">Legale</h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li><button onClick={() => openInfoModal("termini")} className="hover:text-primary transition-colors text-left">Termini e Condizioni</button></li>
+                    <li><button onClick={() => openInfoModal("privacy")} className="hover:text-primary transition-colors text-left">Privacy Policy</button></li>
+                    <li><button onClick={() => openInfoModal("cookie")} className="hover:text-primary transition-colors text-left">Cookie Policy</button></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-4">Seguici</h4>
+                  <div className="flex gap-3">
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-bold">F</a>
+                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-bold">I</a>
+                    <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-bold">T</a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cities grid */}
+              <div className="border-t border-border pt-6 mb-6">
+                <h4 className="font-bold mb-3 text-sm">Citta in Evidenza</h4>
+                <div className="flex flex-wrap gap-2">
+                  {ITALIAN_CITIES.slice(0, 40).map((city) => (
+                    <button
+                      key={city}
+                      className={`text-xs px-2 py-1 rounded transition-colors ${
+                        selectedCity === city
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-primary hover:bg-muted"
+                      }`}
+                      onClick={() => {
+                        setSelectedCity(city);
+                        document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pubblica annuncio bar */}
+              <div className="border-t border-border pt-6 mb-6 text-center">
+                <Button onClick={openPublish} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Pubblica il tuo Annuncio
+                </Button>
+              </div>
+
+              <div className="border-t border-border pt-6 text-center text-sm text-muted-foreground">
+                <p className="mb-2">Tutti gli annunci sono destinati a maggiori di 18 anni.</p>
+                <p>&copy; 2026 Incontri di Bakeka. Tutti i diritti riservati.</p>
+              </div>
+            </div>
+          </footer>
+      </div>
+    );
+  }
