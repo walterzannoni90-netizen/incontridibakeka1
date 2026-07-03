@@ -28,7 +28,7 @@ interface User {
 }
 
 export default function AdminPanel() {
-  const { isAdmin, logout, token: authToken } = useAuth();
+  const { isAdmin, loading: authLoading, logout, token: authToken } = useAuth();
   const { get, patch, delete: deleteRecord } = useSupabase();
   const { navigate } = useRouter();
 
@@ -39,12 +39,13 @@ export default function AdminPanel() {
   const [searchUsers, setSearchUsers] = useState("");
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isAdmin) {
       navigate("/");
       return;
     }
     loadData();
-  }, [isAdmin]);
+  }, [isAdmin, authLoading]);
 
   const loadData = async () => {
     try {

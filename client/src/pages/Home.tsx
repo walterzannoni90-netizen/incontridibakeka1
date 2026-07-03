@@ -339,7 +339,7 @@ export default function Home() {
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold">B</div>
-            <span className="text-xl font-bold text-primary">Bakeka</span>
+            <span className="text-xl font-bold text-primary">Incontri di Bakeka</span>
           </div>
 
           {/* Desktop Menu */}
@@ -805,7 +805,7 @@ export default function Home() {
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h4 className="font-bold mb-4">Bakeka</h4>
+              <h4 className="font-bold mb-4">Incontri di Bakeka</h4>
               <p className="text-sm text-muted-foreground">
                 Il marketplace più affidabile per connessioni autentiche.
               </p>
