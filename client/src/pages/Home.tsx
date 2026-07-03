@@ -6,8 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/hooks/useRouter";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X } from "lucide-react";
 
-const SUPABASE_URL = "https://rdqsmfgpbuswzilgbjyr.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 interface Ad {
   id: string;
@@ -84,7 +84,51 @@ export default function Home() {
   useEffect(() => {
     loadAds();
     checkAuth();
+    handlePaymentCallback();
   }, []);
+
+  const handlePaymentCallback = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("payment");
+    if (!status) return;
+
+    const newUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, "", newUrl);
+
+    if (status === "cancel") {
+      alert("Pagamento annullato.");
+      return;
+    }
+
+    if (status === "success") {
+      const userId = sessionStorage.getItem("stripeUserId");
+      const credits = sessionStorage.getItem("stripeCredits");
+      sessionStorage.removeItem("stripeUserId");
+      sessionStorage.removeItem("stripeCredits");
+
+      if (userId) {
+        try {
+          const stored = localStorage.getItem("currentUser");
+          const localUser = stored ? JSON.parse(stored) : null;
+          const token = localStorage.getItem("authToken");
+          if (localUser && token && localUser.id === userId) {
+            const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=credits&id=eq.${userId}`, {
+              headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+            });
+            const profiles = await resp.json();
+            if (profiles?.[0]) {
+              const updated = { ...localUser, credits: profiles[0].credits };
+              setCurrentUser(updated);
+              localStorage.setItem("currentUser", JSON.stringify(updated));
+            }
+          }
+        } catch (e) {
+          console.error("Errore aggiornamento crediti:", e);
+        }
+      }
+      alert(`Pagamento riuscito! ${credits || ""} crediti aggiunti.`);
+    }
+  };
 
   const loadAds = async () => {
     try {

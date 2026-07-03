@@ -1,14 +1,13 @@
 import { useCallback } from "react";
 
-const STRIPE_PUBLISHABLE_KEY = "pk_live_51TnhPkDxJ0tOArXhfg0ZH8uJZOJFG9Hk38XTAK0JUXI1s84R1WzmHD44jDN9hUBRdDM8XNHDdxnKklFZa97j48gi00vd1sqvV1";
-const EDGE_FUNCTION_URL = "https://rdqsmfgpbuswzilgbjyr.functions.supabase.co";
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-// Mapping crediti -> price_id Stripe
 const PRICE_IDS: Record<number, string> = {
-  10: "price_1TnhPkDxJ0tOArXh0000000a",  // Placeholder - sostituire con veri price_id
-  30: "price_1TnhPkDxJ0tOArXh0000000b",
-  70: "price_1TnhPkDxJ0tOArXh0000000c",
-  150: "price_1TnhPkDxJ0tOArXh0000000d",
+  10: import.meta.env.VITE_STRIPE_PRICE_10 as string,
+  30: import.meta.env.VITE_STRIPE_PRICE_30 as string,
+  70: import.meta.env.VITE_STRIPE_PRICE_70 as string,
+  150: import.meta.env.VITE_STRIPE_PRICE_150 as string,
 };
 
 export function useStripe() {

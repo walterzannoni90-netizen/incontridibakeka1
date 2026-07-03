@@ -28,10 +28,9 @@ interface User {
 }
 
 export default function AdminPanel() {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, logout, token: authToken } = useAuth();
   const { get, patch, delete: deleteRecord } = useSupabase();
   const { navigate } = useRouter();
-  const { token: authToken } = useAuth();
 
   const [ads, setAds] = useState<Ad[]>([]);
   const [users, setUsers] = useState<User[]>([]);
