@@ -187,25 +187,25 @@ export default function AdDetail() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-border">
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-border">
         <div className="container h-16 flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={() => navigate("/")}
-            className="gap-2"
+            className="gap-2 flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Indietro
+            <span className="hidden sm:inline">Indietro</span>
           </Button>
-          <h1 className="text-xl font-bold font-poppins flex-1 text-center">
+          <h1 className="text-base md:text-xl font-bold font-poppins flex-1 text-center truncate px-2">
             {ad.title}
           </h1>
-          <div className="w-12" />
+          <div className="w-16 flex-shrink-0" />
         </div>
       </div>
 
-      <div className="container py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container py-6 md:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
           {/* Gallery */}
           <div className="lg:col-span-2">
             <Card className="overflow-hidden mb-4">
@@ -244,8 +244,8 @@ export default function AdDetail() {
             )}
 
             {/* Description */}
-            <Card className="p-6 mt-6">
-              <h2 className="text-2xl font-bold mb-4 font-poppins">
+            <Card className="p-4 md:p-6 mt-4 md:mt-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 font-poppins">
                 Descrizione
               </h2>
               <p className="text-foreground whitespace-pre-wrap mb-6">

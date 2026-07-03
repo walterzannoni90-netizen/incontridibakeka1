@@ -60,27 +60,27 @@ export default function Shop() {
         </div>
       </div>
 
-      <div className="container py-12">
+      <div className="container py-8 md:py-12">
         <div className="max-w-4xl mx-auto">
           {/* Title */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold font-poppins mb-4">
+          <div className="text-center mb-8 md:mb-12">
+            <h1 className="text-3xl md:text-4xl font-bold font-poppins mb-3 md:mb-4">
               Shop Crediti
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-base md:text-lg">
               Acquista crediti per potenziare i tuoi annunci
             </p>
-            <p className="text-primary font-bold mt-4">
+            <p className="text-primary font-bold mt-3 md:mt-4">
               Crediti attuali: {user.credits || 0}
             </p>
           </div>
 
           {/* Credit Packs Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-12">
             {CREDIT_PACKS.map((pack) => (
               <Card
                 key={pack.credits}
-                className={`p-8 relative overflow-hidden transition-all hover:shadow-lg ${
+                className={`p-5 md:p-8 relative overflow-hidden transition-all hover:shadow-lg ${
                   pack.popular ? "ring-2 ring-accent" : ""
                 }`}
               >

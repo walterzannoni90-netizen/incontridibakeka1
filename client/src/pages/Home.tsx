@@ -283,66 +283,72 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-border shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border shadow-sm">
         <div className="container flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold">B</div>
-            <span className="text-xl font-bold text-primary">Incontri di Bakeka</span>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">B</div>
+            <span className="text-lg font-bold text-primary hidden sm:inline">Incontri di Bakeka</span>
+            <span className="text-lg font-bold text-primary sm:hidden">Bakeka</span>
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-4">
             <Input
               placeholder="Cerca annunci..."
-              className="w-64"
+              className="w-56"
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runSearch()}
             />
             {currentUser ? (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate("/shop")}
-                  className="gap-2"
+                  className="gap-1.5"
                 >
-                  💰 {currentUser.credits || 0} crediti
+                  <span className="text-accent">💰</span>
+                  <span className="font-semibold">{currentUser.credits || 0}</span>
                 </Button>
-                <span className="text-sm text-foreground">{currentUser.name}</span>
+                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted">
+                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
+                    {currentUser.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{currentUser.name}</span>
+                </div>
                 {currentUser.is_admin && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/admin")}
-                    className="gap-2"
+                    className="gap-1.5"
                   >
-                    ⚙️ Admin
+                    <span>⚙️</span> Admin
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={logout}
-                  className="gap-2"
+                  className="gap-1.5"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Esci
+                  <LogOut className="w-4 h-4" /> Esci
                 </Button>
               </div>
             ) : (
-              <Button size="sm" className="gap-2" onClick={() => setAuthModal("login")}>
-                <LogIn className="w-4 h-4" />
-                Accedi
+              <Button size="sm" className="gap-1.5" onClick={() => setAuthModal("login")}>
+                <LogIn className="w-4 h-4" /> Accedi
               </Button>
             )}
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden"
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Menu"
           >
             {mobileMenuOpen ? (
               <X className="w-6 h-6" />
@@ -354,66 +360,126 @@ export default function Home() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border p-4 space-y-4">
-            <Input
-              placeholder="Cerca annunci..."
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && runSearch()}
-            />
-            {currentUser ? (
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={logout}
-              >
-                <LogOut className="w-4 h-4" />
-                Esci ({currentUser.name})
-              </Button>
-            ) : (
-              <Button className="w-full gap-2" onClick={() => setAuthModal("login")}>
-                <LogIn className="w-4 h-4" />
-                Accedi
-              </Button>
-            )}
+          <div className="md:hidden border-t border-border bg-white">
+            <div className="container py-4 space-y-3">
+              {/* Search */}
+              <Input
+                placeholder="Cerca annunci..."
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
+              />
+
+              {currentUser ? (
+                <>
+                  {/* User info bar */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold">
+                      {currentUser.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{currentUser.name}</p>
+                      <button
+                        className="text-xs text-accent font-semibold flex items-center gap-1"
+                        onClick={() => { navigate("/shop"); setMobileMenuOpen(false); }}
+                      >
+                        <span>💰</span> {currentUser.credits || 0} crediti
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <Button
+                    variant="default"
+                    className="w-full gap-2"
+                    onClick={() => { openPublish(); setMobileMenuOpen(false); }}
+                  >
+                    <span>📝</span> Pubblica Annuncio
+                  </Button>
+
+                  {currentUser.is_admin && (
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => { navigate("/admin"); setMobileMenuOpen(false); }}
+                    >
+                      <span>⚙️</span> Pannello Admin
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => { navigate("/shop"); setMobileMenuOpen(false); }}
+                  >
+                    <span>💰</span> Acquista Crediti
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 text-destructive hover:bg-destructive/5 border-destructive/20"
+                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                  >
+                    <LogOut className="w-4 h-4" /> Esci
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => { setAuthModal("login"); setMobileMenuOpen(false); }}
+                  >
+                    <LogIn className="w-4 h-4" /> Accedi
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => { setAuthModal("register"); setMobileMenuOpen(false); }}
+                  >
+                    <span>✨</span> Registrati
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </nav>
 
       {/* HERO SECTION */}
-      <section className="relative h-96 bg-gradient-to-br from-primary via-purple-400 to-secondary overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: "url(https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=400&fit=crop)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-        <div className="relative container h-full flex flex-col items-center justify-center text-center text-white">
-          <h1 className="text-5xl md:text-6xl font-bold mb-4 font-poppins">
-            Connessioni Autentiche
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 opacity-90">
-            Il marketplace più affidabile per incontri e amicizie in Italia
-          </p>
-          <div className="flex gap-4">
-            <Button size="lg" variant="secondary" className="gap-2" onClick={runSearch}>
-              <Search className="w-5 h-5" />
-              Scopri Annunci
-            </Button>
-            <Button size="lg" variant="outline" className="gap-2" onClick={openPublish}>
-              Pubblica Annuncio
-            </Button>
+        <section className="relative min-h-[400px] md:h-96 bg-gradient-to-br from-primary via-purple-500 to-secondary overflow-hidden flex items-center">
+          <div
+            className="absolute inset-0 opacity-15"
+            style={{
+              backgroundImage: "url(https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=400&fit=crop)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+          <div className="relative container flex flex-col items-center justify-center text-center text-white py-12 md:py-0">
+            <h1 className="text-4xl md:text-6xl font-bold mb-3 md:mb-4 font-poppins drop-shadow-lg">
+              Connessioni Autentiche
+            </h1>
+            <p className="text-lg md:text-2xl mb-6 md:mb-8 opacity-90 max-w-2xl px-2">
+              Il marketplace più affidabile per incontri e amicizie in Italia
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto px-4 sm:px-0">
+              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto" onClick={runSearch}>
+                <Search className="w-5 h-5" />
+                Scopri Annunci
+              </Button>
+              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto bg-white/90 hover:bg-white border-white text-primary" onClick={openPublish}>
+                Pubblica Annuncio
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* CATEGORIES */}
-      <section className="py-16 bg-muted/30">
-        <div className="container">
-          <h2 className="text-3xl font-bold mb-12 text-center font-poppins">
+        <section className="py-8 md:py-16 bg-muted/30">
+          <div className="container">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-12 text-center font-poppins">
             Sfoglia per Categoria
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -444,11 +510,11 @@ export default function Home() {
       </section>
 
       {/* ADS SECTION */}
-      <section className="py-16" id="ads-section">
+        <section className="py-8 md:py-16" id="ads-section">
         <div className="container">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-3xl font-bold font-poppins">
+              <h2 className="text-2xl md:text-3xl font-bold font-poppins">
                 Annunci in Evidenza
               </h2>
               {(searchTerm || categoryFilter) && (
@@ -482,14 +548,14 @@ export default function Home() {
               <p>Nessun annuncio disponibile</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               {filteredAds.map((ad) => (
               <Card
                 key={ad.id}
                 className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1"
                 onClick={() => navigate(`/ad?id=${ad.id}`)}
               >
-                  <div className="relative h-48 bg-muted overflow-hidden">
+                  <div className="relative h-36 md:h-48 bg-muted overflow-hidden">
                     {ad.image ? (
                       <img
                         src={ad.image}
@@ -522,14 +588,14 @@ export default function Home() {
                       <Heart className="w-5 h-5 text-primary" />
                     </button>
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                  <div className="p-3 md:p-4">
+                    <h3 className="font-bold text-base md:text-lg mb-1 md:mb-2 line-clamp-1">
                       {ad.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    <p className="text-xs md:text-sm text-muted-foreground mb-2 md:mb-3 line-clamp-2">
                       {ad.description}
                     </p>
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs md:text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <MapPin className="w-4 h-4" />
                         {ad.city}
@@ -749,7 +815,7 @@ export default function Home() {
       )}
 
       {/* FOOTER */}
-      <footer className="bg-muted/50 border-t border-border py-12 mt-16">
+      <footer className="bg-muted/50 border-t border-border py-8 md:py-12 mt-8 md:mt-16">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
