@@ -50,25 +50,10 @@ interface Report {
   created_at: string;
 }
 
-// Demo data for admin when Supabase not configured
-const DEMO_ADS: Ad[] = [
-  { id: "demo1", title: "Sofia - Dolce e passionale", description: "Ciao amore, sono Sofia...", city: "Roma", age: 26, image: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400", category: "donna-cerca-uomo", price: "150€/ora", is_active: true, is_premium: true, is_sponsored: false, is_verified: true, views: 3420, rating: 5, review_count: 42, created_at: "2026-06-15", user_id: "u1" },
-  { id: "demo2", title: "Giulia - Escort MILANO", description: "Ragazza elegante...", city: "Milano", age: 24, image: "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=400", category: "donna-cerca-uomo", price: "200€/ora", is_active: true, is_premium: true, is_sponsored: true, is_verified: true, views: 5610, rating: 5, review_count: 68, created_at: "2026-06-20", user_id: "u2" },
-  { id: "demo3", title: "Valentina - Rosa", description: "Ragazza italiana...", city: "Firenze", age: 28, image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400", category: "donna-cerca-uomo", price: "120€/ora", is_active: false, is_premium: false, is_sponsored: false, is_verified: false, views: 890, rating: 4, review_count: 23, created_at: "2026-06-28", user_id: "u3" },
-  { id: "demo4", title: "Marco - Atleta urbano", description: "Ragazzo sportivo...", city: "Bologna", age: 30, image: "https://images.unsplash.com/photo-1492562080023-ab3db95b4ce4?w=400", category: "uomo-cerca-donna", price: "100€/ora", is_active: true, is_premium: false, is_sponsored: false, is_verified: true, views: 450, rating: 4, review_count: 15, created_at: "2026-07-01", user_id: "u4" },
-];
-
-const DEMO_USERS: User[] = [
-  { id: "u1", email: "sofia@example.com", name: "Sofia", is_verified: true, credits: 50, created_at: "2026-06-10" },
-  { id: "u2", email: "giulia@example.com", name: "Giulia", is_verified: true, credits: 120, created_at: "2026-06-15" },
-  { id: "u3", email: "valentina@example.com", name: "Valentina", is_verified: false, credits: 0, created_at: "2026-06-25" },
-  { id: "u4", email: "marco@example.com", name: "Marco", is_verified: true, credits: 30, created_at: "2026-06-30" },
-];
-
-const DEMO_REPORTS: Report[] = [
-  { id: "r1", ad_id: "demo3", ad_title: "Valentina - Rosa", reason: "Annuncio falso o truffa", status: "pending", created_at: "2026-07-02" },
-  { id: "r2", ad_id: "demo1", ad_title: "Sofia - Dolce e passionale", reason: "Contenuto inappropriato", status: "resolved", created_at: "2026-06-29" },
-];
+// No demo data - real data only from Supabase
+const DEMO_ADS: Ad[] = [];
+const DEMO_USERS: User[] = [];
+const DEMO_REPORTS: Report[] = [];
 
 export default function AdminPanel() {
   const { isAdmin, loading: authLoading, logout, token: authToken, user: currentUser } = useAuth();
