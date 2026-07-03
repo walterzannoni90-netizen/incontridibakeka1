@@ -76,6 +76,13 @@ const CATEGORIES = [
   { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=600&fit=crop", count: "180+ annunci" },
   { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop", count: "20+ annunci" },
   { id: "trans", name: "Trans", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=600&fit=crop", count: "15+ annunci" },
+  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600&h=600&fit=crop", count: "10+ annunci" },
+  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&h=600&fit=crop", count: "8+ annunci" },
+  { id: "coppie", name: "Coppie", image: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=600&h=600&fit=crop", count: "5+ annunci" },
+  { id: "massaggi", name: "Massaggi", image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=600&fit=crop", count: "12+ annunci" },
+  { id: "accompagnatrici", name: "Accompagnatrici", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=600&fit=crop", count: "25+ annunci" },
+  { id: "evento-festa", name: "Eventi e Feste", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=600&h=600&fit=crop", count: "3+ annunci" },
+  { id: "amicizia", name: "Amicizia", image: "https://images.unsplash.com/photo-1522202176988-66273c2fd47f?w=600&h=600&fit=crop", count: "7+ annunci" },
 ];
 
 // No demo data - real data only from Supabase
