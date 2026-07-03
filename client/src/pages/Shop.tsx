@@ -13,7 +13,7 @@ const CREDIT_PACKS = [
   { credits: 10, price: 4.99, popular: false, features: ["Rendi Premium per 1 giorno", "Risali nei risultati 2 volte"] },
   { credits: 30, price: 9.99, popular: true, features: ["Rendi Premium per 7 giorni", "Evidenzia con SuperHot", "Risali nei risultati 5 volte"] },
   { credits: 70, price: 19.99, popular: false, features: ["Rendi Premium per 30 giorni", "Sponsorizza SuperTop 7 giorni", "Risali illimitato"] },
-  { credits: 150, price: 39.99, popular: false, features: ["Rendi Premium illimitato", "Sponsorizza SuperTop 30 giorni", "Tutte le funzioni premium", "Priorita nel supporto"] },
+  { credits: 150, price: 34.99, popular: false, features: ["Rendi Premium illimitato", "Sponsorizza SuperTop 30 giorni", "Tutte le funzioni premium", "Priorita nel supporto"] },
 ];
 
 export default function Shop() {
