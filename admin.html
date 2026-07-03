@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · IncontriDiBakeka</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0b1a1a;
+  --bg2: #0f2323;
+  --bg3: #152d2d;
+  --primary: #0ae0c0;
+  --primary-dim: rgba(10,224,192,0.12);
+  --accent: #f59e0b;
+  --accent-dim: rgba(245,158,11,0.12);
+  --danger: #ef4444;
+  --danger-dim: rgba(239,68,68,0.12);
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --glass: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.06);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-w: 240px;
+}
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  line-height: 1.5;
+}
+a { color: var(--primary); text-decoration: none; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform 0.3s;
+}
+.sidebar-header {
+  padding: 20px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-header .logo {
+  width: 32px; height: 32px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 16px; color: #0b1a1a;
+}
+.sidebar-header h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.sidebar-header small { display: block; font-size: 11px; color: var(--text-muted); font-weight: 400; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 10px; }
+.sidebar-nav a {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  cursor: pointer;
+  text-decoration: none;
+}
+.sidebar-nav a:hover { background: var(--glass); color: var(--text); }
+.sidebar-nav a.active { background: var(--primary-dim); color: var(--primary); }
+.sidebar-nav a i { width: 18px; text-align: center; font-size: 14px; }
+.sidebar-nav .nav-label { flex: 1; }
+.sidebar-nav .nav-badge {
+  background: var(--accent); color: #0b1a1a;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px;
+}
+.sidebar-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer a {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 13px;
+  cursor: pointer; text-decoration: none; transition: all 0.15s;
+}
+.sidebar-footer a:hover { background: var(--danger-dim); color: var(--danger); }
+
+/* Hamburger */
+.hamburger {
+  display: none;
+  position: fixed; top: 14px; left: 14px; z-index: 200;
+  width: 38px; height: 38px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-size: 18px;
+  cursor: pointer; align-items: center; justify-content: center;
+}
+.overlay {
+  display: none;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99;
+}
+
+/* Main */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  padding: 24px 28px;
+  min-height: 100vh;
+}
+.main-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px;
+}
+.main-header h1 { font-size: 22px; font-weight: 700; }
+.main-header p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.main-header .admin-user { font-size: 12px; color: var(--text-secondary); }
+
+/* Tabs */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.stat-card .stat-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.stat-card .stat-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+.stat-card .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* Toolbar */
+.toolbar {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.toolbar input, .toolbar select {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  color: var(--text); font-size: 13px;
+  outline: none;
+}
+.toolbar input:focus, .toolbar select:focus { border-color: var(--primary); }
+.toolbar input { flex: 1; min-width: 180px; }
+.toolbar .toolbar-actions { display: flex; gap: 8px; }
+
+/* Table */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px;
+}
+thead { background: var(--bg2); }
+th {
+  text-align: left; padding: 12px 14px;
+  font-weight: 600; font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+tr:hover td { background: var(--glass); }
+tr:last-child td { border-bottom: none; }
+td .cell-small { font-size: 12px; color: var(--text-secondary); }
+td .cell-mono { font-family: monospace; font-size: 11px; color: var(--text-muted); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600;
+  border: none; cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--primary); color: #0b1a1a; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-accent { background: var(--accent); color: #0b1a1a; }
+.btn-accent:hover { opacity: 0.85; }
+.btn-outline {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+.btn-ghost { background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { background: var(--glass); color: var(--text); }
+.btn-danger { background: var(--danger-dim); color: var(--danger); }
+.btn-danger:hover { background: rgba(239,68,68,0.2); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-xs { padding: 3px 7px; font-size: 10px; }
+
+/* Badges / Tags */
+.tag {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.tag-green { background: rgba(16,185,129,0.15); color: #10b981; }
+.tag-yellow { background: var(--accent-dim); color: var(--accent); }
+.tag-red { background: var(--danger-dim); color: var(--danger); }
+.tag-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.tag-gray { background: var(--glass); color: var(--text-muted); }
+
+/* Empty */
+.empty { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+.empty i { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 500;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px;
+  width: 90%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto;
+}
+.modal h3 { font-size: 18px; margin-bottom: 20px; }
+.modal label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.modal input, .modal textarea, .modal select {
+  width: 100%; padding: 9px 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px;
+  outline: none; margin-bottom: 14px;
+}
+.modal input:focus, .modal textarea:focus { border-color: var(--primary); }
+.modal textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+.modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+/* Settings */
+.settings-list { display: flex; flex-direction: column; gap: 8px; }
+.settings-item {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+.settings-item .skey { font-weight: 600; font-size: 13px; min-width: 140px; }
+.settings-item .sval { flex: 1; font-size: 13px; color: var(--text-secondary); word-break: break-all; }
+.settings-item .sacts { display: flex; gap: 6px; }
+
+/* Toast */
+.toast-container {
+  position: fixed; bottom: 24px; right: 24px; z-index: 999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 12px 20px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500;
+  animation: slideUp 0.25s ease;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text);
+}
+.toast.success { border-left: 3px solid #10b981; }
+.toast.error { border-left: 3px solid var(--danger); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .hamburger { display: flex; }
+  .overlay.open { display: block; }
+  .main { margin-left: 0; padding: 20px 16px; padding-top: 64px; }
+  .main-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .sidebar-header h2 small { display: inline; }
+}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<div class="hamburger" id="hamburger"><i class="fas fa-bars"></i></div>
+<div class="overlay" id="overlay"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">IB</div>
+    <div>
+      <h2>IncontriDiBakeka <small style="display:block;font-size:11px;color:var(--text-muted);font-weight:400">Admin Panel</small></h2>
+    </div>
+  </div>
+  <nav class="sidebar-nav" id="sidebarNav">
+    <a class="active" data-tab="dashboard"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+    <a data-tab="users"><i class="fas fa-users"></i><span class="nav-label">Users</span></a>
+    <a data-tab="ads"><i class="fas fa-ad"></i><span class="nav-label">Ads</span></a>
+    <a data-tab="categories"><i class="fas fa-tags"></i><span class="nav-label">Categories</span></a>
+    <a data-tab="cities"><i class="fas fa-city"></i><span class="nav-label">Cities</span></a>
+    <a data-tab="support"><i class="fas fa-headset"></i><span class="nav-label">Support</span></a>
+    <a data-tab="logs"><i class="fas fa-bug"></i><span class="nav-label">Error Log</span></a>
+    <a data-tab="settings"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="/" target="_blank"><i class="fas fa-external-link-alt"></i> Vai al sito</a>
+    <a id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="main-header">
+    <div>
+      <h1 id="pageTitle">Dashboard</h1>
+      <p id="pageSubtitle">Panoramica del sito</p>
+    </div>
+    <div class="admin-user" id="adminUser"></div>
+  </div>
+
+  <div id="tabDashboard" class="tab-content active">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+      <div class="stat-card"><h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:8px">Riepilogo Rapido</h3><div id="quickSummary" style="font-size:13px;color:var(--text-muted)">Caricamento...</div></div>
+      <div class="stat-card"><h3 style="font-size:14px;color:var(--text-secondary);margin-bottom:8px">Ultime Attività</h3><div id="recentActivity" style="font-size:13px;color:var(--text-muted)">Caricamento...</div></div>
+    </div>
+  </div>
+
+  <div id="tabUsers" class="tab-content">
+    <div class="toolbar">
+      <input type="text" id="usersSearch" placeholder="Cerca per nome o email..." oninput="renderUsers()">
+      <select id="usersGenderFilter" onchange="renderUsers()"><option value="">Tutti</option><option value="male">Uomo</option><option value="female">Donna</option><option value="other">Altro</option></select>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Email</th><th>Città</th><th>Genere</th><th>Verificato</th><th>Premium</th><th>Crediti</th><th style="text-align:right">Azioni</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+  </div>
+
+  <div id="tabAds" class="tab-content">
+    <div class="toolbar">
+      <input type="text" id="adsSearch" placeholder="Cerca annuncio..." oninput="renderAds()">
+      <select id="adsActiveFilter" onchange="renderAds()"><option value="">Tutti</option><option value="true">Attivi</option><option value="false">Disattivi</option></select>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Titolo</th><th>Categoria</th><th>Città</th><th>Visite</th><th>Attivo</th><th>Classe</th><th style="text-align:right">Azioni</th></tr></thead><tbody id="adsBody"></tbody></table></div>
+  </div>
+
+  <div id="tabCategories" class="tab-content">
+    <div class="toolbar"><div class="toolbar-actions"><button class="btn btn-primary btn-sm" onclick="showCategoryModal()"><i class="fas fa-plus"></i> Aggiungi</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Slug</th><th>Nome</th><th>Icona</th><th>Colore</th><th>Ordine</th><th style="text-align:right">Azioni</th></tr></thead><tbody id="categoriesBody"></tbody></table></div>
+  </div>
+
+  <div id="tabCities" class="tab-content">
+    <div class="toolbar"><div class="toolbar-actions"><button class="btn btn-primary btn-sm" onclick="showCityModal()"><i class="fas fa-plus"></i> Aggiungi</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Slug</th><th>Regione</th><th style="text-align:right">Azioni</th></tr></thead><tbody id="citiesBody"></tbody></table></div>
+  </div>
+
+  <div id="tabSupport" class="tab-content">
+    <div class="toolbar">
+      <span style="color:var(--text-muted);font-size:13px" id="supportCount"></span>
+      <div class="toolbar-actions"><button class="btn btn-outline btn-sm" onclick="markAllRead()"><i class="fas fa-check-double"></i> Segna tutti letti</button></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Email</th><th>Messaggio</th><th>Data</th><th>Stato</th><th style="text-align:right">Azioni</th></tr></thead><tbody id="supportBody"></tbody></table></div>
+  </div>
+
+  <div id="tabLogs" class="tab-content">
+    <div class="toolbar">
+      <span style="color:var(--text-muted);font-size:13px" id="logCount"></span>
+      <div class="toolbar-actions"><button class="btn btn-danger btn-sm" onclick="clearLogs()"><i class="fas fa-trash"></i> Cancella tutti</button></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Source</th><th>Messaggio</th><th>Utente</th></tr></thead><tbody id="logsBody"></tbody></table></div>
+  </div>
+
+  <div id="tabSettings" class="tab-content">
+    <div class="toolbar"><div class="toolbar-actions"><button class="btn btn-primary btn-sm" onclick="showSettingModal()"><i class="fas fa-plus"></i> Aggiungi</button></div></div>
+    <div id="settingsList" class="settings-list"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const SUPABASE_URL = 'https://rdqsmfgpbuswzilgbjyr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcXNtZmdwYnVzd3ppbGdianlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MzYyMTcsImV4cCI6MjA5ODQxMjIxN30.EthEz46lh_bnJzjpQi9GrXiQsinyb5g47V1p1bwlL_E';
+const ADMIN_EMAILS = ['walterzannoni90@outlook.it','walterzannoni90@gmail.com','Lucianopoleselli@icloud.com'];
+
+// Error logging
+window.addEventListener('error', e => {
+  const log = JSON.parse(localStorage.getItem('errorLog') || '[]');
+  log.push({ timestamp: new Date().toISOString(), source: e.filename || 'unknown', message: e.message || String(e), user: (JSON.parse(localStorage.getItem('currentUser') || '{}')).email || '?' });
+  if (log.length > 200) log.splice(0, log.length - 200);
+  localStorage.setItem('errorLog', JSON.stringify(log));
+});
+window.addEventListener('unhandledrejection', e => {
+  const log = JSON.parse(localStorage.getItem('errorLog') || '[]');
+  log.push({ timestamp: new Date().toISOString(), source: 'Promise', message: e.reason?.message || String(e.reason), user: (JSON.parse(localStorage.getItem('currentUser') || '{}')).email || '?' });
+  if (log.length > 200) log.splice(0, log.length - 200);
+  localStorage.setItem('errorLog', JSON.stringify(log));
+});
+
+function h(token) { return { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) }; }
+async function get(table, q) { const t = localStorage.getItem('authToken'); const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + q, { headers: h(t) }); if (!r.ok) throw new Error('GET ' + table + ': ' + r.status); return r.json(); }
+async function post(table, d) { const t = localStorage.getItem('authToken'); const r = await fetch(SUPABASE_URL + '/rest/v1/' + table, { method: 'POST', headers: {...h(t), 'Prefer': 'return=representation'}, body: JSON.stringify(d) }); if (!r.ok) throw new Error('POST ' + table + ': ' + r.status); return r.json(); }
+async function patch(table, d, m) { const t = localStorage.getItem('authToken'); const q = Object.entries(m).map(([k,v]) => k+'=eq.'+encodeURIComponent(v)).join('&'); const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + q, { method: 'PATCH', headers: {...h(t), 'Prefer': 'return=representation'}, body: JSON.stringify(d) }); if (!r.ok) throw new Error('PATCH ' + table + ': ' + r.status); return r.json(); }
+async function del(table, m) { const t = localStorage.getItem('authToken'); const q = Object.entries(m).map(([k,v]) => k+'=eq.'+encodeURIComponent(v)).join('&'); const r = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + q, { method: 'DELETE', headers: h(t) }); if (!r.ok) throw new Error('DELETE ' + table + ': ' + r.status); return r.json(); }
+
+function toast(msg, type) {
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type || '');
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+function showModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// Auth check
+(function() {
+  const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
+  if (!cu || !ADMIN_EMAILS.includes(cu.email?.toLowerCase())) { window.location.href = '/'; return; }
+  document.getElementById('adminUser').textContent = '👤 ' + cu.name + ' · ' + cu.email;
+})();
+
+// Sidebar nav
+const navLinks = document.querySelectorAll('.sidebar-nav a[data-tab]');
+const tabContents = {
+  dashboard: document.getElementById('tabDashboard'),
+  users: document.getElementById('tabUsers'),
+  ads: document.getElementById('tabAds'),
+  categories: document.getElementById('tabCategories'),
+  cities: document.getElementById('tabCities'),
+  support: document.getElementById('tabSupport'),
+  logs: document.getElementById('tabLogs'),
+  settings: document.getElementById('tabSettings')
+};
+const pageTitles = {
+  dashboard: ['Dashboard', 'Panoramica del sito'],
+  users: ['Users', 'Gestione utenti'],
+  ads: ['Ads', 'Gestione annunci'],
+  categories: ['Categories', 'Gestione categorie'],
+  cities: ['Cities', 'Gestione città'],
+  support: ['Support', 'Messaggi di supporto'],
+  logs: ['Error Log', 'Registro errori'],
+  settings: ['Settings', 'Impostazioni del sito']
+};
+
+navLinks.forEach(a => {
+  a.addEventListener('click', () => {
+    navLinks.forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    const tab = a.dataset.tab;
+    Object.values(tabContents).forEach(t => t.classList.remove('active'));
+    tabContents[tab].classList.add('active');
+    const [t, s] = pageTitles[tab];
+    document.getElementById('pageTitle').textContent = t;
+    document.getElementById('pageSubtitle').textContent = s;
+    closeSidebar();
+    loadTab(tab);
+  });
+});
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+});
+document.getElementById('overlay').addEventListener('click', closeSidebar);
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('authToken');
+  window.location.href = '/';
+});
+
+// State
+let usersData = [];
+let adsData = [];
+let categoriesData = [];
+let citiesData = [];
+let supportData = [];
+
+// --- Dashboard ---
+async function loadDashboard() {
+  try {
+    const r = await fetch(SUPABASE_URL + '/api/stats');
+    const stats = await r.json();
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-icon" style="background:var(--primary-dim);color:var(--primary)"><i class="fas fa-ad"></i></div><div class="stat-value">${stats.totalAds ?? '?'}</div><div class="stat-label">Annunci Attivi</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--accent-dim);color:var(--accent)"><i class="fas fa-crown"></i></div><div class="stat-value">${stats.premiumAds ?? '?'}</div><div class="stat-label">Annunci Premium</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i class="fas fa-user-check"></i></div><div class="stat-value">${stats.verifiedUsers ?? '?'}</div><div class="stat-label">Utenti Verificati</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(96,165,250,0.15);color:#60a5fa"><i class="fas fa-city"></i></div><div class="stat-value">${stats.citiesAvailable ?? '?'}</div><div class="stat-label">Città</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(139,92,246,0.15);color:#a78bfa"><i class="fas fa-tags"></i></div><div class="stat-value">${stats.categoriesAvailable ?? '?'}</div><div class="stat-label">Categorie</div></div>
+    `;
+  } catch (e) {
+    document.getElementById('statsGrid').innerHTML = '<div class="empty"><i class="fas fa-exclamation-triangle"></i><p>Errore caricamento statistiche</p></div>';
+  }
+  try {
+    const [users, ads, msgs] = await Promise.all([
+      get('profiles', 'select=*&order=created_at.desc&limit=5'),
+      get('ads', 'select=*&order=created_at.desc&limit=5'),
+      get('support_messages', 'select=*&order=created_at.desc&limit=5')
+    ]);
+    document.getElementById('quickSummary').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span>👥 <strong>${users.length || 0}</strong> ultimi utenti registrati</span>
+        <span>📄 <strong>${ads.length || 0}</strong> ultimi annunci</span>
+        <span>💬 <strong>${msgs.length || 0}</strong> ultimi messaggi supporto</span>
+      </div>
+    `;
+    document.getElementById('recentActivity').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:12px">
+        ${(ads || []).slice(0, 3).map(a => '<span>📌 <strong>' + esc(a.title) + '</strong> <span style="color:var(--text-muted)">' + new Date(a.created_at).toLocaleDateString('it-IT') + '</span></span>').join('') || '<span style="color:var(--text-muted)">Nessuna attività recente</span>'}
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('quickSummary').textContent = 'Errore caricamento';
+    document.getElementById('recentActivity').textContent = 'Errore caricamento';
+  }
+}
+
+// --- Users ---
+async function loadUsers() {
+  try {
+    usersData = await get('profiles', 'select=*&order=created_at.desc');
+  } catch (e) { usersData = []; }
+  renderUsers();
+}
+function renderUsers() {
+  const q = (document.getElementById('usersSearch').value || '').toLowerCase();
+  const g = document.getElementById('usersGenderFilter').value;
+  let filtered = usersData.filter(u => {
+    if (q && !(u.name || '').toLowerCase().includes(q) && !(u.email || '').toLowerCase().includes(q)) return false;
+    if (g && u.gender !== g) return false;
+    return true;
+  });
+  document.getElementById('usersBody').innerHTML = filtered.map(u => `
+    <tr>
+      <td><strong>${esc(u.name || '')}</strong> ${u.surname ? '<span class="cell-small">' + esc(u.surname) + '</span>' : ''}</td>
+      <td class="cell-small">${esc(u.email || '—')}</td>
+      <td class="cell-small">${esc(u.city || '—')}</td>
+      <td>${esc(u.gender || '—')}</td>
+      <td>${u.is_verified ? '<span class="tag tag-green">✅</span>' : '<span class="tag tag-gray">✕</span>'}</td>
+      <td>${u.is_premium ? '<span class="tag tag-yellow">⭐</span>' : '<span class="tag tag-gray">—</span>'}</td>
+      <td class="cell-small">${u.credits ?? 0}</td>
+      <td style="text-align:right"><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}')"><i class="fas fa-trash"></i></button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" class="empty"><i class="fas fa-users"></i><p>Nessun utente trovato</p></td></tr>';
+}
+async function editUser(id) {
+  const u = usersData.find(x => x.id === id);
+  if (!u) return;
+  showModal(`
+    <h3>Modifica Utente</h3>
+    <label>Nome</label><input id="mf_name" value="${esc(u.name || '')}">
+    <label>Cognome</label><input id="mf_surname" value="${esc(u.surname || '')}">
+    <label>Città</label><input id="mf_city" value="${esc(u.city || '')}">
+    <label>Genere</label>
+    <select id="mf_gender"><option value="male" ${u.gender==='male'?'selected':''}>Uomo</option><option value="female" ${u.gender==='female'?'selected':''}>Donna</option><option value="other" ${u.gender==='other'?'selected':''}>Altro</option></select>
+    <label>Crediti</label><input id="mf_credits" type="number" value="${u.credits ?? 0}">
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><input type="checkbox" id="mf_verified" ${u.is_verified?'checked':''}> Verificato</label>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><input type="checkbox" id="mf_premium" ${u.is_premium?'checked':''}> Premium</label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveUser('${id}')">Salva</button>
+    </div>
+  `);
+}
+async function saveUser(id) {
+  const d = {
+    name: document.getElementById('mf_name').value,
+    surname: document.getElementById('mf_surname').value,
+    city: document.getElementById('mf_city').value,
+    gender: document.getElementById('mf_gender').value,
+    credits: parseInt(document.getElementById('mf_credits').value) || 0,
+    is_verified: document.getElementById('mf_verified').checked,
+    is_premium: document.getElementById('mf_premium').checked
+  };
+  try {
+    await patch('profiles', d, { id });
+    toast('✅ Utente aggiornato', 'success');
+    closeModal();
+    loadUsers();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function deleteUser(id) {
+  if (!confirm('Eliminare questo utente? (attenzione: operazione irreversibile)')) return;
+  try {
+    await del('profiles', { id });
+    toast('🗑️ Utente eliminato', 'success');
+    loadUsers();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+
+// --- Ads ---
+async function loadAds() {
+  try {
+    adsData = await get('ads', 'select=*&order=created_at.desc');
+  } catch (e) { adsData = []; }
+  renderAds();
+}
+function renderAds() {
+  const q = (document.getElementById('adsSearch').value || '').toLowerCase();
+  const af = document.getElementById('adsActiveFilter').value;
+  let filtered = adsData.filter(a => {
+    if (q && !(a.title || '').toLowerCase().includes(q)) return false;
+    if (af !== '' && (a.is_active === undefined || a.is_active === null)) return false;
+    if (af !== '' && String(a.is_active) !== af) return false;
+    return true;
+  });
+  document.getElementById('adsBody').innerHTML = filtered.map(a => `
+    <tr>
+      <td><strong>${esc(a.title || '')}</strong></td>
+      <td class="cell-small">${esc(a.category || '—')}</td>
+      <td class="cell-small">${esc(a.city || '—')}</td>
+      <td class="cell-small">${a.views ?? 0}</td>
+      <td>${a.is_active ? '<span class="tag tag-green">Attivo</span>' : '<span class="tag tag-red">No</span>'}</td>
+      <td>${a.is_premium ? '<span class="tag tag-yellow">Premium</span>' : a.is_sponsored ? '<span class="tag tag-blue">Sponsor</span>' : '<span class="tag tag-gray">Normale</span>'}</td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-xs" onclick="toggleAd('${a.id}', ${!a.is_active})"><i class="fas ${a.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+        <button class="btn btn-danger btn-xs" onclick="deleteAd('${a.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="empty"><i class="fas fa-ad"></i><p>Nessun annuncio trovato</p></td></tr>';
+}
+async function toggleAd(id, active) {
+  try {
+    await patch('ads', { is_active: active }, { id });
+    toast(active ? '✅ Annuncio attivato' : '✅ Annuncio disattivato', 'success');
+    loadAds();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function deleteAd(id) {
+  if (!confirm('Eliminare questo annuncio?')) return;
+  try {
+    await del('ads', { id });
+    toast('🗑️ Annuncio eliminato', 'success');
+    loadAds();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+
+// --- Categories ---
+async function loadCategories() {
+  try {
+    categoriesData = await get('categories', 'select=*&order=sort_order.asc');
+  } catch (e) { categoriesData = []; }
+  renderCategories();
+}
+function renderCategories() {
+  document.getElementById('categoriesBody').innerHTML = categoriesData.map(c => `
+    <tr>
+      <td class="cell-mono">${esc(c.slug)}</td>
+      <td><strong>${esc(c.name)}</strong></td>
+      <td>${esc(c.icon || '—')}</td>
+      <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${c.color || '#8b5cf6'};vertical-align:middle"></span> <span class="cell-small">${c.color || ''}</span></td>
+      <td class="cell-small">${c.sort_order ?? 0}</td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-xs" onclick="editCategory('${c.slug}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-danger btn-xs" onclick="deleteCategory('${c.slug}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="empty"><i class="fas fa-tags"></i><p>Nessuna categoria</p></td></tr>';
+}
+function showCategoryModal(data) {
+  const d = data || { slug: '', name: '', icon: '', color: '#8b5cf6', sort_order: 0 };
+  const isEdit = !!data;
+  showModal(`
+    <h3>${isEdit ? 'Modifica' : 'Aggiungi'} Categoria</h3>
+    <label>Slug</label><input id="cf_slug" value="${esc(d.slug)}" ${isEdit ? 'readonly' : ''}>
+    <label>Nome</label><input id="cf_name" value="${esc(d.name)}">
+    <label>Icona (classe FontAwesome, es. fa-female)</label><input id="cf_icon" value="${esc(d.icon)}">
+    <label>Colore</label><input id="cf_color" type="color" value="${d.color || '#8b5cf6'}">
+    <label>Ordine</label><input id="cf_sort" type="number" value="${d.sort_order ?? 0}">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveCategory('${isEdit ? d.slug : ''}')">Salva</button>
+    </div>
+  `);
+}
+function editCategory(slug) {
+  const c = categoriesData.find(x => x.slug === slug);
+  if (c) showCategoryModal(c);
+}
+async function saveCategory(existingSlug) {
+  const d = {
+    slug: document.getElementById('cf_slug').value.trim(),
+    name: document.getElementById('cf_name').value.trim(),
+    icon: document.getElementById('cf_icon').value.trim(),
+    color: document.getElementById('cf_color').value,
+    sort_order: parseInt(document.getElementById('cf_sort').value) || 0
+  };
+  if (!d.slug || !d.name) { toast('❌ Slug e nome richiesti', 'error'); return; }
+  try {
+    if (existingSlug) {
+      await patch('categories', d, { slug: existingSlug });
+      toast('✅ Categoria aggiornata', 'success');
+    } else {
+      await post('categories', d);
+      toast('✅ Categoria creata', 'success');
+    }
+    closeModal();
+    loadCategories();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function deleteCategory(slug) {
+  if (!confirm('Eliminare categoria "' + slug + '"?')) return;
+  try {
+    await del('categories', { slug });
+    toast('🗑️ Categoria eliminata', 'success');
+    loadCategories();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+
+// --- Cities ---
+async function loadCities() {
+  try {
+    citiesData = await get('cities', 'select=*&order=name.asc');
+  } catch (e) { citiesData = []; }
+  renderCities();
+}
+function renderCities() {
+  document.getElementById('citiesBody').innerHTML = citiesData.map(c => `
+    <tr>
+      <td><strong>${esc(c.name)}</strong></td>
+      <td class="cell-mono">${esc(c.slug)}</td>
+      <td class="cell-small">${esc(c.region || '—')}</td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-xs" onclick="editCity('${c.name}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-danger btn-xs" onclick="deleteCity('${c.name}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="empty"><i class="fas fa-city"></i><p>Nessuna città</p></td></tr>';
+}
+function showCityModal(data) {
+  const d = data || { name: '', slug: '', region: '' };
+  const isEdit = !!data;
+  showModal(`
+    <h3>${isEdit ? 'Modifica' : 'Aggiungi'} Città</h3>
+    <label>Nome</label><input id="citf_name" value="${esc(d.name)}" ${isEdit ? 'readonly' : ''}>
+    <label>Slug</label><input id="citf_slug" value="${esc(d.slug)}">
+    <label>Regione</label><input id="citf_region" value="${esc(d.region || '')}">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveCity('${isEdit ? d.name : ''}')">Salva</button>
+    </div>
+  `);
+}
+function editCity(name) {
+  const c = citiesData.find(x => x.name === name);
+  if (c) showCityModal(c);
+}
+async function saveCity(existingName) {
+  const d = {
+    name: document.getElementById('citf_name').value.trim(),
+    slug: document.getElementById('citf_slug').value.trim(),
+    region: document.getElementById('citf_region').value.trim()
+  };
+  if (!d.name || !d.slug) { toast('❌ Nome e slug richiesti', 'error'); return; }
+  try {
+    if (existingName) {
+      await patch('cities', d, { name: existingName });
+      toast('✅ Città aggiornata', 'success');
+    } else {
+      await post('cities', d);
+      toast('✅ Città creata', 'success');
+    }
+    closeModal();
+    loadCities();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function deleteCity(name) {
+  if (!confirm('Eliminare città "' + name + '"?')) return;
+  try {
+    await del('cities', { name });
+    toast('🗑️ Città eliminata', 'success');
+    loadCities();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+
+// --- Support ---
+async function loadSupport() {
+  try {
+    supportData = await get('support_messages', 'select=*&order=created_at.desc');
+  } catch (e) { supportData = []; }
+  renderSupport();
+}
+function renderSupport() {
+  const list = supportData;
+  document.getElementById('supportCount').textContent = list.length + ' messaggi';
+  document.getElementById('supportBody').innerHTML = list.map(m => `
+    <tr style="${m.is_read ? '' : 'background:var(--accent-dim)'}">
+      <td class="cell-small">${esc(m.email || 'Anonimo')}</td>
+      <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">${esc((m.message || '').slice(0, 100))}</td>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">${new Date(m.created_at).toLocaleDateString('it-IT') + ' ' + new Date(m.created_at).toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${m.is_read ? '<span class="tag tag-gray">Letto</span>' : '<span class="tag tag-yellow">Nuovo</span>'}</td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-xs" onclick="viewMessage('${m.id}')"><i class="fas fa-eye"></i></button>
+        <button class="btn btn-ghost btn-xs" onclick="toggleRead('${m.id}', ${m.is_read})"><i class="fas ${m.is_read ? 'fa-envelope' : 'fa-envelope-open'}"></i></button>
+        <button class="btn btn-danger btn-xs" onclick="deleteMessage('${m.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" class="empty"><i class="fas fa-headset"></i><p>Nessun messaggio</p></td></tr>';
+}
+function viewMessage(id) {
+  const m = supportData.find(x => x.id === id);
+  if (!m) return;
+  showModal(`
+    <h3>Messaggio</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Da: ${esc(m.email)} · ${new Date(m.created_at).toLocaleString('it-IT')}</p>
+    <div style="background:var(--bg3);padding:16px;border-radius:var(--radius-sm);font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(m.message)}</div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-primary" onclick="toggleRead('${m.id}', ${m.is_read});closeModal()">${m.is_read ? 'Segna non letto' : 'Segna letto'}</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Chiudi</button>
+    </div>
+  `);
+}
+async function toggleRead(id, current) {
+  try {
+    await patch('support_messages', { is_read: !current }, { id });
+    toast('✅ Aggiornato', 'success');
+    loadSupport();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function markAllRead() {
+  try {
+    const unread = supportData.filter(m => !m.is_read);
+    if (!unread.length) { toast('Nessun messaggio non letto', ''); return; }
+    for (const m of unread) await patch('support_messages', { is_read: true }, { id: m.id });
+    toast('✅ Tutti segnati come letti', 'success');
+    loadSupport();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function deleteMessage(id) {
+  if (!confirm('Eliminare questo messaggio?')) return;
+  try {
+    await del('support_messages', { id });
+    toast('🗑️ Messaggio eliminato', 'success');
+    loadSupport();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+
+// --- Error Log ---
+function loadLogs() {
+  const logs = JSON.parse(localStorage.getItem('errorLog') || '[]');
+  document.getElementById('logCount').textContent = logs.length + ' errori';
+  document.getElementById('logsBody').innerHTML = logs.reverse().map(l => `
+    <tr>
+      <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">${l.timestamp ? new Date(l.timestamp).toLocaleString('it-IT') : '?'}</td>
+      <td class="cell-small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(l.source || '?')}</td>
+      <td style="font-size:13px">${esc(l.message || '')}</td>
+      <td class="cell-small">${esc(l.user || '?')}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="empty"><i class="fas fa-check-circle" style="color:#10b981"></i><p>Nessun errore registrato</p></td></tr>';
+}
+function clearLogs() {
+  if (!confirm('Cancellare tutti gli errori registrati?')) return;
+  localStorage.setItem('errorLog', '[]');
+  toast('🗑️ Log cancellati', 'success');
+  loadLogs();
+}
+
+// --- Settings ---
+async function loadSettings() {
+  try {
+    const data = await get('site_settings', 'select=*&order=key.asc');
+    const list = document.getElementById('settingsList');
+    if (!data || !data.length) {
+      list.innerHTML = '<div class="empty"><i class="fas fa-cog"></i><p>Nessuna impostazione</p></div>';
+      return;
+    }
+    list.innerHTML = data.map(s => {
+      const val = typeof s.value === 'object' ? JSON.stringify(s.value) : String(s.value);
+      return `
+        <div class="settings-item">
+          <div class="skey">${esc(s.key)}</div>
+          <div class="sval">${esc(val)}</div>
+          <div class="sacts">
+            <button class="btn btn-ghost btn-xs" onclick="editSetting('${esc(s.key)}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-xs" onclick="deleteSetting('${esc(s.key)}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    document.getElementById('settingsList').innerHTML = '<div class="empty"><i class="fas fa-exclamation-triangle"></i><p>Errore caricamento impostazioni</p></div>';
+  }
+}
+function showSettingModal(data) {
+  const d = data || { key: '', value: '' };
+  const isEdit = !!data;
+  showModal(`
+    <h3>${isEdit ? 'Modifica' : 'Aggiungi'} Impostazione</h3>
+    <label>Chiave</label><input id="sf_key" value="${esc(d.key)}" ${isEdit ? 'readonly' : ''}>
+    <label>Valore (JSON)</label><textarea id="sf_value">${esc(typeof d.value === 'object' ? JSON.stringify(d.value) : String(d.value || ''))}</textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveSetting('${isEdit ? d.key : ''}')">Salva</button>
+    </div>
+  `);
+}
+function editSetting(key) {
+  try {
+    get('site_settings', 'select=*&key=eq.' + encodeURIComponent(key)).then(data => {
+      if (data && data[0]) showSettingModal(data[0]);
+    });
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function saveSetting(existingKey) {
+  const key = document.getElementById('sf_key').value.trim();
+  const valRaw = document.getElementById('sf_value').value.trim();
+  if (!key) { toast('❌ Chiave richiesta', 'error'); return; }
+  let value;
+  try { value = JSON.parse(valRaw); } catch { value = valRaw; }
+  try {
+    if (existingKey) {
+      await patch('site_settings', { key, value }, { key: existingKey });
+      toast('✅ Impostazione aggiornata', 'success');
+    } else {
+      await post('site_settings', { key, value });
+      toast('✅ Impostazione creata', 'success');
+    }
+    closeModal();
+    loadSettings();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+async function deleteSetting(key) {
+  if (!confirm('Eliminare impostazione "' + key + '"?')) return;
+  try {
+    await del('site_settings', { key });
+    toast('🗑️ Impostazione eliminata', 'success');
+    loadSettings();
+  } catch (e) { toast('❌ Errore: ' + e.message, 'error'); }
+}
+
+// --- Helpers ---
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+function loadTab(tab) {
+  switch (tab) {
+    case 'dashboard': loadDashboard(); break;
+    case 'users': loadUsers(); break;
+    case 'ads': loadAds(); break;
+    case 'categories': loadCategories(); break;
+    case 'cities': loadCities(); break;
+    case 'support': loadSupport(); break;
+    case 'logs': loadLogs(); break;
+    case 'settings': loadSettings(); break;
+  }
+}
+
+// Init
+loadDashboard();
+loadUsers();
+loadAds();
+loadCategories();
+loadCities();
+loadSupport();
+loadLogs();
+loadSettings();
+</script>
+</body>
+</html>

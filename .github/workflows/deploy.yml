@@ -20,6 +20,8 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +33,23 @@ jobs:
       - name: Installa dipendenze
         run: npm ci || npm install
 
+      - name: Check required files
+        run: |
+          REQUIRED_FILES=("index.html" "app.js" "style.css" "manifest.json")
+          MISSING=0
+          for f in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required file: $f"
+              MISSING=1
+            else
+              echo "✓ $f trovato"
+            fi
+          done
+          if [ "$MISSING" -eq 1 ]; then
+            exit 1
+          fi
+          echo "✅ Tutti i file richiesti sono presenti"
+
       - name: Fix database Supabase
         env:
           SUPABASE_ADMIN_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
@@ -39,15 +58,41 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           echo "=== Fix Database ==="
-          node apply-fixes.js || echo "⚠️ Fix saltate (Admin Token mancante)"
+          node apply-fixes.js || true
           echo ""
+
+      - name: Seed Dati Supabase
+        env:
+          SUPABASE_ADMIN_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://rdqsmfgpbuswzilgbjyr.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
           echo "=== Seed Dati ==="
           node supabase-seed.js --yes || echo "⚠️ Seed saltato"
+
+      - name: Setup SPA routing (404.html)
+        run: |
+          if [ -f "index.html" ]; then
+            cp index.html 404.html
+            echo "✓ 404.html creato da index.html"
+          else
+            echo "::warning::index.html non trovato, skip 404.html"
+          fi
+
+      - name: Setup CNAME
+        run: |
+          if [ -f "CNAME" ]; then
+            echo "✓ CNAME trovato: $(cat CNAME)"
+          else
+            echo "Nessun CNAME configurato, skip dominio personalizzato"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

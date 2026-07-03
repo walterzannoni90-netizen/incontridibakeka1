@@ -205,7 +205,7 @@ INSERT INTO categories (slug, name, icon, class, description, color, sort_order)
   ('donna-cerca-donna', 'Donna Cerca Donna', 'fa-venus', 'womenseekwomen', 'Donne che amano altre donne.', '#ff3b30', 4),
   ('coppie', 'Coppie', 'fa-heart', 'couples', 'Coppie per avventure swingers.', '#af52de', 5),
   ('cerco-amici', 'Cerco Amici', 'fa-handshake', 'seekfriends', 'Amicizie vere nella tua città.', '#34c759', 6),
-  ('anima-gemella', 'Cerco Anima Gemella', 'fa-dove', 'seeksoulmate', 'Trova l\'altra metà.', '#ff6482', 7),
+  ('anima-gemella', 'Cerco Anima Gemella', 'fa-dove', 'seeksoulmate', 'Trova l''altra metà.', '#ff6482', 7),
   ('trans', 'Trans', 'fa-transgender', 'trans', 'Incontri trans e travestiti.', '#e84393', 8)
 ON CONFLICT (slug) DO NOTHING;
 
