@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS has_paid BOOLEAN DEFAULT FALSE;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS ads_count INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
 
 -- ============================================
 -- 2. ADS TABLE
@@ -543,7 +544,7 @@ CREATE POLICY "ads_storage_upload" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'ads' AND auth.uid() IS NOT NULL);
 
 -- Policy: chiunque puo vedere le foto del bucket 'ads'
-DROP POLICY IF EXISTS "ads_storage_read" ON storage.objects
+DROP POLICY IF EXISTS "ads_storage_read" ON storage.objects;
 CREATE POLICY "ads_storage_read" ON storage.objects
   FOR SELECT USING (bucket_id = 'ads');
 
