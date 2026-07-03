@@ -1,40 +1,65 @@
-name: Deploy Supabase Edge Functions
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [master]
-    paths:
-      - "supabase/functions/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          version: latest
+          node-version: '20'
 
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
 
-      - name: Set Edge Function secrets
-        run: |
-          supabase secrets set \
-            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
-            STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
-            SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            SUPABASE_URL="${{ secrets.SUPABASE_URL }}"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
 
-      - name: Deploy functions
-        run: |
-          supabase functions deploy stripe-checkout
-          supabase functions deploy stripe-webhook
+      - name: Build React app
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          VITE_STRIPE_PRICE_10: ${{ secrets.VITE_STRIPE_PRICE_10 }}
+          VITE_STRIPE_PRICE_30: ${{ secrets.VITE_STRIPE_PRICE_30 }}
+          VITE_STRIPE_PRICE_70: ${{ secrets.VITE_STRIPE_PRICE_70 }}
+          VITE_STRIPE_PRICE_150: ${{ secrets.VITE_STRIPE_PRICE_150 }}
+          VITE_BASE_PATH: "/"
+        run: pnpm build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'dist/public'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
