@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Incontridibakeka — Il portale premium di annunci incontri. Escort, accompagnatori, coppie, trans e molto più. Esperienza esclusiva nella tua città.">
-  <meta name="theme-color" content="#0b1a1a">
+  <meta name="theme-color" content="#f8fafc">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -142,7 +142,7 @@
           <button class="btn btn-primary" onclick="openPublish()" style="padding:6px 12px;font-size:0.7rem">
             <i class="fas fa-plus"></i>
           </button>
-          <button class="btn btn-ghost" onclick="openLogin()">
+          <button class="btn btn-ghost" onclick="openAccount()">
             <i class="fas fa-user"></i>
           </button>
           <button class="hamburger" id="hamburger" onclick="toggleMenu()">
@@ -326,7 +326,7 @@
             <input type="checkbox" id="loginRemember">
             <span>Ricordami</span>
           </label>
-          <a href="#" class="forgot-link" onclick="alert('Funzionalità di reset password in arrivo!'); return false;">Password dimenticata?</a>
+          <a href="#" class="forgot-link" onclick="recoverPassword(); return false;">Password dimenticata?</a>
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
           <i class="fas fa-sign-in-alt"></i> Accedi
@@ -609,7 +609,7 @@
             <input type="text" class="form-control" placeholder="Mario Rossi">
           </div>
         </div>
-        <button class="btn btn-primary btn-block btn-lg" onclick="nextSponsorStep(4)" style="margin-top: 1rem;">
+        <button class="btn btn-primary btn-block btn-lg" id="sponsorPayBtn" onclick="completeSponsor()" style="margin-top: 1rem;">
           <i class="fas fa-lock"></i> Paga €<span id="sponsorPayAmount">4.95</span>
         </button>
         <p style="color: var(--text-muted); font-size: 0.75rem; text-align: center; margin-top: 0.8rem;">
@@ -1257,10 +1257,10 @@
           </a>
           <p>Il portale premium di annunci incontri in Italia. Esperienze autentiche, persone reali, discrezione assoluta.</p>
           <div class="footer-social">
-            <a href="#"><i class="fab fa-instagram"></i></a>
-            <a href="#"><i class="fab fa-telegram"></i></a>
-            <a href="#"><i class="fab fa-whatsapp"></i></a>
-            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+            <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" aria-label="X/Twitter"><i class="fab fa-twitter"></i></a>
           </div>
         </div>
         <div class="footer-links">

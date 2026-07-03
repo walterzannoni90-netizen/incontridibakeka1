@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test:e2e": "node tests/e2e-smoke.js"
   },
   "keywords": [
     "incontri",
@@ -21,5 +22,8 @@
     "express": "^4.22.2",
     "libsodium-wrappers": "^0.8.4",
     "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   }
 }
