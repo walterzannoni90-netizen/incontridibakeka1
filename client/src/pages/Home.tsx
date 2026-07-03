@@ -82,7 +82,7 @@ const CATEGORIES = [
   { id: "massaggi", name: "Massaggi", image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=600&fit=crop", count: "12+ annunci" },
   { id: "accompagnatrici", name: "Accompagnatrici", image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&h=600&fit=crop", count: "25+ annunci" },
   { id: "evento-festa", name: "Eventi e Feste", image: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=600&h=600&fit=crop", count: "3+ annunci" },
-  { id: "amicizia", name: "Amicizia", image: "https://images.unsplash.com/photo-1522202176988-66273c2fd47f?w=600&h=600&fit=crop", count: "7+ annunci" },
+  { id: "amicizia", name: "Amicizia", image: "https://images.unsplash.com/photo-1518604666860-9ed391f76460?w=600&h=600&fit=crop", count: "7+ annunci" },
 ];
 
 // No demo data - real data only from Supabase
