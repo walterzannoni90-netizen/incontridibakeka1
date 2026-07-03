@@ -46,7 +46,8 @@ async function sbDelete(table, match, token) {
   return sbRead(r);
 }
 async function sbAuth(method, body, token) {
-  const r = await fetch(`${SUPABASE_URL}/auth/v1/${method}`, { method: 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
+  const isGet = method === 'user';
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/${method}`, { method: isGet ? 'GET' : 'POST', headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }, ...(isGet ? {} : { body: JSON.stringify(body) }) });
   return r.json();
 }
 async function sbCount(table, filter) {
