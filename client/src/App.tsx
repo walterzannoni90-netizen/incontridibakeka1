@@ -13,8 +13,7 @@ import Shop from "./pages/Shop";
 function Router() {
   return (
     <Switch>
-      <Route path={"/ "} component={Home} />
-      <Route path={""} component={Home} />
+      <Route path="/" component={Home} />
       <Route path={"/ad"} component={AdDetail} />
       <Route path={"/shop"} component={Shop} />
       <Route path={"/admin"} component={AdminPanel} />
