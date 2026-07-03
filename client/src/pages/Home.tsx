@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "@/hooks/useRouter";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X } from "lucide-react";
 
 const SUPABASE_URL = "https://rdqsmfgpbuswzilgbjyr.supabase.co";
@@ -40,12 +41,45 @@ const CATEGORIES = [
   { id: "cerco-amici", name: "Cerco Amici", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=400&fit=crop" },
 ];
 
+const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function persistSession(token: string, user: CurrentUser) {
+  localStorage.setItem("authToken", token);
+  localStorage.setItem("currentUser", JSON.stringify(user));
+  localStorage.setItem(
+    "authSession",
+    JSON.stringify({ savedAt: Date.now(), expiresAt: Date.now() + AUTH_SESSION_TTL_MS })
+  );
+}
+
+function clearSession() {
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("authSession");
+}
+
 export default function Home() {
+  const { navigate } = useRouter();
   const [ads, setAds] = useState<Ad[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [authModal, setAuthModal] = useState<"login" | "register" | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
+  const [publishForm, setPublishForm] = useState({
+    title: "",
+    description: "",
+    city: "Roma",
+    age: "25",
+    category: CATEGORIES[0].id,
+    image: "",
+    price: "",
+  });
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     loadAds();
@@ -75,20 +109,184 @@ export default function Home() {
   const checkAuth = () => {
     const token = localStorage.getItem("authToken");
     const user = localStorage.getItem("currentUser");
+    const session = localStorage.getItem("authSession");
     if (token && user) {
       try {
+        const sessionData = session ? JSON.parse(session) : null;
+        if (sessionData?.expiresAt && Date.now() > sessionData.expiresAt) {
+          clearSession();
+          return;
+        }
         setCurrentUser(JSON.parse(user));
       } catch (e) {
         console.error("Errore parsing user:", e);
+        clearSession();
       }
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("currentUser");
+    clearSession();
     setCurrentUser(null);
   };
+
+  const runSearch = () => {
+    const section = document.getElementById("ads-section");
+    if (!section) return;
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const openPublish = () => {
+    if (!currentUser) {
+      setAuthModal("login");
+      return;
+    }
+    setPublishOpen(true);
+  };
+
+  const handleAuth = async () => {
+    if (!authForm.email || !authForm.password || (authModal === "register" && !authForm.name)) {
+      alert("Compila tutti i campi richiesti.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const endpoint =
+        authModal === "login"
+          ? `${SUPABASE_URL}/auth/v1/token?grant_type=password`
+          : `${SUPABASE_URL}/auth/v1/signup`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: authForm.email,
+          password: authForm.password,
+          data: { name: authForm.name || authForm.email.split("@")[0] },
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error_description || data.msg || data.error || "Accesso non riuscito");
+
+      const authUser = data.user;
+      const token = data.access_token;
+      if (!authUser || !token) {
+        alert("Controlla la tua email per confermare l'account, poi accedi.");
+        setAuthModal("login");
+        return;
+      }
+
+      const profile: CurrentUser = {
+        id: authUser.id,
+        email: authUser.email || authForm.email,
+        name: authForm.name || authUser.user_metadata?.name || authForm.email.split("@")[0],
+        is_admin: authForm.email.toLowerCase() === "walterzannoni90@outlook.it",
+        credits: authModal === "register" ? 20 : 0,
+      };
+
+      if (authModal === "register") {
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+          method: "POST",
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Prefer: "resolution=merge-duplicates,return=representation",
+          },
+          body: JSON.stringify(profile),
+        }).catch(() => {});
+      } else {
+        const profileResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${authUser.id}`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+        const profiles = profileResp?.ok ? await profileResp.json() : [];
+        if (profiles?.[0]) Object.assign(profile, profiles[0]);
+      }
+
+      persistSession(token, profile);
+      setCurrentUser(profile);
+      setAuthModal(null);
+      setAuthForm({ name: "", email: "", password: "" });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Errore accesso.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!currentUser || !token) {
+      setAuthModal("login");
+      return;
+    }
+    if (!publishForm.title || !publishForm.description) {
+      alert("Titolo e descrizione sono obbligatori.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const payload = {
+        title: publishForm.title,
+        description: publishForm.description,
+        city: publishForm.city,
+        age: Number(publishForm.age) || null,
+        category: publishForm.category,
+        image: publishForm.image || null,
+        price: publishForm.price || null,
+        user_id: currentUser.id,
+        is_active: true,
+        is_premium: false,
+        is_sponsored: false,
+        rating: 5,
+        review_count: 0,
+      };
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/ads`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || data.error || "Pubblicazione non riuscita");
+
+      setPublishOpen(false);
+      setPublishForm({
+        title: "",
+        description: "",
+        city: "Roma",
+        age: "25",
+        category: CATEGORIES[0].id,
+        image: "",
+        price: "",
+      });
+      await loadAds();
+      alert("Annuncio pubblicato.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Errore pubblicazione.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const filteredAds = ads.filter((ad) => {
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      [ad.title, ad.description, ad.city, ad.category].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      );
+    const matchesCategory = !categoryFilter || ad.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,13 +304,16 @@ export default function Home() {
               placeholder="Cerca annunci..."
               className="w-64"
               type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && runSearch()}
             />
             {currentUser ? (
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => window.location.href = "/shop"}
+                  onClick={() => navigate("/shop")}
                   className="gap-2"
                 >
                   💰 {currentUser.credits || 0} crediti
@@ -122,7 +323,7 @@ export default function Home() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.location.href = "/admin"}
+                    onClick={() => navigate("/admin")}
                     className="gap-2"
                   >
                     ⚙️ Admin
@@ -139,7 +340,7 @@ export default function Home() {
                 </Button>
               </div>
             ) : (
-              <Button size="sm" className="gap-2">
+              <Button size="sm" className="gap-2" onClick={() => setAuthModal("login")}>
                 <LogIn className="w-4 h-4" />
                 Accedi
               </Button>
@@ -162,7 +363,13 @@ export default function Home() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border p-4 space-y-4">
-            <Input placeholder="Cerca annunci..." type="search" />
+            <Input
+              placeholder="Cerca annunci..."
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && runSearch()}
+            />
             {currentUser ? (
               <Button
                 variant="outline"
@@ -173,7 +380,7 @@ export default function Home() {
                 Esci ({currentUser.name})
               </Button>
             ) : (
-              <Button className="w-full gap-2">
+              <Button className="w-full gap-2" onClick={() => setAuthModal("login")}>
                 <LogIn className="w-4 h-4" />
                 Accedi
               </Button>
@@ -200,11 +407,11 @@ export default function Home() {
             Il marketplace più affidabile per incontri e amicizie in Italia
           </p>
           <div className="flex gap-4">
-            <Button size="lg" variant="secondary" className="gap-2">
+            <Button size="lg" variant="secondary" className="gap-2" onClick={runSearch}>
               <Search className="w-5 h-5" />
               Scopri Annunci
             </Button>
-            <Button size="lg" variant="outline" className="gap-2">
+            <Button size="lg" variant="outline" className="gap-2" onClick={openPublish}>
               Pubblica Annuncio
             </Button>
           </div>
@@ -222,6 +429,10 @@ export default function Home() {
               <Card
                 key={cat.id}
                 className="overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all group"
+                onClick={() => {
+                  setCategoryFilter(categoryFilter === cat.id ? null : cat.id);
+                  document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
+                }}
               >
                 <div className="relative h-40 overflow-hidden bg-muted">
                   <img
@@ -241,11 +452,32 @@ export default function Home() {
       </section>
 
       {/* ADS SECTION */}
-      <section className="py-16">
+      <section className="py-16" id="ads-section">
         <div className="container">
-          <h2 className="text-3xl font-bold mb-8 font-poppins">
-            Annunci in Evidenza
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-3xl font-bold font-poppins">
+                Annunci in Evidenza
+              </h2>
+              {(searchTerm || categoryFilter) && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {filteredAds.length} risultati
+                  {categoryFilter ? ` in ${CATEGORIES.find((c) => c.id === categoryFilter)?.name}` : ""}
+                </p>
+              )}
+            </div>
+            {(searchTerm || categoryFilter) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("");
+                  setCategoryFilter(null);
+                }}
+              >
+                Cancella filtri
+              </Button>
+            )}
+          </div>
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -253,17 +485,17 @@ export default function Home() {
                 <Card key={i} className="h-64 bg-muted animate-pulse" />
               ))}
             </div>
-          ) : ads.length === 0 ? (
+          ) : filteredAds.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <p>Nessun annuncio disponibile</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ads.map((ad) => (
+              {filteredAds.map((ad) => (
               <Card
                 key={ad.id}
                 className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1"
-                onClick={() => window.location.href = `/ad?id=${ad.id}`}
+                onClick={() => navigate(`/ad?id=${ad.id}`)}
               >
                   <div className="relative h-48 bg-muted overflow-hidden">
                     {ad.image ? (
@@ -287,7 +519,14 @@ export default function Home() {
                         👑 Premium
                       </div>
                     )}
-                    <button className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-muted">
+                    <button
+                      className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-md hover:bg-muted"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAd(ad);
+                      }}
+                      aria-label="Salva o contatta"
+                    >
                       <Heart className="w-5 h-5 text-primary" />
                     </button>
                   </div>
@@ -362,14 +601,156 @@ export default function Home() {
               )}
 
               <div className="flex gap-2">
-                <Button className="flex-1 gap-2">
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    if (!currentUser) {
+                      setSelectedAd(null);
+                      setAuthModal("login");
+                      return;
+                    }
+                    navigate(`/ad?id=${selectedAd.id}`);
+                  }}
+                >
                   💬 Contatta
                 </Button>
-                <Button variant="outline" className="flex-1 gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    const saved = JSON.parse(localStorage.getItem("savedAds") || "[]");
+                    localStorage.setItem("savedAds", JSON.stringify([...new Set([...saved, selectedAd.id])]));
+                    alert("Annuncio salvato.");
+                  }}
+                >
                   <Heart className="w-4 h-4" />
                   Salva
                 </Button>
               </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* AUTH MODAL */}
+      {authModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setAuthModal(null)}
+        >
+          <Card className="w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold font-poppins">
+                {authModal === "login" ? "Accedi" : "Registrati"}
+              </h2>
+              <button onClick={() => setAuthModal(null)} className="text-2xl">×</button>
+            </div>
+
+            <div className="space-y-4">
+              {authModal === "register" && (
+                <Input
+                  placeholder="Nome"
+                  value={authForm.name}
+                  onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                />
+              )}
+              <Input
+                placeholder="Email"
+                type="email"
+                value={authForm.email}
+                onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+              />
+              <Input
+                placeholder="Password"
+                type="password"
+                value={authForm.password}
+                onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+              />
+
+              <Button className="w-full" onClick={handleAuth} disabled={busy}>
+                {busy ? "Attendi..." : authModal === "login" ? "Entra" : "Crea account"}
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => setAuthModal(authModal === "login" ? "register" : "login")}
+              >
+                {authModal === "login" ? "Non hai un account? Registrati" : "Hai già un account? Accedi"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* PUBLISH MODAL */}
+      {publishOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setPublishOpen(false)}
+        >
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold font-poppins">Pubblica Annuncio</h2>
+              <button onClick={() => setPublishOpen(false)} className="text-2xl">×</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                className="md:col-span-2"
+                placeholder="Titolo annuncio"
+                value={publishForm.title}
+                onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
+              />
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={publishForm.category}
+                onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              <Input
+                placeholder="Città"
+                value={publishForm.city}
+                onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
+              />
+              <Input
+                placeholder="Età"
+                type="number"
+                min="18"
+                value={publishForm.age}
+                onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
+              />
+              <Input
+                placeholder="Prezzo o info"
+                value={publishForm.price}
+                onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
+              />
+              <Input
+                className="md:col-span-2"
+                placeholder="URL foto"
+                value={publishForm.image}
+                onChange={(e) => setPublishForm({ ...publishForm, image: e.target.value })}
+              />
+              <Textarea
+                className="md:col-span-2"
+                rows={5}
+                placeholder="Descrizione"
+                value={publishForm.description}
+                onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
+              <Button className="flex-1" onClick={handlePublish} disabled={busy}>
+                {busy ? "Pubblicazione..." : "Pubblica"}
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setPublishOpen(false)}>
+                Annulla
+              </Button>
             </div>
           </Card>
         </div>

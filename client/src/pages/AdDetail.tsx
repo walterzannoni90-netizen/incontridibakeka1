@@ -38,12 +38,13 @@ interface Profile {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   avatar_url: string;
 }
 
 export default function AdDetail() {
   const { getQueryParam, navigate } = useRouter();
-  const { get, patch } = useSupabase();
+  const { get, post, patch } = useSupabase();
   const { user, token: authToken } = useAuth();
 
   const [ad, setAd] = useState<Ad | null>(null);
@@ -73,6 +74,8 @@ export default function AdDetail() {
       const adData = ads[0];
       setAd(adData);
       setMainImage(adData.images?.[0] || adData.image || "");
+      const savedAds = JSON.parse(localStorage.getItem("savedAds") || "[]");
+      setSaved(savedAds.includes(adData.id));
 
       // Incrementa views
       if (adId) {
@@ -110,20 +113,44 @@ export default function AdDetail() {
     if (!ad) return;
 
     try {
-      // Registra il contatto
-      await get("ad_contacts", "", authToken || undefined).catch(() => {});
+      await post(
+        "ad_contacts",
+        {
+          ad_id: ad.id,
+          user_id: user.id,
+          contact_type: type,
+          contacted_at: new Date().toISOString(),
+        },
+        authToken || undefined
+      ).catch(() => {});
 
       if (type === "whatsapp" && profile?.phone) {
-        // Apri WhatsApp
         const message = `Ciao, sono interessato al tuo annuncio: ${ad.title}`;
         const whatsappUrl = `https://wa.me/${profile.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
-      } else if (type === "email" && profile?.id) {
-        // Apri form di contatto
-        alert("Email contact - implementare form");
+      } else if (type === "email") {
+        const subject = encodeURIComponent(`Info annuncio: ${ad.title}`);
+        const body = encodeURIComponent(`Ciao, sono interessato al tuo annuncio "${ad.title}".`);
+        if (profile?.email) {
+          window.location.href = `mailto:${profile.email}?subject=${subject}&body=${body}`;
+        } else {
+          window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        }
       } else if (type === "message") {
-        // Apri chat interna
-        alert("Internal message - implementare chat");
+        const messages = JSON.parse(localStorage.getItem("pendingMessages") || "[]");
+        localStorage.setItem(
+          "pendingMessages",
+          JSON.stringify([
+            ...messages,
+            {
+              ad_id: ad.id,
+              title: ad.title,
+              to_user_id: ad.user_id,
+              created_at: new Date().toISOString(),
+            },
+          ])
+        );
+        alert("Messaggio preparato. Lo trovi nei messaggi salvati.");
       }
     } catch (error) {
       console.error("Errore contatto:", error);
@@ -324,7 +351,15 @@ export default function AdDetail() {
             <Button
               variant={saved ? "default" : "outline"}
               className="w-full gap-2"
-              onClick={() => setSaved(!saved)}
+              onClick={() => {
+                const savedAds = JSON.parse(localStorage.getItem("savedAds") || "[]");
+                const nextSaved = !saved;
+                const nextIds = nextSaved
+                  ? [...new Set([...savedAds, ad.id])]
+                  : savedAds.filter((id: string) => id !== ad.id);
+                localStorage.setItem("savedAds", JSON.stringify(nextIds));
+                setSaved(nextSaved);
+              }}
             >
               <Heart className={`w-4 h-4 ${saved ? "fill-current" : ""}`} />
               {saved ? "Salvato" : "Salva"}
