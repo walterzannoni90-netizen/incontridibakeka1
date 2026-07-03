@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import AdDetail from "./pages/AdDetail";
 import AdminPanel from "./pages/AdminPanel";
 import Shop from "./pages/Shop";
+import MyAds from "./pages/MyAds";
 
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path={"/ad"} component={AdDetail} />
       <Route path={"/ad/:slug"} component={AdDetail} />
       <Route path={"/shop"} component={Shop} />
+      <Route path={"/my-ads"} component={MyAds} />
       <Route path={"/admin"} component={AdminPanel} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

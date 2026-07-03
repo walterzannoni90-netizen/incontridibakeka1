@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { useStripe } from "@/hooks/useStripe";
 import { useRouter } from "@/hooks/useRouter";
-import { ArrowLeft, Zap, Star, CheckCircle } from "lucide-react";
+import { ArrowLeft, Zap, Star, CheckCircle, Loader2 } from "lucide-react";
 
 const STRIPE_CONFIGURED = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
@@ -11,13 +13,15 @@ const CREDIT_PACKS = [
   { credits: 10, price: 4.99, popular: false, features: ["Rendi Premium per 1 giorno", "Risali nei risultati 2 volte"] },
   { credits: 30, price: 9.99, popular: true, features: ["Rendi Premium per 7 giorni", "Evidenzia con SuperHot", "Risali nei risultati 5 volte"] },
   { credits: 70, price: 19.99, popular: false, features: ["Rendi Premium per 30 giorni", "Sponsorizza SuperTop 7 giorni", "Risali illimitato"] },
-  { credits: 150, price: 34.99, popular: false, features: ["Rendi Premium illimitato", "Sponsorizza SuperTop 30 giorni", "Tutte le funzioni premium", "Priorita nel supporto"] },
+  { credits: 150, price: 39.99, popular: false, features: ["Rendi Premium illimitato", "Sponsorizza SuperTop 30 giorni", "Tutte le funzioni premium", "Priorita nel supporto"] },
 ];
 
 export default function Shop() {
   const { user } = useAuth();
   const { navigate } = useRouter();
+  const { createCheckoutSession } = useStripe();
   const [loadingPack, setLoadingPack] = useState<number | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   if (!user) {
     return (
@@ -36,17 +40,30 @@ export default function Shop() {
 
   const handleBuyCredits = async (credits: number) => {
     if (!STRIPE_CONFIGURED) {
-      alert("Pagamenti non configurati. Configura Stripe nel file .env per abilitare gli acquisti.");
+      toast.error("Pagamenti non configurati", {
+        description: "Configura Stripe nel file .env per abilitare gli acquisti.",
+      });
       return;
     }
     try {
       setLoadingPack(credits);
-      // Stripe checkout would happen here via Supabase edge function
-      alert("Reindirizzamento a Stripe in corso...");
+      setRedirecting(true);
+      toast.info("Reindirizzamento a Stripe in corso...", {
+        description: `${credits} crediti in preparazione.`,
+      });
+      // crea la sessione di checkout e reindirizza a Stripe
+      await createCheckoutSession(user.id, credits);
+      // Se arriviamo qui senza redirect (URL mancante), resetta lo stato
+      setLoadingPack(null);
+      setRedirecting(false);
+      toast.success("Sessione di pagamento pronta.");
     } catch (error) {
       console.error("Errore acquisto:", error);
-      alert("Errore durante l'acquisto. Riprova.");
+      const message =
+        error instanceof Error ? error.message : "Errore durante l'acquisto. Riprova.";
+      toast.error("Acquisto non riuscito", { description: message });
       setLoadingPack(null);
+      setRedirecting(false);
     }
   };
 
@@ -118,23 +135,23 @@ export default function Shop() {
                 </ul>
 
                 <Button
-                  className="w-full gap-2"
-                  onClick={() => handleBuyCredits(pack.credits)}
-                  disabled={loadingPack !== null}
-                  variant={pack.popular ? "default" : "outline"}
-                >
-                  {loadingPack === pack.credits ? (
-                    <>
-                      <span className="animate-spin">⏳</span>
-                      Elaborazione...
-                    </>
-                  ) : (
-                    <>
-                      <Star className="w-4 h-4" />
-                      Acquista
-                    </>
-                  )}
-                </Button>
+                      className="w-full gap-2"
+                      onClick={() => handleBuyCredits(pack.credits)}
+                      disabled={loadingPack !== null || redirecting}
+                      variant={pack.popular ? "default" : "outline"}
+                    >
+                      {loadingPack === pack.credits ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Elaborazione...
+                        </>
+                      ) : (
+                        <>
+                          <Star className="w-4 h-4" />
+                          Acquista
+                        </>
+                      )}
+                    </Button>
               </Card>
             ))}
           </div>
@@ -176,13 +193,36 @@ export default function Shop() {
 
           {!STRIPE_CONFIGURED && (
             <div className="mt-6 text-center">
-              <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-4 py-3 rounded-lg">
-                ⚠ Pagamenti non configurati. Configura Stripe nel file .env per abilitare gli acquisti.
-              </p>
+              <Card className="p-5 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700">
+                <div className="flex items-start gap-3 text-left">
+                  <span className="text-2xl">⚠️</span>
+                  <div>
+                    <p className="font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                      Pagamenti non ancora configurati
+                    </p>
+                    <p className="text-sm text-amber-600 dark:text-amber-500">
+                      Imposta <code className="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">VITE_STRIPE_PUBLISHABLE_KEY</code> e i relativi
+                      <code className="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 mx-1">VITE_STRIPE_PRICE_*</code>
+                      nel file <code className="px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40">.env</code> per abilitare gli acquisti tramite Stripe.
+                    </p>
+                  </div>
+                </div>
+              </Card>
             </div>
           )}
         </div>
       </div>
+
+      {/* Overlay durante il reindirizzamento a Stripe */}
+      {redirecting && (
+        <div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="p-8 text-center max-w-sm">
+            <Loader2 className="w-10 h-10 mx-auto mb-4 animate-spin text-primary" />
+            <p className="font-semibold mb-1">Reindirizzamento a Stripe…</p>
+            <p className="text-sm text-muted-foreground">Attendi, stai per essere portato al pagamento sicuro.</p>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

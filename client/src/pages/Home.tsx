@@ -1,33 +1,75 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useRouter } from "@/hooks/useRouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useStripe } from "@/hooks/useStripe";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const SUPABASE_CONFIGURED = SUPABASE_URL && SUPABASE_KEY && !SUPABASE_URL.includes("your-project");
+
+const PAGE_SIZE = 12;
+
+// Costo in crediti per la vetrina in base alla durata (giorni)
+const VETRINA_COSTS: Record<number, number> = { 1: 10, 3: 25, 7: 50 };
+
+const HAIR_COLORS = ["neri", "castani", "biondi", "rossi", "grigi", "altri"];
+const BODY_TYPES = ["snello", "normale", "formoso", "sportivo", "curvy"];
+const ETHNICITIES = ["italiana", "europea", "sudamericana", "asiatica", "africana", "mista"];
+
+// Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
+function isAdBoosted(ad: Ad): boolean {
+  if (ad.is_premium || ad.is_sponsored) return true;
+  if (ad.boosted_until) {
+    const until = new Date(ad.boosted_until).getTime();
+    const start = ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0;
+    const now = Date.now();
+    return now >= start && now < until;
+  }
+  return false;
+}
 
 interface Ad {
   id: string;
   title: string;
   description: string;
   city: string;
+  country?: string;
   age: number;
   image: string;
+  images?: string[];
   category: string;
   price?: string;
+  phone?: string;
+  whatsapp?: string;
   rating: number;
   review_count: number;
   is_premium: boolean;
   is_sponsored: boolean;
   is_verified?: boolean;
   views?: number;
+  user_id?: string;
+  has_paid?: boolean;
+  // Campi dettaglio
+  hair_color?: string;
+  body_type?: string;
+  ethnicity?: string;
+  services?: string;
+  availability_hours?: string;
+  height?: number;
+  weight?: number;
+  // Vetrina / boost
+  boosted_until?: string;
+  vetrina_scheduled_at?: string;
+  vetrina_duration_days?: number;
+  created_at?: string;
 }
 
 const CATEGORIES = [
@@ -42,11 +84,14 @@ const DEMO_ADS: Ad[] = [];
 export default function Home() {
   const { navigate } = useRouter();
   const { user: currentUser, login, logout } = useAuth();
+  const { handlePaymentCallback: stripePaymentCallback } = useStripe();
   const { theme, toggleTheme } = useTheme();
   const [ads, setAds] = useState<Ad[]>([]);
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [authModal, setAuthModal] = useState<"login" | "register" | null>(null);
@@ -56,13 +101,33 @@ export default function Home() {
     title: "",
     description: "",
     city: "Roma",
+    country: "IT",
     age: "25",
     category: CATEGORIES[0].id,
     image: "",
     price: "",
     phone: "",
+    whatsapp: "",
+    hair_color: "",
+    body_type: "",
+    ethnicity: "",
+    services: "",
+    availability_hours: "",
+    height: "",
+    weight: "",
   });
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  // Scheduling vetrina
+  const [scheduleVetrina, setScheduleVetrina] = useState(false);
+  const [vetrinaDuration, setVetrinaDuration] = useState(1);
+  const [vetrinaStartAt, setVetrinaStartAt] = useState("");
+  // Limite annunci giornaliero
+  const [adsPostedToday, setAdsPostedToday] = useState(0);
+  const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState("IT");
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -71,65 +136,66 @@ export default function Home() {
   const [infoModal, setInfoModal] = useState<string | null>(null);
   const [savedAds, setSavedAds] = useState<string[]>([]);
 
+  // Numero massimo di foto in base allo stato premium dell'utente
+  const maxPhotos = currentUser?.has_paid ? 5 : 1;
+  const hasPaid = !!currentUser?.has_paid;
+  const dailyLimit = hasPaid ? 2 : 1;
+
   useEffect(() => {
-    loadAds();
-    handlePaymentCallback();
+    loadAds(true);
+    // Gestione callback pagamento delegata a useStripe (rimossa la versione duplicata locale)
+    handlePaymentResult();
     if (!localStorage.getItem("ageAccepted")) {
       setShowDisclaimer(true);
     }
     setSavedAds(JSON.parse(localStorage.getItem("savedAds") || "[]"));
   }, []);
 
-  const handlePaymentCallback = async () => {
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get("payment");
-    if (!status) return;
-
+  // Processa il risultato del callback Stripe (usando useStripe) e aggiorna i crediti
+  const handlePaymentResult = async () => {
+    const result = stripePaymentCallback();
+    if (!result) return;
+    // Pulisci i parametri payment dall'URL
     const newUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, "", newUrl);
 
-    if (status === "cancel") {
+    if (!result.success) {
       alert("Pagamento annullato.");
       return;
     }
-
-    if (status === "success") {
-      const userId = sessionStorage.getItem("stripeUserId");
-      const credits = sessionStorage.getItem("stripeCredits");
-      sessionStorage.removeItem("stripeUserId");
-      sessionStorage.removeItem("stripeCredits");
-
-      if (userId && SUPABASE_CONFIGURED) {
-        try {
-          const stored = localStorage.getItem("currentUser");
-          const localUser = stored ? JSON.parse(stored) : null;
-          const authToken = localStorage.getItem("authToken");
-          if (localUser && authToken && localUser.id === userId) {
-            const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=credits&id=eq.${userId}`, {
-              headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${authToken}` },
-            });
-            const profiles = await resp.json();
-            if (profiles?.[0]) {
-              login({ ...localUser, credits: profiles[0].credits }, authToken);
-            }
+    const userId = result.userId;
+    const credits = result.credits;
+    if (userId && SUPABASE_CONFIGURED) {
+      try {
+        const stored = localStorage.getItem("currentUser");
+        const localUser = stored ? JSON.parse(stored) : null;
+        const authToken = localStorage.getItem("authToken");
+        if (localUser && authToken && localUser.id === userId) {
+          const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=credits,has_paid&id=eq.${userId}`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${authToken}` },
+          });
+          const profiles = await resp.json();
+          if (profiles?.[0]) {
+            login({ ...localUser, credits: profiles[0].credits, has_paid: profiles[0].has_paid }, authToken);
           }
-        } catch (e) {
-          console.error("Errore aggiornamento crediti:", e);
         }
+      } catch (e) {
+        console.error("Errore aggiornamento crediti:", e);
       }
-      alert(`Pagamento riuscito! ${credits || ""} crediti aggiunti.`);
     }
+    alert(`Pagamento riuscito! ${credits || ""} crediti aggiunti.`);
   };
 
-  const loadAds = async () => {
+  const loadAds = async (reset = false) => {
     if (!SUPABASE_CONFIGURED) {
       setAds(DEMO_ADS);
       setLoading(false);
       return;
     }
     try {
+      const offset = reset ? 0 : ads.length;
       const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/ads?select=*&is_active=eq.true&order=is_sponsored.desc,is_premium.desc,created_at.desc&limit=12`,
+        `${SUPABASE_URL}/rest/v1/ads?select=*&is_active=eq.true&order=is_sponsored.desc,is_premium.desc,created_at.desc&limit=${PAGE_SIZE}&offset=${offset}`,
         {
           headers: {
             apikey: SUPABASE_KEY,
@@ -138,12 +204,85 @@ export default function Home() {
         }
       );
       const data = await response.json();
-      setAds(data && data.length > 0 ? data : DEMO_ADS);
+      const fetched: Ad[] = data && data.length > 0 ? data : [];
+      if (reset) {
+        setAds(fetched.length > 0 ? fetched : DEMO_ADS);
+      } else {
+        setAds((prev) => [...prev, ...fetched]);
+      }
+      setHasMore(fetched.length === PAGE_SIZE);
     } catch (error) {
       console.error("Errore caricamento annunci:", error);
-      setAds(DEMO_ADS);
+      if (reset) setAds(DEMO_ADS);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    loadAds(false);
+  };
+
+  // Carica le foto su Supabase Storage (bucket 'ads') e ritorna gli URL pubblici
+  const uploadPhotos = async (files: File[]): Promise<string[]> => {
+    const token = localStorage.getItem("authToken");
+    const urls: string[] = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${currentUser?.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/ads/${path}`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": file.type || "image/jpeg",
+        },
+        body: file,
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`Upload foto non riuscito: ${res.status} ${txt}`);
+      }
+      urls.push(`${SUPABASE_URL}/storage/v1/object/public/ads/${path}`);
+    }
+    return urls;
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const remaining = maxPhotos - photoFiles.length;
+    const toAdd = files.slice(0, remaining);
+    setPhotoFiles((prev) => [...prev, ...toAdd]);
+    setPhotoPreviewUrls((prev) => [...prev, ...toAdd.map((f) => URL.createObjectURL(f))]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removePhoto = (idx: number) => {
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== idx));
+    setPhotoPreviewUrls((prev) => {
+      URL.revokeObjectURL(prev[idx]);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  // Conta quanti annunci l'utente ha pubblicato nelle ultime 24 ore
+  const checkDailyLimit = async (): Promise<number> => {
+    if (!currentUser || !SUPABASE_CONFIGURED) return 0;
+    const token = localStorage.getItem("authToken");
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    try {
+      const resp = await fetch(
+        `${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&created_at=gte.${since}`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } }
+      );
+      const data = await resp.json();
+      return Array.isArray(data) ? data.length : 0;
+    } catch {
+      return 0;
     }
   };
 
@@ -153,11 +292,24 @@ export default function Home() {
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const openPublish = () => {
+  const openPublish = async () => {
     if (!currentUser) {
       setAuthModal("login");
       return;
     }
+    // Verifica il limite giornaliero di annunci
+    const count = await checkDailyLimit();
+    setAdsPostedToday(count);
+    if (count >= dailyLimit) {
+      setLimitMessage(
+        hasPaid
+          ? "Hai raggiunto il limite di 2 annunci al giorno."
+          : "Hai raggiunto il limite di 1 annuncio gratuito al giorno. Acquista crediti per pubblicarne di piu."
+      );
+      setPublishOpen(true);
+      return;
+    }
+    setLimitMessage(null);
     setPublishOpen(true);
   };
 
@@ -265,20 +417,99 @@ export default function Home() {
       return;
     }
 
+    // Controllo limite giornaliero prima di pubblicare
+    const count = await checkDailyLimit();
+    if (count >= dailyLimit) {
+      setAdsPostedToday(count);
+      setLimitMessage(
+        hasPaid
+          ? "Hai raggiunto il limite di 2 annunci al giorno."
+          : "Hai raggiunto il limite di 1 annuncio gratuito al giorno. Acquista crediti per pubblicarne di piu."
+      );
+      return;
+    }
+
     setBusy(true);
     try {
+      // 1. Upload delle foto su Supabase Storage
+      let uploadedImages: string[] = [];
+      if (photoFiles.length > 0) {
+        setUploadingPhotos(true);
+        uploadedImages = await uploadPhotos(photoFiles);
+        setUploadingPhotos(false);
+      }
+      const mainImage = uploadedImages[0] || null;
+
+      // 2. Gestione vetrina (boost) con crediti
+      let boostedUntil: string | null = null;
+      let vetrinaScheduledAt: string | null = null;
+      let vetrinaDurationDays: number | null = null;
+      let isSponsored = false;
+      if (scheduleVetrina) {
+        const cost = VETRINA_COSTS[vetrinaDuration] ?? 0;
+        const userCredits = currentUser.credits || 0;
+        if (cost > 0 && userCredits < cost) {
+          alert(`Non hai abbastanza crediti per la vetrina. Servono ${cost} crediti.`);
+          setBusy(false);
+          return;
+        }
+        const startAt = vetrinaStartAt ? new Date(vetrinaStartAt) : new Date();
+        if (isNaN(startAt.getTime())) {
+          alert("Data di inizio vetrina non valida.");
+          setBusy(false);
+          return;
+        }
+        const untilDate = new Date(startAt.getTime() + vetrinaDuration * 24 * 60 * 60 * 1000);
+        vetrinaScheduledAt = startAt.toISOString();
+        boostedUntil = untilDate.toISOString();
+        vetrinaDurationDays = vetrinaDuration;
+        // Se la vetrina parte subito, attiva is_sponsored
+        isSponsored = startAt.getTime() <= Date.now();
+
+        // Scala i crediti sul profilo
+        if (cost > 0) {
+          const newCredits = userCredits - cost;
+          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
+            method: "PATCH",
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Prefer: "return=representation",
+            },
+            body: JSON.stringify({ credits: newCredits }),
+          }).catch(() => {});
+          login({ ...currentUser, credits: newCredits }, token);
+        }
+      }
+
       const payload = {
         title: publishForm.title,
         description: publishForm.description,
         city: publishForm.city,
+        country: publishForm.country || "IT",
         age: Number(publishForm.age) || null,
         category: publishForm.category,
-        image: publishForm.image || null,
+        image: mainImage,
+        images: uploadedImages.length > 0 ? uploadedImages : null,
         price: publishForm.price || null,
+        phone: publishForm.phone || null,
+        whatsapp: publishForm.whatsapp || null,
         user_id: currentUser.id,
+        has_paid: hasPaid,
+        hair_color: publishForm.hair_color || null,
+        body_type: publishForm.body_type || null,
+        ethnicity: publishForm.ethnicity || null,
+        services: publishForm.services || null,
+        availability_hours: publishForm.availability_hours || null,
+        height: publishForm.height ? Number(publishForm.height) : null,
+        weight: publishForm.weight ? Number(publishForm.weight) : null,
+        boosted_until: boostedUntil,
+        vetrina_scheduled_at: vetrinaScheduledAt,
+        vetrina_duration_days: vetrinaDurationDays,
         is_active: true,
         is_premium: false,
-        is_sponsored: false,
+        is_sponsored: isSponsored,
         rating: 5,
         review_count: 0,
       };
@@ -295,13 +526,22 @@ export default function Home() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || data.error || "Pubblicazione non riuscita");
 
+      // Reset form
       setPublishOpen(false);
-      setPublishForm({ title: "", description: "", city: "Roma", age: "25", category: CATEGORIES[0].id, image: "", price: "", phone: "" });
-      await loadAds();
-      alert("Annuncio pubblicato.");
+      setPublishForm({ title: "", description: "", city: "Roma", country: "IT", age: "25", category: CATEGORIES[0].id, image: "", price: "", phone: "", whatsapp: "", hair_color: "", body_type: "", ethnicity: "", services: "", availability_hours: "", height: "", weight: "" });
+      photoFiles.forEach((_, i) => URL.revokeObjectURL(photoPreviewUrls[i]));
+      setPhotoFiles([]);
+      setPhotoPreviewUrls([]);
+      setScheduleVetrina(false);
+      setVetrinaDuration(1);
+      setVetrinaStartAt("");
+      setLimitMessage(null);
+      await loadAds(true);
+      alert(scheduleVetrina ? "Annuncio pubblicato e vetrina programmata!" : "Annuncio pubblicato.");
     } catch (error) {
       alert(error instanceof Error ? error.message : "Errore pubblicazione.");
     } finally {
+      setUploadingPhotos(false);
       setBusy(false);
     }
   };
@@ -390,9 +630,7 @@ export default function Home() {
       <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-9 h-9 bg-gradient-to-br from-primary to-purple-700 rounded-xl flex items-center justify-center text-white font-bold shadow-md">B</div>
-            <span className="text-lg font-bold text-primary hidden sm:inline font-poppins">Incontri di Bakeka</span>
-            <span className="text-lg font-bold text-primary sm:hidden font-poppins">Bakeka</span>
+            <img src="/logo.svg" alt="Incontri di Bakeka" className="h-9 w-auto" />
           </div>
 
           {/* Desktop Menu */}
@@ -826,7 +1064,9 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                {filteredAds.map((ad) => (
+                {filteredAds.map((ad) => {
+                const boosted = isAdBoosted(ad);
+                return (
                 <Card
                   key={ad.id}
                   className={`overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
@@ -839,13 +1079,24 @@ export default function Home() {
                         <img
                           src={ad.image}
                           alt={ad.title}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                          className={`w-full h-full object-cover hover:scale-105 transition-transform duration-500 ${
+                            !boosted ? "blur-xl scale-110" : ""
+                          }`}
                           loading="lazy"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-5xl">
                           {ad.category === "uomo-cerca-donna" ? "👨" : ad.category === "trans" ? "⚧️" : "👤"}
+                        </div>
+                      )}
+                      {/* Badge Premium / lucchetto sulle foto sfocate */}
+                      {!boosted && ad.image && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none">
+                          <div className="bg-black/60 text-white px-2 py-1 rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1 backdrop-blur-sm">
+                            <Lock className="w-3 h-3" /> Premium
+                          </div>
+                          <span className="text-[10px] text-white/80">Clicca per vedere</span>
                         </div>
                       )}
                       {ad.is_sponsored && (
@@ -898,7 +1149,25 @@ export default function Home() {
                       )}
                     </div>
                   </Card>
-                ))}
+                );
+              })}
+              </div>
+            )}
+
+            {/* PAGINAZIONE - Carica altri */}
+            {!loading && filteredAds.length > 0 && hasMore && !searchTerm && !categoryFilter && !selectedCity && (
+              <div className="flex justify-center mt-8">
+                <Button variant="outline" size="lg" onClick={loadMore} disabled={loadingMore} className="gap-2">
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Caricamento...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-4 h-4" /> Carica altri annunci
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </div>
@@ -1101,71 +1370,278 @@ export default function Home() {
                 <button onClick={() => setPublishOpen(false)} className="text-2xl text-muted-foreground hover:text-foreground">×</button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  className="md:col-span-2"
-                  placeholder="Titolo annuncio"
-                  value={publishForm.title}
-                  onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
-                />
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={publishForm.category}
-                  onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={publishForm.city}
-                  onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
-                >
-                  {ITALIAN_CITIES.map((city) => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
-                <Input
-                  placeholder="Eta"
-                  type="number"
-                  min="18"
-                  value={publishForm.age}
-                  onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
-                />
-                <Input
-                  placeholder="Prezzo o info"
-                  value={publishForm.price}
-                  onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
-                />
-                <Input
-                  placeholder="Numero WhatsApp (es. +39 333 1234567)"
-                  value={publishForm.phone}
-                  onChange={(e) => setPublishForm({ ...publishForm, phone: e.target.value })}
-                />
-                <Input
-                  className="md:col-span-2"
-                  placeholder="URL foto (incolla il link di una immagine)"
-                  value={publishForm.image}
-                  onChange={(e) => setPublishForm({ ...publishForm, image: e.target.value })}
-                />
-                <Textarea
-                  className="md:col-span-2"
-                  rows={5}
-                  placeholder="Descrizione"
-                  value={publishForm.description}
-                  onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
-                />
-              </div>
+              {/* Messaggio limite giornaliero */}
+              {limitMessage ? (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">{limitMessage}</p>
+                      {!hasPaid && (
+                        <Button
+                          size="sm"
+                          className="mt-3 gap-1.5"
+                          onClick={() => { setPublishOpen(false); navigate("/shop"); }}
+                        >
+                          💰 Acquista crediti
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Info limite */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-4 bg-muted/50 rounded-lg px-3 py-2">
+                    <span>Annunci pubblicati oggi: <strong className="text-foreground">{adsPostedToday}/{dailyLimit}</strong></span>
+                    <span className="flex items-center gap-1">
+                      {hasPaid ? <><Crown className="w-3.5 h-3.5 text-amber-500" /> Account Premium</> : "Account gratuito"}
+                    </span>
+                  </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <Button className="flex-1" onClick={handlePublish} disabled={busy}>
-                  {busy ? "Pubblicazione..." : "Pubblica"}
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setPublishOpen(false)}>
-                  Annulla
-                </Button>
-              </div>
+                  {/* UPLOAD FOTO */}
+                  <div className="mb-5">
+                    <Label className="mb-2 block">Foto {hasPaid ? `(max ${maxPhotos})` : `(max ${maxPhotos} - upgrade premium per 5)`}</Label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple={hasPaid}
+                      className="hidden"
+                      onChange={handlePhotoSelect}
+                    />
+                    {photoPreviewUrls.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
+                        {photoPreviewUrls.map((url, idx) => (
+                          <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
+                            <img src={url} alt={`anteprima ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(idx)}
+                              className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Rimuovi foto"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            {idx === 0 && (
+                              <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[9px] px-1.5 py-0.5 rounded font-bold">Principale</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {photoPreviewUrls.length < maxPhotos && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingPhotos}
+                        className="w-full border-2 border-dashed border-border rounded-lg py-6 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                      >
+                        {uploadingPhotos ? (
+                          <><Loader2 className="w-6 h-6 animate-spin" /> Caricamento...</>
+                        ) : (
+                          <>
+                            <ImagePlus className="w-6 h-6" />
+                            <span className="text-sm font-medium">Carica foto</span>
+                            <span className="text-xs">PNG, JPG fino a {maxPhotos - photoPreviewUrls.length} rimanenti</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      className="md:col-span-2"
+                      placeholder="Titolo annuncio"
+                      value={publishForm.title}
+                      onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
+                    />
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={publishForm.category}
+                      onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
+                    >
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={publishForm.city}
+                      onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
+                    >
+                      {ITALIAN_CITIES.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                    <Input
+                      placeholder="Eta"
+                      type="number"
+                      min="18"
+                      value={publishForm.age}
+                      onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Prezzo o info"
+                      value={publishForm.price}
+                      onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Telefono (es. +39 333 1234567)"
+                      value={publishForm.phone}
+                      onChange={(e) => setPublishForm({ ...publishForm, phone: e.target.value })}
+                    />
+                    <Input
+                      placeholder="WhatsApp (es. +39 333 1234567)"
+                      value={publishForm.whatsapp}
+                      onChange={(e) => setPublishForm({ ...publishForm, whatsapp: e.target.value })}
+                    />
+                    <Textarea
+                      className="md:col-span-2"
+                      rows={5}
+                      placeholder="Descrizione"
+                      value={publishForm.description}
+                      onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
+                    />
+                  </div>
+
+                  {/* CAMPI DETTAGLIO */}
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-primary">
+                      <Sparkles className="w-4 h-4" /> Dettagli (opzionale)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="mb-1.5 block text-xs">Colore capelli</Label>
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={publishForm.hair_color}
+                          onChange={(e) => setPublishForm({ ...publishForm, hair_color: e.target.value })}
+                        >
+                          <option value="">Seleziona...</option>
+                          {HAIR_COLORS.map((v) => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs">Corporatura</Label>
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={publishForm.body_type}
+                          onChange={(e) => setPublishForm({ ...publishForm, body_type: e.target.value })}
+                        >
+                          <option value="">Seleziona...</option>
+                          {BODY_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs">Etnia</Label>
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={publishForm.ethnicity}
+                          onChange={(e) => setPublishForm({ ...publishForm, ethnicity: e.target.value })}
+                        >
+                          <option value="">Seleziona...</option>
+                          {ETHNICITIES.map((v) => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs">Orari disponibilita</Label>
+                        <Input
+                          placeholder="es. 10:00-22:00"
+                          value={publishForm.availability_hours}
+                          onChange={(e) => setPublishForm({ ...publishForm, availability_hours: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs">Altezza (cm)</Label>
+                        <Input
+                          type="number"
+                          min="100"
+                          max="250"
+                          placeholder="es. 170"
+                          value={publishForm.height}
+                          onChange={(e) => setPublishForm({ ...publishForm, height: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs">Peso (kg)</Label>
+                        <Input
+                          type="number"
+                          min="30"
+                          max="200"
+                          placeholder="es. 60"
+                          value={publishForm.weight}
+                          onChange={(e) => setPublishForm({ ...publishForm, weight: e.target.value })}
+                        />
+                      </div>
+                      <Textarea
+                        className="md:col-span-2"
+                        rows={3}
+                        placeholder="Servizi offerti"
+                        value={publishForm.services}
+                        onChange={(e) => setPublishForm({ ...publishForm, services: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* SCHEDULAZIONE VETRINA */}
+                  {(currentUser?.credits || 0) > 0 && (
+                    <div className="mt-6 pt-6 border-t border-border">
+                      <label className="flex items-center gap-3 cursor-pointer mb-3">
+                        <input
+                          type="checkbox"
+                          checked={scheduleVetrina}
+                          onChange={(e) => setScheduleVetrina(e.target.checked)}
+                          className="w-4 h-4 rounded accent-primary"
+                        />
+                        <span className="text-sm font-bold flex items-center gap-2 text-accent">
+                          <Sparkles className="w-4 h-4" /> Metti in vetrina (boost)
+                        </span>
+                      </label>
+                      {scheduleVetrina && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-accent/5 rounded-lg p-4">
+                          <div>
+                            <Label className="mb-1.5 block text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Durata vetrina</Label>
+                            <select
+                              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              value={vetrinaDuration}
+                              onChange={(e) => setVetrinaDuration(Number(e.target.value))}
+                            >
+                              <option value={1}>1 giorno ({VETRINA_COSTS[1]} crediti)</option>
+                              <option value={3}>3 giorni ({VETRINA_COSTS[3]} crediti)</option>
+                              <option value={7}>7 giorni ({VETRINA_COSTS[7]} crediti)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="mb-1.5 block text-xs flex items-center gap-1"><Calendar className="w-3 h-3" /> Inizio (opzionale, altrimenti subito)</Label>
+                            <Input
+                              type="datetime-local"
+                              value={vetrinaStartAt}
+                              onChange={(e) => setVetrinaStartAt(e.target.value)}
+                            />
+                          </div>
+                          <p className="md:col-span-2 text-xs text-muted-foreground">
+                            Costo: <strong className="text-foreground">{VETRINA_COSTS[vetrinaDuration]} crediti</strong> • Saldo attuale: <strong className="text-foreground">{currentUser?.credits || 0} crediti</strong>
+                            {(currentUser?.credits || 0) < (VETRINA_COSTS[vetrinaDuration] ?? 0) && (
+                              <span className="text-destructive font-semibold"> • Crediti insufficienti</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                    <Button className="flex-1" onClick={handlePublish} disabled={busy}>
+                      {busy ? (uploadingPhotos ? "Caricamento foto..." : "Pubblicazione...") : "Pubblica"}
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => setPublishOpen(false)}>
+                      Annulla
+                    </Button>
+                  </div>
+                </>
+              )}
             </Card>
           </div>
         )}
@@ -1176,8 +1652,7 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-sm">B</div>
-                    <h4 className="font-bold font-poppins">Incontri di Bakeka</h4>
+                    <img src="/logo.svg" alt="Incontri di Bakeka" className="h-8 w-auto" />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Il marketplace piu affidabile per connessioni autentiche in Italia.
@@ -1201,11 +1676,12 @@ export default function Home() {
                 </div>
                 <div>
                   <h4 className="font-bold mb-4">Seguici</h4>
-                  <div className="flex gap-3">
-                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-bold">F</a>
-                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-bold">I</a>
-                    <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-bold">T</a>
+                  <div className="flex gap-3 mb-2">
+                    <span className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-sm font-bold opacity-50 cursor-not-allowed" title="Coming Soon">F</span>
+                    <span className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-sm font-bold opacity-50 cursor-not-allowed" title="Coming Soon">I</span>
+                    <span className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-sm font-bold opacity-50 cursor-not-allowed" title="Coming Soon">T</span>
                   </div>
+                  <p className="text-xs text-muted-foreground">Coming Soon</p>
                 </div>
               </div>
 

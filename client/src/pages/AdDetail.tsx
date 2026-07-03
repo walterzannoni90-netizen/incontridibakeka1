@@ -3,13 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "@/hooks/useRouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useSupabase } from "@/hooks/useSupabase";
 import { slugify } from "@shared/data";
+import { toast } from "sonner";
 import {
   MapPin,
   Star,
   Heart,
   ArrowLeft,
   ChevronRight,
+  ChevronLeft,
   Home as HomeIcon,
   Eye,
   Shield,
@@ -17,6 +20,7 @@ import {
   Share2,
   Phone,
   MessageCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -54,12 +58,20 @@ interface Profile {
   avatar_url?: string;
 }
 
+const REPORT_REASONS = [
+  "Contenuto inappropriato",
+  "Annuncio falso o truffa",
+  "Minorile",
+  "Spam o phishing",
+];
+
 // No demo data - real data only from Supabase
 const DEMO_ADS_MAP: Record<string, Ad> = {};
 
 export default function AdDetail() {
   const { getQueryParam, navigate, currentPath } = useRouter();
   const { user, token: authToken } = useAuth();
+  const supabase = useSupabase();
 
   const [ad, setAd] = useState<Ad | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -68,6 +80,8 @@ export default function AdDetail() {
   const [saved, setSaved] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
 
   const adId = getQueryParam("id") || (() => {
     const match = currentPath.match(/^\/ad\/(.+)$/);
@@ -170,22 +184,22 @@ export default function AdDetail() {
     if (!ad) return;
     const phone = profile?.whatsapp || profile?.phone || ad.whatsapp || ad.phone;
     if (!phone) {
-      alert("Numero WhatsApp non disponibile per questo annuncio.");
+      toast.error("Numero WhatsApp non disponibile per questo annuncio.");
       return;
     }
     const message = `Ciao, ho visto il tuo annuncio "${ad.title}" su Incontri di Bakeka e sono interessato.`;
     const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   };
 
   const handlePhoneCall = () => {
     if (!ad) return;
     const phone = profile?.phone || ad.phone;
     if (!phone) {
-      alert("Numero di telefono non disponibile per questo annuncio.");
+      toast.error("Numero di telefono non disponibile per questo annuncio.");
       return;
     }
-    window.location.href = `tel:${phone}`;
+    window.location.href = `tel:${phone.replace(/\s/g, "")}`;
   };
 
   const handleShare = () => {
@@ -200,9 +214,35 @@ export default function AdDetail() {
     }
   };
 
-  const handleReport = () => {
-    setShowReportModal(false);
-    alert("Segnalazione inviata. Il nostro team valutera il contenuto.");
+  const handleReport = async (reason: string) => {
+    if (!ad) return;
+    if (!authToken || !user) {
+      toast.error("Devi accedere per segnalare un annuncio.");
+      return;
+    }
+    setSelectedReason(reason);
+    setReporting(true);
+    try {
+      await supabase.post(
+        "ad_reports",
+        {
+          ad_id: ad.id,
+          reporter_id: user.id,
+          ad_title: ad.title,
+          reason,
+          status: "pending",
+        },
+        authToken
+      );
+      toast.success("Segnalazione inviata. Il nostro team valutera il contenuto.");
+      setShowReportModal(false);
+      setSelectedReason(null);
+    } catch (error) {
+      console.error("Errore segnalazione:", error);
+      toast.error("Impossibile inviare la segnalazione. Riprova piu tardi.");
+    } finally {
+      setReporting(false);
+    }
   };
 
   const toggleSave = () => {
@@ -214,6 +254,7 @@ export default function AdDetail() {
       : savedAds.filter((id: string) => id !== ad.id);
     localStorage.setItem("savedAds", JSON.stringify(nextIds));
     setSaved(nextSaved);
+    toast.success(nextSaved ? "Annuncio salvato" : "Annuncio rimosso dai salvati");
   };
 
   if (loading) {
@@ -242,7 +283,16 @@ export default function AdDetail() {
     );
   }
 
-  const images = ad.images && ad.images.length > 0 ? ad.images : [ad.image].filter(Boolean);
+  // Costruisci la lista immagini: nessun blur nella vista dettaglio.
+  const images: string[] = ad.images && ad.images.length > 0 ? ad.images : [ad.image].filter(Boolean) as string[];
+  const currentIdx = Math.max(0, images.indexOf(mainImage));
+  const hasMultiple = images.length > 1;
+
+  const goToImage = (idx: number) => {
+    if (!hasMultiple) return;
+    const next = (idx + images.length) % images.length;
+    setMainImage(images[next]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -283,7 +333,12 @@ export default function AdDetail() {
             <Card className="overflow-hidden mb-4 border-0 shadow-md">
               <div className="relative aspect-[4/3] md:aspect-video bg-gradient-to-br from-primary/20 to-purple-300/20 flex items-center justify-center">
                 {mainImage ? (
-                  <img src={mainImage} alt={ad.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <img
+                    src={mainImage}
+                    alt={ad.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                 ) : (
                   <div className="text-6xl">
                     {ad.category === "uomo-cerca-donna" ? "👨" : ad.category === "trans" ? "⚧️" : "👤"}
@@ -299,11 +354,34 @@ export default function AdDetail() {
                     <Shield className="w-3 h-3" /> Verificato
                   </div>
                 )}
+
+                {/* Carousel controls - solo se piu di una immagine */}
+                {hasMultiple && (
+                  <>
+                    <button
+                      onClick={() => goToImage(currentIdx - 1)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors"
+                      aria-label="Foto precedente"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => goToImage(currentIdx + 1)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors"
+                      aria-label="Foto successiva"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">
+                      {currentIdx + 1} / {images.length}
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
 
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {hasMultiple && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {images.map((img, idx) => (
                   <button
@@ -384,9 +462,9 @@ export default function AdDetail() {
               </div>
             </Card>
 
-            {/* Contact Card - WhatsApp only */}
+            {/* Contact Card - WhatsApp + telefono */}
             <Card className="p-4 md:p-6 mb-4 border-0 shadow-md">
-              <h3 className="font-bold mb-4 font-poppins">Contatta su WhatsApp</h3>
+              <h3 className="font-bold mb-4 font-poppins">Contatta</h3>
               <div className="space-y-3">
                 <Button
                   className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
@@ -422,7 +500,7 @@ export default function AdDetail() {
             <Button
               variant="ghost"
               className="w-full gap-2 text-muted-foreground text-sm"
-              onClick={() => setShowReportModal(true)}
+              onClick={() => { setSelectedReason(null); setShowReportModal(true); }}
             >
               <Flag className="w-3.5 h-3.5" />
               Segnala annuncio
@@ -454,17 +532,35 @@ export default function AdDetail() {
             <p className="text-sm text-muted-foreground mb-4">
               Segnala questo annuncio se ritieni che violi le nostre regole. Il nostro team esaminera la segnalazione.
             </p>
-            <div className="space-y-2 mb-4">
-              {["Contenuto inappropriato", "Annuncio falso o truffa", "Minorile", "Spam o phishing"].map((reason) => (
-                <button
-                  key={reason}
-                  className="w-full text-left px-4 py-2.5 rounded-lg border border-border hover:bg-muted text-sm transition-colors"
-                  onClick={handleReport}
+            {!user ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Devi accedere per inviare una segnalazione.
+                </p>
+                <Button
+                  className="w-full"
+                  onClick={() => { setShowReportModal(false); navigate("/"); }}
                 >
-                  {reason}
-                </button>
-              ))}
-            </div>
+                  Vai al login
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {REPORT_REASONS.map((reason) => (
+                  <button
+                    key={reason}
+                    disabled={reporting}
+                    className="w-full text-left px-4 py-2.5 rounded-lg border border-border hover:bg-muted text-sm transition-colors disabled:opacity-50 flex items-center justify-between"
+                    onClick={() => handleReport(reason)}
+                  >
+                    <span>{reason}</span>
+                    {reporting && selectedReason === reason && (
+                      <CheckCircle2 className="w-4 h-4 animate-pulse text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}

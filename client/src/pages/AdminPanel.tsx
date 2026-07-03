@@ -6,7 +6,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
-import { ArrowLeft, Trash2, CheckCircle, XCircle, Star, Crown, Eye, EyeOff, Search, Users, FileText, Settings, Plus, Edit3, Save, X, TrendingUp, AlertTriangle, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Star,
+  Crown,
+  Eye,
+  EyeOff,
+  Search,
+  Users,
+  FileText,
+  Settings,
+  Edit3,
+  Save,
+  TrendingUp,
+  AlertTriangle,
+  MessageCircle,
+  Rocket,
+  CreditCard,
+  Ban,
+} from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -24,6 +46,7 @@ interface Ad {
   is_active: boolean;
   is_premium: boolean;
   is_sponsored: boolean;
+  is_boosted?: boolean;
   is_verified?: boolean;
   views?: number;
   rating: number;
@@ -38,6 +61,8 @@ interface User {
   name: string;
   is_verified: boolean;
   credits: number;
+  has_paid?: boolean;
+  subscription_tier?: string;
   created_at?: string;
 }
 
@@ -50,10 +75,22 @@ interface Report {
   created_at: string;
 }
 
+interface Transaction {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  amount?: number;
+  credits?: number;
+  status: string;
+  type?: string;
+  created_at: string;
+}
+
 // No demo data - real data only from Supabase
 const DEMO_ADS: Ad[] = [];
 const DEMO_USERS: User[] = [];
 const DEMO_REPORTS: Report[] = [];
+const DEMO_TRANSACTIONS: Transaction[] = [];
 
 export default function AdminPanel() {
   const { isAdmin, loading: authLoading, logout, token: authToken, user: currentUser } = useAuth();
@@ -62,6 +99,7 @@ export default function AdminPanel() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchAds, setSearchAds] = useState("");
   const [searchUsers, setSearchUsers] = useState("");
@@ -83,6 +121,7 @@ export default function AdminPanel() {
       setAds(DEMO_ADS);
       setUsers(DEMO_USERS);
       setReports(DEMO_REPORTS);
+      setTransactions(DEMO_TRANSACTIONS);
       setLoading(false);
       return;
     }
@@ -101,12 +140,22 @@ export default function AdminPanel() {
       const usersData = await usersResp.json();
       setAds(adsData || []);
       setUsers(usersData || []);
-      // Reports may not exist as table yet
+
+      // Segnalazioni (tabella ad_reports)
       try {
-        const reportsResp = await fetch(`${SUPABASE_URL}/rest/v1/reports?select=*&order=created_at.desc`, { headers });
+        const reportsResp = await fetch(`${SUPABASE_URL}/rest/v1/ad_reports?select=*&order=created_at.desc`, { headers });
         if (reportsResp.ok) {
           const reportsData = await reportsResp.json();
           setReports(reportsData || []);
+        }
+      } catch {}
+
+      // Transazioni (tabella transactions)
+      try {
+        const txResp = await fetch(`${SUPABASE_URL}/rest/v1/transactions?select=*&order=created_at.desc`, { headers });
+        if (txResp.ok) {
+          const txData = await txResp.json();
+          setTransactions(txData || []);
         }
       } catch {}
     } catch (error) {
@@ -114,6 +163,7 @@ export default function AdminPanel() {
       setAds(DEMO_ADS);
       setUsers(DEMO_USERS);
       setReports(DEMO_REPORTS);
+      setTransactions(DEMO_TRANSACTIONS);
     } finally {
       setLoading(false);
     }
@@ -167,6 +217,7 @@ export default function AdminPanel() {
       method: "DELETE",
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${authToken}` },
     });
+    toast.success("Annuncio eliminato.");
     loadData();
   };
 
@@ -185,12 +236,14 @@ export default function AdminPanel() {
       method: "DELETE",
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${authToken}` },
     });
+    toast.success("Utente eliminato.");
     loadData();
   };
 
   const handleSaveEdit = async () => {
     if (!editingAd) return;
     await updateAd(editingAd.id, editForm);
+    toast.success("Annuncio aggiornato.");
     setEditingAd(null);
     setEditForm({});
   };
@@ -199,6 +252,13 @@ export default function AdminPanel() {
     const u = users.find((x) => x.id === userId);
     if (!u) return;
     await updateProfile(userId, { credits: (u.credits || 0) + amount });
+    toast.success(`+${amount} crediti aggiunti.`);
+  };
+
+  const handleToggleBoost = async (ad: Ad) => {
+    const next = !ad.is_boosted;
+    await updateAd(ad.id, { is_boosted: next });
+    toast.success(next ? "Annuncio boostato." : "Boost rimosso.");
   };
 
   const handleResolveReport = async (reportId: string) => {
@@ -206,7 +266,7 @@ export default function AdminPanel() {
       setReports(reports.map((r) => (r.id === reportId ? { ...r, status: "resolved" } : r)));
       return;
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${reportId}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/ad_reports?id=eq.${reportId}`, {
       method: "PATCH",
       headers: {
         apikey: SUPABASE_KEY,
@@ -216,6 +276,26 @@ export default function AdminPanel() {
       },
       body: JSON.stringify({ status: "resolved" }),
     });
+    toast.success("Segnalazione risolta.");
+    loadData();
+  };
+
+  const handleDismissReport = async (reportId: string) => {
+    if (!SUPABASE_CONFIGURED) {
+      setReports(reports.map((r) => (r.id === reportId ? { ...r, status: "dismissed" } : r)));
+      return;
+    }
+    await fetch(`${SUPABASE_URL}/rest/v1/ad_reports?id=eq.${reportId}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({ status: "dismissed" }),
+    });
+    toast.success("Segnalazione ignorata.");
     loadData();
   };
 
@@ -229,15 +309,23 @@ export default function AdminPanel() {
     user.name.toLowerCase().includes(searchUsers.toLowerCase())
   );
 
+  const pendingReports = reports.filter((r) => r.status === "pending");
+  const totalRevenue = transactions
+    .filter((t) => t.status === "completed" || t.status === "succeeded" || t.status === "paid")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+
   const stats = {
     totalAds: ads.length,
     activeAds: ads.filter((a) => a.is_active).length,
     premiumAds: ads.filter((a) => a.is_premium).length,
     sponsoredAds: ads.filter((a) => a.is_sponsored).length,
+    boostedAds: ads.filter((a) => a.is_boosted).length,
     totalUsers: users.length,
     verifiedUsers: users.filter((u) => u.is_verified).length,
-    pendingReports: reports.filter((r) => r.status === "pending").length,
+    paidUsers: users.filter((u) => u.has_paid).length,
+    pendingReports: pendingReports.length,
     totalViews: ads.reduce((sum, a) => sum + (a.views || 0), 0),
+    totalTransactions: transactions.length,
   };
 
   if (loading) {
@@ -289,13 +377,6 @@ export default function AdminPanel() {
           </Card>
           <Card className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs md:text-sm text-muted-foreground">Annunci Attivi</p>
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <p className="text-2xl md:text-3xl font-bold text-green-600">{stats.activeAds}</p>
-          </Card>
-          <Card className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-2">
               <p className="text-xs md:text-sm text-muted-foreground">Utenti</p>
               <Users className="w-5 h-5 text-secondary" />
             </div>
@@ -308,6 +389,13 @@ export default function AdminPanel() {
             </div>
             <p className="text-2xl md:text-3xl font-bold text-accent">{stats.totalViews}</p>
           </Card>
+          <Card className="p-4 md:p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs md:text-sm text-muted-foreground">Ricavi (€)</p>
+              <CreditCard className="w-5 h-5 text-green-600" />
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-green-600">{totalRevenue.toFixed(2)}</p>
+          </Card>
         </div>
 
         {/* Secondary stats */}
@@ -318,8 +406,14 @@ export default function AdminPanel() {
           <span className="text-xs md:text-sm bg-accent/10 text-accent px-3 py-1.5 rounded-lg font-medium">
             ⭐ Sponsor: {stats.sponsoredAds}
           </span>
+          <span className="text-xs md:text-sm bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-3 py-1.5 rounded-lg font-medium">
+            🚀 Boost: {stats.boostedAds}
+          </span>
           <span className="text-xs md:text-sm bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-3 py-1.5 rounded-lg font-medium">
             ✓ Verificati: {stats.verifiedUsers}/{stats.totalUsers}
+          </span>
+          <span className="text-xs md:text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-lg font-medium">
+            💳 Paganti: {stats.paidUsers}
           </span>
           {stats.pendingReports > 0 && (
             <span className="text-xs md:text-sm bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-3 py-1.5 rounded-lg font-medium">
@@ -330,7 +424,7 @@ export default function AdminPanel() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-4">
             <TabsTrigger value="ads" className="gap-1.5 text-xs md:text-sm">
               <FileText className="w-4 h-4" /> Annunci ({ads.length})
             </TabsTrigger>
@@ -338,7 +432,13 @@ export default function AdminPanel() {
               <Users className="w-4 h-4" /> Utenti ({users.length})
             </TabsTrigger>
             <TabsTrigger value="reports" className="gap-1.5 text-xs md:text-sm">
-              <AlertTriangle className="w-4 h-4" /> Segnalazioni ({reports.filter((r) => r.status === "pending").length})
+              <AlertTriangle className="w-4 h-4" /> Segnalazioni ({pendingReports.length})
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-1.5 text-xs md:text-sm">
+              <CreditCard className="w-4 h-4" /> Transazioni ({transactions.length})
+            </TabsTrigger>
+            <TabsTrigger value="boosts" className="gap-1.5 text-xs md:text-sm">
+              <Rocket className="w-4 h-4" /> Boost ({stats.boostedAds})
             </TabsTrigger>
           </TabsList>
 
@@ -474,6 +574,8 @@ export default function AdminPanel() {
                   <tr>
                     <th className="px-3 md:px-4 py-2 md:py-3 text-left font-semibold">Utente</th>
                     <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Verificato</th>
+                    <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Pagante</th>
+                    <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold hidden md:table-cell">Abbonamento</th>
                     <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Crediti</th>
                     <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Azioni</th>
                   </tr>
@@ -506,6 +608,28 @@ export default function AdminPanel() {
                         </button>
                       </td>
                       <td className="px-3 md:px-4 py-3 text-center">
+                        <button
+                          onClick={() => updateProfile(u.id, { has_paid: !u.has_paid })}
+                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
+                          title={u.has_paid ? "Segna come non pagante" : "Segna come pagante"}
+                        >
+                          {u.has_paid ? (
+                            <CreditCard className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <CreditCard className="w-5 h-5 text-muted-foreground/40" />
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-3 md:px-4 py-3 text-center hidden md:table-cell">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                          u.subscription_tier === "premium"
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          {u.subscription_tier || "free"}
+                        </span>
+                      </td>
+                      <td className="px-3 md:px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <span className="font-bold text-accent">{u.credits || 0}</span>
                           <button
@@ -530,7 +654,7 @@ export default function AdminPanel() {
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <td colSpan={6} className="text-center py-8 text-muted-foreground">
                         Nessun utente trovato
                       </td>
                     </tr>
@@ -555,7 +679,7 @@ export default function AdminPanel() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <AlertTriangle className={`w-4 h-4 ${report.status === "pending" ? "text-red-500" : "text-green-500"}`} />
-                          <h4 className="font-bold text-sm">{report.ad_title}</h4>
+                          <h4 className="font-bold text-sm">{report.ad_title || "Annuncio"}</h4>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">Motivo: {report.reason}</p>
                         <p className="text-xs text-muted-foreground">
@@ -575,9 +699,17 @@ export default function AdminPanel() {
                             </Button>
                             <Button
                               size="sm"
+                              variant="ghost"
+                              onClick={() => handleDismissReport(report.id)}
+                              className="gap-1.5"
+                            >
+                              <Ban className="w-3.5 h-3.5" /> Ignora
+                            </Button>
+                            <Button
+                              size="sm"
                               variant="destructive"
                               onClick={() => {
-                                handleDeleteAd(report.ad_id, report.ad_title);
+                                handleDeleteAd(report.ad_id, report.ad_title || "annuncio");
                                 handleResolveReport(report.id);
                               }}
                               className="gap-1.5"
@@ -586,7 +718,9 @@ export default function AdminPanel() {
                             </Button>
                           </>
                         ) : (
-                          <span className="text-xs text-green-600 font-medium">✓ Risolto</span>
+                          <span className="text-xs text-green-600 font-medium">
+                            ✓ {report.status === "dismissed" ? "Ignorata" : "Risolto"}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -594,6 +728,124 @@ export default function AdminPanel() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* TRANSACTIONS TAB */}
+          <TabsContent value="transactions" className="space-y-4">
+            {transactions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <CreditCard className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-muted-foreground">Nessuna transazione registrata.</p>
+              </Card>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-left font-semibold">ID</th>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-left font-semibold hidden md:table-cell">Utente</th>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Tipo</th>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Importo</th>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Crediti</th>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Stato</th>
+                      <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold hidden md:table-cell">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((t) => (
+                      <tr key={t.id} className="border-t border-border hover:bg-muted/30">
+                        <td className="px-3 md:px-4 py-3 font-mono text-xs">{t.id.slice(0, 8)}</td>
+                        <td className="px-3 md:px-4 py-3 hidden md:table-cell text-xs text-muted-foreground">{t.user_email || t.user_id.slice(0, 8)}</td>
+                        <td className="px-3 md:px-4 py-3 text-center text-xs">{t.type || "crediti"}</td>
+                        <td className="px-3 md:px-4 py-3 text-center font-semibold">{t.amount ? `€${t.amount.toFixed(2)}` : "—"}</td>
+                        <td className="px-3 md:px-4 py-3 text-center text-accent font-semibold">{t.credits ?? "—"}</td>
+                        <td className="px-3 md:px-4 py-3 text-center">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            t.status === "completed" || t.status === "succeeded" || t.status === "paid"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : t.status === "pending"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          }`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="px-3 md:px-4 py-3 text-center hidden md:table-cell text-xs text-muted-foreground">
+                          {new Date(t.created_at).toLocaleDateString("it-IT")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* BOOSTS TAB */}
+          <TabsContent value="boosts" className="space-y-4">
+            <Card className="p-4 mb-2 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-900/40">
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Rocket className="w-4 h-4 text-purple-600" />
+                Boosta manualmente un annuncio per dargli maggiore visibilita nei risultati.
+              </p>
+            </Card>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-3 md:px-4 py-2 md:py-3 text-left font-semibold">Annuncio</th>
+                    <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold hidden md:table-cell">Citta</th>
+                    <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Stato Boost</th>
+                    <th className="px-3 md:px-4 py-2 md:py-3 text-center font-semibold">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ads.map((ad) => (
+                    <tr key={ad.id} className="border-t border-border hover:bg-muted/30">
+                      <td className="px-3 md:px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {ad.image && (
+                            <img src={ad.image} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium truncate max-w-[200px]">{ad.title}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{ad.category?.replace(/-/g, " ")}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 md:px-4 py-3 hidden md:table-cell">{ad.city}</td>
+                      <td className="px-3 md:px-4 py-3 text-center">
+                        {ad.is_boosted ? (
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                            🚀 Boostato
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Non boostato</span>
+                        )}
+                      </td>
+                      <td className="px-3 md:px-4 py-3 text-center">
+                        <Button
+                          size="sm"
+                          variant={ad.is_boosted ? "outline" : "default"}
+                          onClick={() => handleToggleBoost(ad)}
+                          className="gap-1.5"
+                        >
+                          <Rocket className="w-3.5 h-3.5" />
+                          {ad.is_boosted ? "Rimuovi boost" : "Boosta"}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {ads.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                        Nessun annuncio disponibile
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </TabsContent>
         </Tabs>
 
@@ -678,7 +930,7 @@ export default function AdminPanel() {
                 value={editForm.description || ""}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
               />
-              <div className="flex gap-6 md:col-span-2">
+              <div className="flex flex-wrap gap-4 md:col-span-2">
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -702,6 +954,14 @@ export default function AdminPanel() {
                     onChange={(e) => setEditForm({ ...editForm, is_sponsored: e.target.checked })}
                   />
                   Sponsor
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={editForm.is_boosted || false}
+                    onChange={(e) => setEditForm({ ...editForm, is_boosted: e.target.checked })}
+                  />
+                  Boost
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input

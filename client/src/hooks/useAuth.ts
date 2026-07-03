@@ -9,6 +9,7 @@ export interface User {
   is_admin: boolean;
   credits?: number;
   role?: string;
+  has_paid?: boolean;
 }
 
 function isAdminUser(user: any): boolean {
