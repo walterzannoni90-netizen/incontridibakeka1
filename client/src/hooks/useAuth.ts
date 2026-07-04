@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 export interface User {
   id: string;
@@ -8,80 +8,89 @@ export interface User {
   name: string;
   is_admin: boolean;
   credits?: number;
-  role?: string;
   has_paid?: boolean;
-}
-
-function isAdminUser(user: any): boolean {
-  return user?.role === "admin" || user?.is_admin === true;
+  subscription_tier?: string;
+  ads_count?: number;
+  is_verified?: boolean;
 }
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
 
+  // Verifica sessione al mount (cookie HTTP-only)
   useEffect(() => {
-    const storedToken = localStorage.getItem("authToken");
-    const storedUser = localStorage.getItem("currentUser");
-    const storedSession = localStorage.getItem("authSession");
-
-    if (storedToken && storedUser) {
+    const checkAuth = async () => {
       try {
-        const session = storedSession ? JSON.parse(storedSession) : null;
-        if (session?.expiresAt && Date.now() > session.expiresAt) {
-          localStorage.removeItem("authToken");
-          localStorage.removeItem("currentUser");
-          localStorage.removeItem("authSession");
-          setLoading(false);
-          return;
+        const res = await fetch(`${API_URL}/api/auth/me`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
         }
-
-        const parsedUser = JSON.parse(storedUser);
-        const admin = isAdminUser(parsedUser);
-        setUser({ ...parsedUser, is_admin: admin });
-        setToken(storedToken);
       } catch (e) {
-        console.error("Errore parsing user:", e);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("currentUser");
-        localStorage.removeItem("authSession");
+        console.error("Auth check error:", e);
+      } finally {
+        setLoading(false);
       }
+    };
+    checkAuth();
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Login fallito");
     }
-    setLoading(false);
+
+    setUser(data.user);
+    return data.user;
   }, []);
 
-  const login = useCallback((userData: User, authToken: string) => {
-    const admin = isAdminUser(userData);
-    const userWithAdmin = { ...userData, is_admin: admin };
-    setUser(userWithAdmin);
-    setToken(authToken);
-    localStorage.setItem("authToken", authToken);
-    localStorage.setItem("currentUser", JSON.stringify(userWithAdmin));
-    localStorage.setItem(
-      "authSession",
-      JSON.stringify({
-        savedAt: Date.now(),
-        expiresAt: Date.now() + AUTH_SESSION_TTL_MS,
-      })
-    );
+  const register = useCallback(async (email: string, password: string, name: string, phone?: string) => {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password, name, phone }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Registrazione fallita");
+    }
+
+    return data;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await fetch(`${API_URL}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
     setUser(null);
-    setToken(null);
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("authSession");
+  }, []);
+
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
 
   return {
     user,
-    token,
     loading,
     isAuthenticated: !!user,
     isAdmin: user?.is_admin || false,
     login,
+    register,
     logout,
+    updateUser,
   };
 }
