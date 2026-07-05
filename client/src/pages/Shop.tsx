@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useStripe } from "@/hooks/useStripe";
 import { useRouter } from "@/hooks/useRouter";
-import { ArrowLeft, Zap, Star, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Zap, CheckCircle, Loader2, Coins } from "lucide-react";
 
 const CREDIT_PACKS = [
   { credits: 10, price: 4.99, popular: false, features: ["Rendi Premium per 1 giorno", "Risali nei risultati 2 volte"] },
@@ -15,11 +15,46 @@ const CREDIT_PACKS = [
 ];
 
 export default function Shop() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { navigate } = useRouter();
-  const { createCheckoutSession } = useStripe();
+  const { createCheckoutSession, verifyPayment, handlePaymentCallback } = useStripe();
   const [loadingPack, setLoadingPack] = useState<number | null>(null);
-  const [redirecting, setRedirecting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  // Gestisce il callback dopo il pagamento Stripe
+  useEffect(() => {
+    const callback = handlePaymentCallback();
+    if (callback?.success && callback.sessionId) {
+      setVerifying(true);
+      toast.info("Verifica pagamento in corso...");
+
+      verifyPayment(callback.sessionId)
+        .then((result) => {
+          if (result?.status === "completed") {
+            toast.success("Pagamento completato!", {
+              description: `Hai ricevuto ${result.credits} crediti. Totale: ${result.totalCredits}`,
+            });
+            // Aggiorna i crediti dell'utente nel contesto
+            updateUser({ credits: result.totalCredits, has_paid: result.has_paid });
+            // Rimuovi i parametri URL
+            window.history.replaceState({}, "", "/shop");
+          } else {
+            toast.warning("Pagamento in elaborazione", {
+              description: "I crediti verranno aggiornati a breve.",
+            });
+          }
+        })
+        .catch((err) => {
+          toast.error("Errore verifica pagamento", { description: err.message });
+        })
+        .finally(() => {
+          setVerifying(false);
+        });
+    } else if (callback && !callback.success) {
+      toast.info("Pagamento annullato", { description: callback.message });
+      window.history.replaceState({}, "", "/shop");
+    }
+  }, [handlePaymentCallback, verifyPayment, updateUser]);
 
   if (!user) {
     return (
@@ -39,19 +74,15 @@ export default function Shop() {
   const handleBuyCredits = async (credits: number) => {
     try {
       setLoadingPack(credits);
-      setRedirecting(true);
       toast.info("Reindirizzamento a Stripe in corso...", {
         description: `${credits} crediti in preparazione.`,
       });
       await createCheckoutSession(user.id, credits);
-      setLoadingPack(null);
-      setRedirecting(false);
     } catch (error) {
       console.error("Errore acquisto:", error);
       const message = error instanceof Error ? error.message : "Errore durante l'acquisto. Riprova.";
       toast.error("Acquisto non riuscito", { description: message });
       setLoadingPack(null);
-      setRedirecting(false);
     }
   };
 
@@ -71,10 +102,17 @@ export default function Shop() {
             Potenzia i tuoi annunci con i crediti. Rendi premium, metti in vetrina e ottieni più visibilità.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
-            <Zap className="w-4 h-4 text-primary" />
+            <Coins className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">Crediti disponibili: {user.credits || 0}</span>
           </div>
         </div>
+
+        {verifying && (
+          <Card className="mb-6 p-4 text-center bg-yellow-50 border-yellow-200">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-yellow-600" />
+            <p className="text-yellow-800">Verifica pagamento in corso...</p>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {CREDIT_PACKS.map((pack) => (
@@ -114,7 +152,7 @@ export default function Shop() {
                 className="w-full gap-2"
                 variant={pack.popular ? "default" : "outline"}
                 onClick={() => handleBuyCredits(pack.credits)}
-                disabled={loadingPack === pack.credits || redirecting}
+                disabled={loadingPack === pack.credits || verifying}
               >
                 {loadingPack === pack.credits ? (
                   <>

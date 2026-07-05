@@ -1,9 +1,16 @@
 import { Router } from "express";
+import Stripe from "stripe";
 import { supabase } from "../middleware/supabaseClient";
 import { authMiddleware } from "../middleware/auth";
 import type { AuthenticatedRequest } from "../types";
 
 const router = Router();
+
+// Inizializza Stripe con la chiave segreta
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2024-06-20",
+  typescript: true,
+});
 
 const PRICE_MAP: Record<number, { price: number; stripePriceId: string }> = {
   10: { price: 4.99, stripePriceId: process.env.VITE_STRIPE_PRICE_10 || "" },
@@ -26,65 +33,52 @@ router.post("/checkout", authMiddleware, async (req: AuthenticatedRequest, res) 
     const stripePriceId = pack.stripePriceId;
 
     if (!stripePriceId) {
-      return res.status(500).json({ error: "Configurazione Stripe incompleta" });
+      return res.status(500).json({ error: "Configurazione Stripe incompleta: manca il Price ID" });
     }
 
-    // Crea transazione pending
-    const { data: transaction, error: txError } = await supabase
-      .from("transactions")
-      .insert({
-        user_id: userId,
-        amount: pack.price,
-        credits,
-        status: "pending",
-      })
-      .select()
+    // Recupera email utente per pre-compilare il checkout
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email, name")
+      .eq("id", userId)
       .single();
 
-    if (txError || !transaction) {
-      return res.status(500).json({ error: "Errore creazione transazione" });
-    }
-
-    // Chiama Supabase Edge Function per creare sessione Stripe
-    const edgeFunctionUrl = `${process.env.SUPABASE_URL}/functions/v1/stripe-checkout`;
-    const response = await fetch(edgeFunctionUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify({
-        price_id: stripePriceId,
+    // Crea sessione Stripe Checkout direttamente
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price: stripePriceId, quantity: 1 }],
+      success_url: `${process.env.CLIENT_URL}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/shop?payment=cancel`,
+      metadata: {
         user_id: userId,
-        credits,
-        transaction_id: transaction.id,
-        success_url: `${process.env.CLIENT_URL}/shop?payment=success`,
-        cancel_url: `${process.env.CLIENT_URL}/shop?payment=cancel`,
-      }),
+        credits: String(credits),
+      },
+      client_reference_id: userId,
+      customer_email: profile?.email || undefined,
     });
 
-    const data = await response.json();
-
-    if (data.error || !data.url) {
-      // Aggiorna transazione come failed
-      await supabase
-        .from("transactions")
-        .update({ status: "failed" })
-        .eq("id", transaction.id);
-
-      return res.status(500).json({ error: data.error || "Errore creazione sessione Stripe" });
+    if (!session.url) {
+      return res.status(500).json({ error: "Stripe non ha restituito un URL di checkout" });
     }
 
-    // Aggiorna transazione con session ID
-    await supabase
-      .from("transactions")
-      .update({ stripe_session_id: data.session_id })
-      .eq("id", transaction.id);
+    // Salva transazione pending nel DB
+    const { error: txError } = await supabase.from("transactions").insert({
+      user_id: userId,
+      stripe_session_id: session.id,
+      amount: pack.price,
+      credits,
+      status: "pending",
+    });
 
-    res.json({ url: data.url, session_id: data.session_id });
-  } catch (error) {
+    if (txError) {
+      console.error("Errore salvataggio transazione:", txError);
+      // Non blocchiamo il checkout, ma logghiamo l'errore
+    }
+
+    res.json({ url: session.url, session_id: session.id });
+  } catch (error: any) {
     console.error("Checkout error:", error);
-    res.status(500).json({ error: "Errore interno del server" });
+    res.status(500).json({ error: error.message || "Errore creazione sessione di pagamento" });
   }
 });
 
@@ -94,7 +88,7 @@ router.get("/verify/:sessionId", authMiddleware, async (req: AuthenticatedReques
     const { sessionId } = req.params;
     const userId = req.user!.userId;
 
-    // Verifica transazione
+    // Verifica transazione nel DB
     const { data: transaction } = await supabase
       .from("transactions")
       .select("*")
@@ -122,11 +116,135 @@ router.get("/verify/:sessionId", authMiddleware, async (req: AuthenticatedReques
       });
     }
 
+    // Se ancora pending, verifica con Stripe
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === "paid") {
+        // Aggiorna transazione
+        await supabase
+          .from("transactions")
+          .update({ status: "completed", stripe_payment_id: session.payment_intent as string })
+          .eq("stripe_session_id", sessionId);
+
+        // Aggiungi crediti se non già aggiunti
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("credits")
+          .eq("id", userId)
+          .single();
+
+        const newCredits = (profile?.credits || 0) + transaction.credits;
+        await supabase
+          .from("profiles")
+          .update({ credits: newCredits, has_paid: true })
+          .eq("id", userId);
+
+        return res.json({
+          status: "completed",
+          credits: transaction.credits,
+          totalCredits: newCredits,
+          has_paid: true,
+        });
+      }
+    } catch (stripeError) {
+      console.error("Stripe verify error:", stripeError);
+    }
+
     res.json({ status: transaction.status });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Verify payment error:", error);
-    res.status(500).json({ error: "Errore interno del server" });
+    res.status(500).json({ error: error.message || "Errore verifica pagamento" });
   }
+});
+
+// ========== STRIPE WEBHOOK (pubblico, NO auth) ==========
+// Express raw body parser per webhook
+router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"] as string;
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!endpointSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET non configurato");
+    return res.status(500).json({ error: "Webhook non configurato" });
+  }
+
+  if (!sig) {
+    return res.status(400).json({ error: "Missing stripe-signature header" });
+  }
+
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err: any) {
+    console.error("Webhook signature verification failed:", err.message);
+    return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
+  }
+
+  console.log(`Webhook ricevuto: ${event.type} - ${event.id}`);
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.user_id;
+        const creditsStr = session.metadata?.credits;
+        const credits = creditsStr ? parseInt(creditsStr, 10) : 0;
+
+        if (!userId || !credits) {
+          console.error("Webhook: missing user_id or credits in metadata", session.metadata);
+          break;
+        }
+
+        // Aggiorna transazione
+        await supabase
+          .from("transactions")
+          .update({
+            status: "completed",
+            stripe_payment_id: session.payment_intent as string,
+          })
+          .eq("stripe_session_id", session.id);
+
+        // Aggiungi crediti all'utente
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("credits, has_paid")
+          .eq("id", userId)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from("profiles")
+            .update({
+              credits: (profile.credits || 0) + credits,
+              has_paid: true,
+            })
+            .eq("id", userId);
+
+          console.log(`Crediti aggiunti: ${credits} all'utente ${userId}`);
+        }
+        break;
+      }
+
+      case "checkout.session.expired":
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await supabase
+          .from("transactions")
+          .update({ status: "failed" })
+          .eq("stripe_session_id", session.id);
+        console.log(`Transazione fallita: ${session.id}`);
+        break;
+      }
+
+      default:
+        console.log(`Evento non gestito: ${event.type}`);
+    }
+  } catch (err: any) {
+    console.error("Errore processing webhook:", err.message);
+    // Ritorniamo 200 per evitare retry di Stripe
+  }
+
+  res.json({ received: true });
 });
 
 // ========== GET TRANSACTION HISTORY ==========
@@ -145,9 +263,9 @@ router.get("/history", authMiddleware, async (req: AuthenticatedRequest, res) =>
     }
 
     res.json({ transactions: transactions || [] });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Get history error:", error);
-    res.status(500).json({ error: "Errore interno del server" });
+    res.status(500).json({ error: error.message || "Errore interno del server" });
   }
 });
 

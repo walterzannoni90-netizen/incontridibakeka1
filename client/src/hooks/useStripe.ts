@@ -20,6 +20,8 @@ export function useStripe() {
 
         if (data.url) {
           window.location.href = data.url;
+        } else {
+          throw new Error("Stripe non ha restituito un URL di checkout");
         }
       } catch (error) {
         console.error("Errore creazione sessione Stripe:", error);
@@ -44,9 +46,10 @@ export function useStripe() {
   const handlePaymentCallback = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("payment");
+    const sessionId = params.get("session_id");
 
-    if (status === "success") {
-      return { success: true };
+    if (status === "success" && sessionId) {
+      return { success: true, sessionId };
     } else if (status === "cancel") {
       return { success: false, message: "Pagamento annullato" };
     }

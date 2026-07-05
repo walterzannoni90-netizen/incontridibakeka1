@@ -41,12 +41,17 @@ async function startServer() {
   }));
 
   app.use(cookieParser());
+
+  // IMPORTANTE: Webhook Stripe richiede raw body, NON json parsed
+  // Deve essere PRIMA di express.json()
+  app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
+
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
   // Rate limiting
   const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minuti
+    windowMs: 15 * 60 * 1000,
     max: 200,
     message: { error: "Troppe richieste, riprova più tardi." },
     standardHeaders: true,
@@ -55,7 +60,7 @@ async function startServer() {
   app.use("/api/", generalLimiter);
 
   const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 ora
+    windowMs: 60 * 60 * 1000,
     max: 10,
     message: { error: "Troppe tentativi di autenticazione. Riprova più tardi." },
     standardHeaders: true,
@@ -84,6 +89,8 @@ async function startServer() {
       status: "ok",
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
+      stripe: process.env.STRIPE_SECRET_KEY ? "configured" : "missing",
+      webhook: process.env.STRIPE_WEBHOOK_SECRET ? "configured" : "missing",
     });
   });
 
@@ -94,7 +101,7 @@ async function startServer() {
 
   app.use(express.static(staticPath));
 
-  // SPA fallback - serve index.html for all non-API routes
+  // SPA fallback
   app.get("*", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));
   });
@@ -110,6 +117,8 @@ async function startServer() {
     console.log(`🚀 Server Incontri di Bakeka V2`);
     console.log(`📡 Porta: ${port}`);
     console.log(`🌍 Ambiente: ${process.env.NODE_ENV || "development"}`);
+    console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? "✅ Configurato" : "❌ Manca STRIPE_SECRET_KEY"}`);
+    console.log(`🔔 Webhook: ${process.env.STRIPE_WEBHOOK_SECRET ? "✅ Configurato" : "❌ Manca STRIPE_WEBHOOK_SECRET"}`);
     console.log(`🔗 API: http://localhost:${port}/api`);
     console.log(`🏥 Health: http://localhost:${port}/api/health`);
   });
