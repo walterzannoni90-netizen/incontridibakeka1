@@ -1,13 +1,10 @@
-import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // base: "/" su custom domain, "/nome-repo/" su GitHub Pages.
-  // Imposta VITE_BASE_PATH nel .env o CI per il sottopercorso.
   base: process.env.VITE_BASE_PATH || "/",
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
