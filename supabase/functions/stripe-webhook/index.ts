@@ -189,7 +189,7 @@ async function safeUpdateTransaction(
 ): Promise<void> {
   const { error } = await supabase
     .from("transactions")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status })
     .eq("stripe_session_id", sessionId);
 
   if (error) {

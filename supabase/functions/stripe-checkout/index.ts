@@ -130,8 +130,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           stripe_session_id: session.id,
           user_id,
           credits,
-          amount_total: session.amount_total ?? null,
-          currency: session.currency ?? null,
+          amount: session.amount_total ?? null,
           status: "pending",
         })
         .select()
