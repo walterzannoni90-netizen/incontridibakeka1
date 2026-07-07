@@ -593,5 +593,61 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
+-- 10. MESSAGES & CONVERSATIONS
+-- ============================================
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ad_id UUID REFERENCES ads(id) ON DELETE CASCADE,
+  buyer_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  seller_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  ad_title TEXT,
+  last_message TEXT,
+  last_message_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indici
+CREATE INDEX IF NOT EXISTS idx_conversations_buyer ON conversations(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_seller ON conversations(seller_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+
+-- Abilita Realtime per messages
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+
+-- RLS per messages
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "messages_select" ON messages;
+CREATE POLICY "messages_select" ON messages
+  FOR SELECT USING (
+    sender_id = auth.uid() OR
+    conversation_id IN (
+      SELECT id FROM conversations
+      WHERE buyer_id = auth.uid() OR seller_id = auth.uid()
+    )
+  );
+DROP POLICY IF EXISTS "messages_insert" ON messages;
+CREATE POLICY "messages_insert" ON messages
+  FOR INSERT WITH CHECK (sender_id = auth.uid());
+
+-- RLS per conversations
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "conversations_select" ON conversations;
+CREATE POLICY "conversations_select" ON conversations
+  FOR SELECT USING (buyer_id = auth.uid() OR seller_id = auth.uid());
+DROP POLICY IF EXISTS "conversations_insert" ON conversations;
+CREATE POLICY "conversations_insert" ON conversations
+  FOR INSERT WITH CHECK (buyer_id = auth.uid() OR seller_id = auth.uid());
+
+-- ============================================
 -- FINE SCHEMA
 -- ============================================

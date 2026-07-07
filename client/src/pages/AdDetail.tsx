@@ -419,7 +419,48 @@ export default function AdDetail() {
                   </a>
                 </Button>
               )}
-              {!ad.phone && !ad.whatsapp && (
+              {ad.user_id && user && user.id !== ad.user_id && (
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2 border-primary/30 text-primary hover:bg-primary/5 transition-all duration-200 hover:scale-[1.02]"
+                  onClick={async () => {
+                    try {
+                      if (!supabase || !user) { toast.error("Devi accedere per contattare"); return; }
+                      const token = (await supabase.auth.getSession()).data.session?.access_token;
+                      if (!token) throw new Error();
+                      const checkRes = await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/conversations?ad_id=eq.${ad.id}&buyer_id=eq.${user.id}&seller_id=eq.${ad.user_id}&select=id`,
+                        { headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } }
+                      );
+                      const existing = await checkRes.json();
+                      if (Array.isArray(existing) && existing.length > 0) {
+                        navigate(`/messages/${existing[0].id}`);
+                        return;
+                      }
+                      const createRes = await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/conversations`,
+                        {
+                          method: "POST",
+                          headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
+                          body: JSON.stringify({
+                            ad_id: ad.id,
+                            buyer_id: user.id,
+                            seller_id: ad.user_id,
+                            ad_title: ad.title,
+                            last_message: "Conversazione iniziata",
+                          }),
+                        }
+                      );
+                      const created = await createRes.json();
+                      navigate(`/messages/${created[0]?.id || created.id}`);
+                    } catch { toast.error("Errore creazione conversazione"); }
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Contatta
+                </Button>
+              )}
+              {!ad.phone && !ad.whatsapp && !(ad.user_id && user && user.id !== ad.user_id) && (
                 <div className="w-full text-center text-sm text-muted-foreground bg-muted/50 rounded-xl py-4">
                   Nessun contatto disponibile per questo annuncio
                 </div>

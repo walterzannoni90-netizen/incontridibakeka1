@@ -194,6 +194,8 @@ export default function Profile() {
     setEditPhotoPreviews([]);
   };
 
+  const maxEditPhotos = (user?.has_paid || (user?.credits || 0) > 0) ? 5 : 1;
+
   const saveEdit = async () => {
     if (!editingAd) return;
     try {
@@ -556,25 +558,29 @@ export default function Profile() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-1">Modifica annuncio</h2>
-            <p className="text-xs text-muted-foreground mb-4">Puoi modificare i campi e cambiare le foto</p>
+            <p className="text-xs text-muted-foreground mb-4">Puoi modificare testo e foto. Città ed età rimangono invariati.</p>
             <input
               ref={editFileRef}
               type="file"
               accept="image/*"
+              multiple={maxEditPhotos > 1}
               className="hidden"
               onChange={(e) => {
                 const files = Array.from(e.target.files || []);
                 if (files.length === 0) return;
-                setEditPhotos(files);
-                setEditPhotoPreviews(files.map(f => URL.createObjectURL(f)));
+                const allowed = files.slice(0, maxEditPhotos);
+                setEditPhotos(allowed);
+                setEditPhotoPreviews(allowed.map(f => URL.createObjectURL(f)));
                 if (editFileRef.current) editFileRef.current.value = "";
               }}
             />
             {/* Foto section */}
             <div className="mb-4">
-              <label className="text-sm font-medium mb-1.5 block">Foto annuncio</label>
+              <label className="text-sm font-medium mb-1.5 block">
+                Foto annuncio {maxEditPhotos > 1 ? `(max ${maxEditPhotos})` : "(max 1)"}
+              </label>
               {editingAd.image && editPhotos.length === 0 && (
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2 max-w-[200px]">
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2 max-w-[200px] border border-border">
                   <img src={editingAd.image} alt="corrente" className="w-full h-full object-cover" />
                   <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">Corrente</span>
                 </div>
@@ -588,11 +594,24 @@ export default function Profile() {
                   ))}
                 </div>
               )}
-              <Button variant="outline" size="sm" onClick={() => editFileRef.current?.click()} className="gap-1.5">
-                <ImagePlus className="w-4 h-4" /> {editPhotos.length > 0 ? "Cambia foto selezionate" : "Scegli nuove foto"}
+              <Button variant="outline" size="sm" onClick={() => editFileRef.current?.click()} className="gap-1.5" disabled={editPhotos.length >= maxEditPhotos}>
+                <ImagePlus className="w-4 h-4" /> {editPhotos.length > 0 ? `Cambia foto (${editPhotos.length}/${maxEditPhotos})` : `Scegli foto (max ${maxEditPhotos})`}
               </Button>
               {editPhotos.length > 0 && (
                 <p className="text-[10px] text-green-600 mt-1">{editPhotos.length} foto pronte per l'upload</p>
+              )}
+            </div>
+            {/* Info città/età non modificabili */}
+            <div className="flex items-center gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
+              <div className="text-xs">
+                <span className="text-muted-foreground">Città:</span>
+                <span className="font-medium ml-1">{editingAd.city}</span>
+              </div>
+              {editingAd.age && (
+                <div className="text-xs">
+                  <span className="text-muted-foreground">Età:</span>
+                  <span className="font-medium ml-1">{editingAd.age} anni</span>
+                </div>
               )}
             </div>
             <div className="space-y-4">
@@ -603,10 +622,6 @@ export default function Profile() {
               <div>
                 <label className="text-sm font-medium mb-1 block">Descrizione</label>
                 <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={4} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Città</label>
-                <Input value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Prezzo</label>
@@ -621,7 +636,7 @@ export default function Profile() {
                 setEditPhotoPreviews([]);
               }}>Annulla</Button>
               <Button onClick={saveEdit} disabled={savingEdit} className="gap-1.5">
-                {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> {editUploading ? "Caricamento..." : "Salvataggio..."}</> : "Salva modifiche"}
+                {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> {editUploading ? "Caricamento foto..." : "Salvataggio..."}</> : "Salva modifiche"}
               </Button>
             </div>
           </Card>

@@ -702,6 +702,15 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => navigate("/messages")}
+                  className="gap-1.5 text-gray-700 dark:text-gray-200"
+                  title="Messaggi"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => navigate("/my-ads")}
                   className="gap-1.5 text-gray-700 dark:text-gray-200"
                   title="I miei annunci"
@@ -878,6 +887,13 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <Package className="w-4 h-4" /> Il mio Profilo
                   </Button>
 
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                    onClick={() => { navigate("/messages"); setMobileMenuOpen(false); }}
+                  >
+                    <MessageCircle className="w-4 h-4" /> Messaggi
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
