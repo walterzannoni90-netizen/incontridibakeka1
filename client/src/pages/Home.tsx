@@ -24,6 +24,17 @@ const VETRINA_COSTS: Record<number, number> = { 1: 10, 3: 25, 7: 50 };
 const HAIR_COLORS = ["neri", "castani", "biondi", "rossi", "grigi", "altri"];
 const BODY_TYPES = ["snello", "normale", "formoso", "sportivo", "curvy"];
 const ETHNICITIES = ["italiana", "europea", "sudamericana", "asiatica", "africana", "mista"];
+const SERVICE_OPTIONS = [
+  "Massaggio corpo a corpo",
+  "Sex protetto",
+  "Sex non protetto",
+  "Disponibile per coppia",
+  "Uomo con uomo",
+  "Donna con donna",
+  "Uomo con donna",
+  "Videochiamata",
+  "Massaggio integrale",
+];
 
 // Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
 function isAdBoosted(ad: Ad): boolean {
@@ -169,29 +180,29 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   }, []);
 
   // Carica statistiche personali per la dashboard
-  const loadMyStats = useCallback(async () => {
-    if (!currentUser || !SUPABASE_CONFIGURED) return;
-    try {
-      const token = (await supabase!.auth.getSession()).data.session?.access_token;
-      if (!token) return;
-      const [adsRes, boostedRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&is_active=eq.true`, {
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&or=(is_sponsored.eq.true,is_premium.eq.true)`, {
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-        }),
-      ]);
-      const adsData = await adsRes.json();
-      const boostedData = await boostedRes.json();
-      setMyStats({
-        adsCount: Array.isArray(adsData) ? adsData.length : 0,
-        boostedCount: Array.isArray(boostedData) ? boostedData.length : 0,
-      });
-    } catch {}
-  }, [currentUser]);
-
-  useEffect(() => { if (currentUser) loadMyStats(); }, [currentUser, loadMyStats]);
+  useEffect(() => {
+    if (!currentUser || !SUPABASE_CONFIGURED || !supabase) return;
+    (async () => {
+      try {
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        if (!token) return;
+        const [adsRes, boostedRes] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&is_active=eq.true`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&or=(is_sponsored.eq.true,is_premium.eq.true)`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        const adsData = await adsRes.json();
+        const boostedData = await boostedRes.json();
+        setMyStats({
+          adsCount: Array.isArray(adsData) ? adsData.length : 0,
+          boostedCount: Array.isArray(boostedData) ? boostedData.length : 0,
+        });
+      } catch {}
+    })();
+  }, [currentUser?.id]);
 
   useEffect(() => {
     let title = "Incontri di Bakeka — Marketplace Affidabile";
@@ -1610,15 +1621,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                       onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
                     />
                      <Input
-                       placeholder="Telefono (es. 333 1234567)"
-                       value={publishForm.phone}
-                       onChange={(e) => setPublishForm({ ...publishForm, phone: formatPhone(e.target.value) })}
+                        placeholder="Chiamate (es. 333 1234567)"
+                        value={publishForm.whatsapp}
+                        onChange={(e) => setPublishForm({ ...publishForm, whatsapp: formatPhone(e.target.value) })}
                      />
-                     <Input
-                       placeholder="WhatsApp (es. 333 1234567)"
-                       value={publishForm.whatsapp}
-                       onChange={(e) => setPublishForm({ ...publishForm, whatsapp: formatPhone(e.target.value) })}
-                    />
                     <Textarea
                       className="md:col-span-2"
                       rows={5}
@@ -1660,17 +1666,6 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         </select>
                       </div>
                       <div>
-                        <Label className="mb-1.5 block text-xs">Etnia</Label>
-                        <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                          value={publishForm.ethnicity}
-                          onChange={(e) => setPublishForm({ ...publishForm, ethnicity: e.target.value })}
-                        >
-                          <option value="">Seleziona...</option>
-                          {ETHNICITIES.map((v) => <option key={v} value={v}>{v}</option>)}
-                        </select>
-                      </div>
-                      <div>
                         <Label className="mb-1.5 block text-xs">Orari disponibilita</Label>
                         <Input
                           placeholder="es. 10:00-22:00"
@@ -1700,13 +1695,34 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           onChange={(e) => setPublishForm({ ...publishForm, weight: e.target.value })}
                         />
                       </div>
-                      <Textarea
-                        className="md:col-span-2"
-                        rows={3}
-                        placeholder="Servizi offerti"
-                        value={publishForm.services}
-                        onChange={(e) => setPublishForm({ ...publishForm, services: e.target.value })}
-                      />
+                      <div className="md:col-span-2">
+                        <Label className="mb-2 block text-xs">Servizi offerti (tocca per selezionare)</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {SERVICE_OPTIONS.map((svc) => {
+                            const selected = publishForm.services?.split(",").map(s => s.trim()).includes(svc);
+                            return (
+                              <button
+                                key={svc}
+                                type="button"
+                                onClick={() => {
+                                  const current = (publishForm.services || "").split(",").map(s => s.trim()).filter(Boolean);
+                                  const next = selected
+                                    ? current.filter(s => s !== svc)
+                                    : [...current, svc];
+                                  setPublishForm({ ...publishForm, services: next.join(", ") });
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                                  selected
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                    : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-primary"
+                                }`}
+                              >
+                                {svc}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
