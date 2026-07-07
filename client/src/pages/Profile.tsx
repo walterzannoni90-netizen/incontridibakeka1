@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
 import {
-  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, User, Phone, Mail, Save, X, LogOut, Sparkles, Package
+  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, User, Phone, Mail, Save, X, LogOut, Sparkles, Package, TrendingUp, CheckCircle2, Timer, Star, Rocket, ImagePlus
 } from "lucide-react";
 
 interface Ad {
@@ -49,10 +49,10 @@ async function getToken() {
 }
 
 const BOOST_OPTIONS = [
-  { days: 1, credits: 10, label: "Vetrina 1g", icon: Store, type: "vetrina" as const },
-  { days: 3, credits: 25, label: "Vetrina 3g", icon: Store, type: "vetrina" as const },
-  { days: 7, credits: 50, label: "Vetrina 7g", icon: Store, type: "vetrina" as const },
-  { days: 30, credits: 10, label: "Premium", icon: Crown, type: "premium" as const },
+  { days: 1, credits: 10, label: "Vetrina 1g", icon: Store, type: "vetrina" as const, desc: "1 giorno in evidenza", color: "from-violet-500 to-purple-600" },
+  { days: 3, credits: 25, label: "Vetrina 3g", icon: Store, type: "vetrina" as const, desc: "3 giorni in evidenza", color: "from-purple-500 to-pink-600" },
+  { days: 7, credits: 50, label: "Vetrina 7g", icon: Store, type: "vetrina" as const, desc: "1 settimana in evidenza", color: "from-pink-500 to-rose-600" },
+  { days: 30, credits: 10, label: "Premium", icon: Crown, type: "premium" as const, desc: "Sblocca foto + badge", color: "from-amber-500 to-orange-600" },
 ];
 
 export default function Profile() {
@@ -63,6 +63,9 @@ export default function Profile() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [busyBoost, setBusyBoost] = useState<string | null>(null);
+  const [boostStep, setBoostStep] = useState<string>("");
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiKey, setConfettiKey] = useState(0);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [editForm, setEditForm] = useState({ title: "", description: "", city: "", price: "" });
   const [savingEdit, setSavingEdit] = useState(false);
@@ -71,6 +74,10 @@ export default function Profile() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: "", phone: "" });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [editPhotos, setEditPhotos] = useState<File[]>([]);
+  const [editPhotoPreviews, setEditPhotoPreviews] = useState<string[]>([]);
+  const [editUploading, setEditUploading] = useState(false);
+  const editFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -133,22 +140,29 @@ export default function Profile() {
 
   const handleBoost = async (adId: string, credits: number, days: number, type: "vetrina" | "premium") => {
     try {
-      setBusyBoost(adId + type + days);
+      const boostId = adId + type + days;
+      setBusyBoost(boostId);
       if (!user || (user.credits || 0) < credits) {
         toast.error("Crediti insufficienti");
         return;
       }
+      setBoostStep("Preparazione...");
+      await new Promise(r => setTimeout(r, 400));
       const token = await getToken();
       const boostedUntil = new Date(Date.now() + days * 86400000).toISOString();
       const updates: Record<string, any> = { boosted_until: boostedUntil };
       if (type === "premium") updates.is_premium = true;
       else updates.is_sponsored = true;
+      setBoostStep("Aggiornamento annuncio...");
+      await new Promise(r => setTimeout(r, 500));
       const adRes = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${adId}`, {
         method: "PATCH",
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify(updates),
       });
       if (!adRes.ok) throw new Error("Errore aggiornamento");
+      setBoostStep("Aggiornamento crediti...");
+      await new Promise(r => setTimeout(r, 400));
       const newCredits = (user.credits || 0) - credits;
       await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, {
         method: "PATCH",
@@ -156,12 +170,17 @@ export default function Profile() {
         body: JSON.stringify({ credits: newCredits }),
       });
       updateUser({ credits: newCredits });
-      toast.success(`Annuncio potenziato! ${days} giorni`);
+      setBoostStep("Completato! 🎉");
+      setShowConfetti(true);
+      setConfettiKey(k => k + 1);
+      setTimeout(() => setShowConfetti(false), 3000);
+      toast.success(`Annuncio potenziato! ${days} giorni di visibilità`);
       loadAds();
     } catch (e: any) {
       toast.error(e?.message || "Errore boost");
     } finally {
       setBusyBoost(null);
+      setBoostStep("");
     }
   };
 
@@ -171,6 +190,8 @@ export default function Profile() {
       title: ad.title, description: ad.description, city: ad.city,
       price: ad.price || "",
     });
+    setEditPhotos([]);
+    setEditPhotoPreviews([]);
   };
 
   const saveEdit = async () => {
@@ -178,19 +199,47 @@ export default function Profile() {
     try {
       setSavingEdit(true);
       const token = await getToken();
+      let newImageUrl = editingAd.image;
+      let newImagesUrls = editingAd.image ? [editingAd.image] : [];
+      if (editPhotos.length > 0) {
+        setEditUploading(true);
+        const urls: string[] = [];
+        for (const file of editPhotos) {
+          const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+          const path = `${user?.id}/edit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/ads/${path}`, {
+            method: "POST",
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": file.type || "image/jpeg" },
+            body: file,
+          });
+          if (!uploadRes.ok) throw new Error("Upload foto fallito");
+          urls.push(`${SUPABASE_URL}/storage/v1/object/public/ads/${path}`);
+        }
+        newImageUrl = urls[0];
+        newImagesUrls = urls;
+        setEditUploading(false);
+      }
+      const payload: Record<string, any> = { ...editForm };
+      if (editPhotos.length > 0) {
+        payload.image = newImageUrl;
+        payload.images = newImagesUrls;
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${editingAd.id}`, {
         method: "PATCH",
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Errore salvataggio");
       toast.success("Annuncio aggiornato!");
       setEditingAd(null);
+      setEditPhotos([]);
+      setEditPhotoPreviews([]);
       loadAds();
     } catch (e: any) {
       toast.error(e?.message || "Errore salvataggio");
     } finally {
       setSavingEdit(false);
+      setEditUploading(false);
     }
   };
 
@@ -370,22 +419,88 @@ export default function Profile() {
                           <Trash2 className="w-3 h-3" /> Elimina
                         </Button>
                       </div>
-                      <div className="border-t pt-3">
-                        <p className="text-xs font-medium mb-2">Potenzia:</p>
-                        <div className="grid grid-cols-2 gap-1.5">
+                      {/* RICCA SEZIONE PROMOZIONE */}
+                      <div className="border-t pt-3 mt-2">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Rocket className="w-3.5 h-3.5 text-purple-500" />
+                          <p className="text-xs font-bold text-purple-600 dark:text-purple-400">Promuovi annuncio</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
                           {BOOST_OPTIONS.map((opt) => {
                             const Icon = opt.icon;
                             const isBusy = busyBoost === ad.id + opt.type + opt.days;
+                            const canAfford = (user.credits || 0) >= opt.credits;
                             return (
-                              <Button key={opt.type + opt.days} variant="outline" size="sm"
-                                className="gap-1 text-xs" onClick={() => handleBoost(ad.id, opt.credits, opt.days, opt.type)}
-                                disabled={isBusy || (user.credits || 0) < opt.credits}>
-                                {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
-                                {opt.label} ({opt.credits}c)
-                              </Button>
+                              <button
+                                key={opt.type + opt.days}
+                                onClick={() => handleBoost(ad.id, opt.credits, opt.days, opt.type)}
+                                disabled={!!isBusy}
+                                className={`relative group rounded-xl p-2.5 text-left transition-all duration-300 border ${
+                                  canAfford
+                                    ? "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40 border-purple-200 dark:border-purple-800 hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-0.5"
+                                    : "bg-muted/30 border-border opacity-60"
+                                } ${isBusy ? "pointer-events-none" : "cursor-pointer"}`}
+                              >
+                                {isBusy && (
+                                  <div className="absolute inset-0 rounded-xl bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                                    <div className="w-full max-w-[80%] bg-muted rounded-full h-1.5 mb-2 overflow-hidden">
+                                      <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 animate-boost-progress rounded-full" />
+                                    </div>
+                                    <span className="text-[10px] font-medium text-foreground">{boostStep || "Elaborazione..."}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                                    opt.type === "premium"
+                                      ? "bg-amber-100 dark:bg-amber-900/40"
+                                      : canAfford
+                                        ? "bg-purple-100 dark:bg-purple-900/40"
+                                        : "bg-muted"
+                                  }`}>
+                                    <Icon className={`w-3.5 h-3.5 ${
+                                      opt.type === "premium" ? "text-amber-600" : "text-purple-600"
+                                    }`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold truncate">{opt.label}</p>
+                                    <p className="text-[9px] text-muted-foreground">{opt.desc}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className={`font-bold ${canAfford ? "text-primary" : "text-destructive"}`}>
+                                    {opt.credits} crediti
+                                  </span>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${
+                                    canAfford
+                                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                                      : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                                  }`}>
+                                    {canAfford ? "Disponibile" : "Crediti insufficienti"}
+                                  </span>
+                                </div>
+                              </button>
                             );
                           })}
                         </div>
+                        {/* Confetti per boost riuscito */}
+                        {showConfetti && (
+                          <div key={confettiKey} className="fixed inset-0 pointer-events-none z-[100] overflow-hidden">
+                            {[...Array(30)].map((_, i) => (
+                              <div
+                                key={i}
+                                className="absolute w-2 h-2 rounded-sm animate-confetti"
+                                style={{
+                                  left: `${Math.random() * 100}%`,
+                                  top: "-5%",
+                                  background: ["#8b5cf6","#f59e0b","#06b6d4","#ec4899","#22c55e","#ef4444"][i % 6],
+                                  animationDelay: `${Math.random() * 0.8}s`,
+                                  animationDuration: `${2 + Math.random() * 2}s`,
+                                  transform: `rotate(${Math.random() * 360}deg)`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -436,11 +551,50 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Edit Ad Dialog */}
+      {/* Edit Ad Dialog con foto */}
       {editingAd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Modifica annuncio</h2>
+            <h2 className="text-xl font-bold mb-1">Modifica annuncio</h2>
+            <p className="text-xs text-muted-foreground mb-4">Puoi modificare i campi e cambiare le foto</p>
+            <input
+              ref={editFileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length === 0) return;
+                setEditPhotos(files);
+                setEditPhotoPreviews(files.map(f => URL.createObjectURL(f)));
+                if (editFileRef.current) editFileRef.current.value = "";
+              }}
+            />
+            {/* Foto section */}
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-1.5 block">Foto annuncio</label>
+              {editingAd.image && editPhotos.length === 0 && (
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2 max-w-[200px]">
+                  <img src={editingAd.image} alt="corrente" className="w-full h-full object-cover" />
+                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">Corrente</span>
+                </div>
+              )}
+              {editPhotoPreviews.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {editPhotoPreviews.map((url, i) => (
+                    <div key={i} className="aspect-video rounded-lg overflow-hidden bg-muted border border-primary">
+                      <img src={url} alt="nuova" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button variant="outline" size="sm" onClick={() => editFileRef.current?.click()} className="gap-1.5">
+                <ImagePlus className="w-4 h-4" /> {editPhotos.length > 0 ? "Cambia foto selezionate" : "Scegli nuove foto"}
+              </Button>
+              {editPhotos.length > 0 && (
+                <p className="text-[10px] text-green-600 mt-1">{editPhotos.length} foto pronte per l'upload</p>
+              )}
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Titolo</label>
@@ -460,9 +614,14 @@ export default function Profile() {
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <Button variant="outline" onClick={() => setEditingAd(null)}>Annulla</Button>
-              <Button onClick={saveEdit} disabled={savingEdit}>
-                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salva"}
+              <Button variant="outline" onClick={() => {
+                setEditingAd(null);
+                setEditPhotos([]);
+                editPhotoPreviews.forEach(u => URL.revokeObjectURL(u));
+                setEditPhotoPreviews([]);
+              }}>Annulla</Button>
+              <Button onClick={saveEdit} disabled={savingEdit} className="gap-1.5">
+                {savingEdit ? <><Loader2 className="w-4 h-4 animate-spin" /> {editUploading ? "Caricamento..." : "Salvataggio..."}</> : "Salva modifiche"}
               </Button>
             </div>
           </Card>

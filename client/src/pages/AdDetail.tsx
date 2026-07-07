@@ -22,6 +22,14 @@ import {
   Heart,
   Share2,
   Flag,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  Sparkles,
+  Ruler,
+  Weight,
+  Palette,
+  User,
 } from "lucide-react";
 
 interface Ad {
@@ -159,8 +167,20 @@ export default function AdDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="h-8 w-32 bg-muted rounded animate-shimmer mb-6" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="aspect-[4/3] bg-muted rounded-xl animate-shimmer" />
+            <div className="space-y-4">
+              <div className="h-8 bg-muted rounded w-3/4 animate-shimmer" />
+              <div className="h-4 bg-muted rounded w-1/2 animate-shimmer" />
+              <div className="h-4 bg-muted rounded w-1/3 animate-shimmer" />
+              <div className="h-24 bg-muted rounded animate-shimmer mt-6" />
+              <div className="h-12 bg-muted rounded animate-shimmer" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -192,49 +212,66 @@ export default function AdDetail() {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Images */}
-          <div>
-            <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted mb-4">
+          {/* Images migliorato */}
+          <div className="animate-fade-up">
+            <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted mb-4 group">
               {allImages.length > 0 ? (
-                <img
-                  src={allImages[currentImage]}
-                  alt={ad.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+                <>
+                  <img
+                    src={allImages[currentImage]}
+                    alt={ad.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  {allImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentImage(i => Math.max(0, i - 1))}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setCurrentImage(i => Math.min(allImages.length - 1, i + 1))}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+                        {currentImage + 1} / {allImages.length}
+                      </div>
+                    </>
+                  )}
+                </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                  Nessuna immagine
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-lg">
+                  📸 Nessuna immagine
                 </div>
               )}
               {ad.is_premium && (
-                <Badge className="absolute top-3 left-3 bg-yellow-500">
-                  <Crown className="w-3 h-3 mr-1" />
-                  Premium
+                <Badge className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0 shadow-lg">
+                  <Crown className="w-3 h-3 mr-1" /> Premium
                 </Badge>
               )}
               {ad.is_sponsored && (
-                <Badge className="absolute top-3 right-3 bg-purple-500">
-                  <Zap className="w-3 h-3 mr-1" />
-                  Sponsored
+                <Badge className="absolute top-3 right-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 shadow-lg">
+                  <Zap className="w-3 h-3 mr-1" /> In Vetrina
                 </Badge>
               )}
               {ad.is_verified && (
-                <Badge className="absolute bottom-3 left-3 bg-green-500">
-                  <Shield className="w-3 h-3 mr-1" />
-                  Verificato
+                <Badge className="absolute bottom-3 left-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 shadow-lg">
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> Verificato
                 </Badge>
               )}
             </div>
 
             {allImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {allImages.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImage(idx)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
-                      idx === currentImage ? "border-primary" : "border-transparent"
+                    className={`w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all duration-200 hover:opacity-90 ${
+                      idx === currentImage ? "border-primary ring-1 ring-primary/30 scale-105" : "border-border opacity-70 hover:opacity-100"
                     }`}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
@@ -244,108 +281,127 @@ export default function AdDetail() {
             )}
           </div>
 
-          {/* Info */}
-          <div>
+          {/* Info migliorato */}
+          <div className="animate-fade-up" style={{ animationDelay: "0.1s" }}>
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold mb-2">{ad.title}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2 font-poppins">{ad.title}</h1>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
+                  <MapPin className="w-4 h-4 text-primary" />
                   {ad.city}, {ad.country}
+                  {ad.age && <span className="text-muted-foreground/50">•</span>}
+                  {ad.age && <span>{ad.age} anni</span>}
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => setLiked(!liked)}>
-                  <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : ""}`} />
+                <Button variant="outline" size="icon" onClick={() => setLiked(!liked)}
+                  className={`transition-all duration-200 ${liked ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800" : ""}`}>
+                  <Heart className={`w-4 h-4 transition-all ${liked ? "fill-red-500 text-red-500 scale-110" : ""}`} />
                 </Button>
-                <Button variant="outline" size="icon" onClick={handleShare}>
+                <Button variant="outline" size="icon" onClick={handleShare}
+                  className="transition-all duration-200 hover:bg-primary/10">
                   <Share2 className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
               <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                <Star className="w-4 h-4 text-accent fill-accent" />
                 <span className="font-medium">{ad.rating}</span>
-                <span className="text-muted-foreground">({ad.review_count} recensioni)</span>
+                <span className="text-muted-foreground text-sm">({ad.review_count})</span>
               </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
+              <div className="flex items-center gap-1 text-muted-foreground text-sm">
                 <Eye className="w-4 h-4" />
                 {ad.views} visualizzazioni
+              </div>
+              <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                <Clock className="w-4 h-4" />
+                {new Date(ad.created_at).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })}
               </div>
             </div>
 
             {ad.price && (
-              <div className="text-xl font-bold text-primary mb-4">{ad.price}</div>
+              <div className="inline-flex items-center gap-2 bg-primary/5 text-primary font-bold text-lg px-4 py-2 rounded-xl mb-4">
+                <Sparkles className="w-4 h-4" />
+                {ad.price}
+              </div>
             )}
 
             <div className="space-y-4 mb-6">
               <div>
-                <h3 className="font-semibold mb-2">Descrizione</h3>
-                <p className="text-muted-foreground whitespace-pre-line">{ad.description}</p>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-primary rounded-full" />
+                  Descrizione
+                </h3>
+                <p className="text-muted-foreground whitespace-pre-line leading-relaxed">{ad.description}</p>
               </div>
 
-              {ad.age && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Età:</span>
-                  <span>{ad.age} anni</span>
-                </div>
-              )}
-
-              {ad.height && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Altezza:</span>
-                  <span>{ad.height} cm</span>
-                </div>
-              )}
-
-              {ad.weight && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Peso:</span>
-                  <span>{ad.weight} kg</span>
-                </div>
-              )}
-
-              {ad.hair_color && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Capelli:</span>
-                  <span>{ad.hair_color}</span>
-                </div>
-              )}
-
-              {ad.body_type && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Fisico:</span>
-                  <span>{ad.body_type}</span>
-                </div>
-              )}
-
-              {ad.ethnicity && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Etnia:</span>
-                  <span>{ad.ethnicity}</span>
-                </div>
-              )}
-
-              {ad.services && (
-                <div>
-                  <span className="font-medium">Servizi:</span>
-                  <p className="text-muted-foreground">{ad.services}</p>
-                </div>
-              )}
-
-              {ad.availability_hours && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{ad.availability_hours}</span>
+              {/* Dettagli migliorati */}
+              {(ad.height || ad.weight || ad.hair_color || ad.body_type || ad.ethnicity || ad.services || ad.availability_hours) && (
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                    <span className="w-1 h-4 bg-primary rounded-full" />
+                    Dettagli profilo
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {ad.height && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Ruler className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Altezza:</span>
+                        <span className="font-medium">{ad.height} cm</span>
+                      </div>
+                    )}
+                    {ad.weight && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Weight className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Peso:</span>
+                        <span className="font-medium">{ad.weight} kg</span>
+                      </div>
+                    )}
+                    {ad.hair_color && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Palette className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Capelli:</span>
+                        <span className="font-medium capitalize">{ad.hair_color}</span>
+                      </div>
+                    )}
+                    {ad.body_type && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center text-muted-foreground">💪</span>
+                        <span className="text-muted-foreground">Fisico:</span>
+                        <span className="font-medium capitalize">{ad.body_type}</span>
+                      </div>
+                    )}
+                    {ad.ethnicity && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-3.5 h-3.5 flex items-center justify-center text-muted-foreground">🌍</span>
+                        <span className="text-muted-foreground">Etnia:</span>
+                        <span className="font-medium capitalize">{ad.ethnicity}</span>
+                      </div>
+                    )}
+                    {ad.availability_hours && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Disponibilità:</span>
+                        <span className="font-medium">{ad.availability_hours}</span>
+                      </div>
+                    )}
+                  </div>
+                  {ad.services && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <span className="text-sm text-muted-foreground">Servizi:</span>
+                      <p className="text-sm mt-0.5">{ad.services}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
+            {/* Pulsanti contatto migliorati */}
             <div className="flex gap-3 mb-6">
               {ad.phone && (
-                <Button className="flex-1 gap-2" asChild>
+                <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all duration-200 hover:scale-[1.02]" asChild>
                   <a href={`tel:${ad.phone}`}>
                     <Phone className="w-4 h-4" />
                     Chiama
@@ -353,7 +409,7 @@ export default function AdDetail() {
                 </Button>
               )}
               {ad.whatsapp && (
-                <Button variant="outline" className="flex-1 gap-2" asChild>
+                <Button variant="outline" className="flex-1 gap-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 shadow-lg transition-all duration-200 hover:scale-[1.02]" asChild>
                   <a
                     href={`https://wa.me/${ad.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`)}`}
                     target="_blank" rel="noopener noreferrer"
@@ -363,13 +419,19 @@ export default function AdDetail() {
                   </a>
                 </Button>
               )}
+              {!ad.phone && !ad.whatsapp && (
+                <div className="w-full text-center text-sm text-muted-foreground bg-muted/50 rounded-xl py-4">
+                  Nessun contatto disponibile per questo annuncio
+                </div>
+              )}
             </div>
 
+            {/* Segnalazione */}
             <div className="border-t pt-4">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive"
+                className="text-destructive/70 hover:text-destructive hover:bg-destructive/5 transition-all"
                 onClick={() => setReporting(!reporting)}
               >
                 <Flag className="w-4 h-4 mr-2" />
@@ -377,9 +439,9 @@ export default function AdDetail() {
               </Button>
 
               {reporting && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
+                <div className="mt-4 p-4 bg-muted rounded-xl animate-fade-up">
                   <textarea
-                    className="w-full p-2 rounded border bg-background mb-2"
+                    className="w-full p-3 rounded-lg border bg-background mb-3 text-sm resize-none"
                     rows={3}
                     placeholder="Descrivi il problema con questo annuncio..."
                     value={reportReason}
@@ -387,7 +449,9 @@ export default function AdDetail() {
                   />
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setReporting(false)}>Annulla</Button>
-                    <Button size="sm" onClick={handleReport}>Invia segnalazione</Button>
+                    <Button size="sm" onClick={handleReport} className="gap-1.5">
+                      <Flag className="w-3.5 h-3.5" /> Invia segnalazione
+                    </Button>
                   </div>
                 </div>
               )}

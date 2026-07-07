@@ -10,7 +10,7 @@ import { useStripe } from "@/hooks/useStripe";
 import { supabase } from "@/lib/supabaseClient";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown, Package } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Zap, Rocket } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -1052,12 +1052,14 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden bg-muted animate-pulse">
-                    <div className="h-36 md:h-52 bg-muted" />
-                    <div className="p-4 space-y-2">
-                      <div className="h-4 bg-muted rounded w-3/4" />
-                      <div className="h-3 bg-muted rounded w-full" />
-                      <div className="h-3 bg-muted rounded w-1/2" />
+                  <div key={i} className="rounded-xl overflow-hidden bg-card border border-border">
+                    <div className="h-36 md:h-52 bg-gradient-to-r from-muted via-muted/50 to-muted animate-shimmer relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                    </div>
+                    <div className="p-4 space-y-2.5">
+                      <div className="h-4 bg-gradient-to-r from-muted to-muted/50 rounded w-3/4 animate-shimmer" />
+                      <div className="h-3 bg-gradient-to-r from-muted to-muted/50 rounded w-full animate-shimmer" />
+                      <div className="h-3 bg-gradient-to-r from-muted to-muted/50 rounded w-1/2 animate-shimmer" />
                     </div>
                   </div>
                 ))}
@@ -1074,12 +1076,13 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                 {filteredAds.map((ad) => {
                 const boosted = isAdBoosted(ad);
+                const isSaved = savedAds.includes(ad.id);
                 return (
                 <Card
                   key={ad.id}
-                  className={`overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
+                  className={`group overflow-hidden cursor-pointer transition-all duration-500 ${
                     ad.is_sponsored ? "ring-1 ring-accent/40" : ""
-                  } ${ad.is_premium ? "ring-1 ring-primary/30" : ""}`}
+                  } ${ad.is_premium ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
                   onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
                 >
                     <div className="relative h-36 md:h-52 bg-gradient-to-br from-primary/20 to-purple-300/20 overflow-hidden">
@@ -1087,44 +1090,47 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         <img
                           src={ad.image}
                           alt={ad.title}
-                          className={`w-full h-full object-cover hover:scale-105 transition-transform duration-500 ${
-                            !boosted ? "blur-xl scale-110" : ""
+                          className={`w-full h-full object-cover transition-all duration-700 ${
+                            !boosted ? "blur-xl scale-110 group-hover:scale-125" : "group-hover:scale-110"
                           }`}
                           loading="lazy"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-5xl">
+                        <div className="w-full h-full flex items-center justify-center text-4xl md:text-5xl transition-transform duration-500 group-hover:scale-110">
                           {ad.category === "uomo-cerca-donna" ? "👨" : ad.category === "trans" ? "⚧️" : "👤"}
                         </div>
                       )}
-                      {/* Badge Premium / lucchetto sulle foto sfocate */}
+                      {/* Lock overlay migliorato */}
                       {!boosted && ad.image && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none">
-                          <div className="bg-black/60 text-white px-2 py-1 rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1 backdrop-blur-sm">
-                            <Lock className="w-3 h-3" /> Premium
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-opacity duration-300 group-hover:opacity-90">
+                          <div className="bg-black/70 text-white px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1.5 backdrop-blur-sm shadow-lg animate-float">
+                            <Lock className="w-3 h-3" /> Annuncio Premium
                           </div>
-                          <span className="text-[10px] text-white/80">Clicca per vedere</span>
+                          <span className="text-[10px] text-white/60 mt-2 flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> Clicca per vedere
+                          </span>
                         </div>
                       )}
+                      {/* Badge sponsorizzati/premium migliorati */}
                       {ad.is_sponsored && (
-                        <div className="absolute top-2 right-2 bg-accent text-accent-foreground px-2 py-1 rounded text-[10px] md:text-xs font-bold shadow-md">
-                          ⭐ SuperTop
+                        <div className="absolute top-2 right-2 bg-gradient-to-r from-accent to-amber-600 text-white px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-white" /> SuperTop
                         </div>
                       )}
                       {ad.is_premium && !ad.is_sponsored && (
-                        <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded text-[10px] md:text-xs font-bold shadow-md">
-                          👑 Premium
+                        <div className="absolute top-2 right-2 bg-gradient-to-r from-primary to-purple-600 text-white px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center gap-1">
+                          <Crown className="w-3 h-3" /> Premium
                         </div>
                       )}
                       {ad.is_verified && (
-                        <div className="absolute top-2 left-2 bg-green-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 shadow-md">
-                          ✓ Verificato
+                        <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg">
+                          <CheckCircle2 className="w-3 h-3" /> Verificato
                         </div>
                       )}
                       <button
-                        className={`absolute bottom-2 right-2 rounded-full p-2 shadow-md transition-all active:scale-90 ${
-                          savedAds.includes(ad.id) ? "bg-primary text-primary-foreground" : "bg-white hover:bg-muted"
+                        className={`absolute bottom-2 right-2 rounded-full p-2 shadow-lg transition-all duration-300 active:scale-90 hover:scale-110 ${
+                          isSaved ? "bg-primary text-primary-foreground scale-110" : "bg-white/90 hover:bg-white text-primary backdrop-blur-sm"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1132,14 +1138,21 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         }}
                         aria-label="Salva annuncio"
                       >
-                        <Heart className={`w-4 h-4 ${savedAds.includes(ad.id) ? "fill-current" : "text-primary"}`} />
+                        <Heart className={`w-4 h-4 ${isSaved ? "fill-current" : ""}`} />
                       </button>
+                      {/* Overlay gradient al hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/0 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                     </div>
                     <div className="p-3 md:p-4">
-                      <h3 className="font-bold text-sm md:text-base mb-1 line-clamp-1">
-                        {ad.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                      <div className="flex items-start justify-between gap-1 mb-1">
+                        <h3 className="font-bold text-sm md:text-base line-clamp-1 group-hover:text-primary transition-colors duration-300">
+                          {ad.title}
+                        </h3>
+                        {ad.is_premium && (
+                          <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2 leading-relaxed">
                         {ad.description}
                       </p>
                       <div className="flex items-center justify-between text-xs">
@@ -1153,7 +1166,16 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         </div>
                       </div>
                       {ad.price && (
-                        <p className="text-xs font-bold text-accent mt-2">{ad.price}</p>
+                        <p className="text-xs font-bold text-accent mt-2 flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3" /> {ad.price}
+                        </p>
+                      )}
+                      {/* Indicatore boost in fondo card */}
+                      {boosted && (
+                        <div className="mt-2 flex items-center gap-1 text-[9px] text-purple-500 font-medium">
+                          <Zap className="w-2.5 h-2.5" />
+                          {ad.is_sponsored ? "In Vetrina" : "Premium"}
+                        </div>
                       )}
                     </div>
                   </Card>
@@ -1672,26 +1694,27 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
         )}
 
-        {/* SUCCESS MODAL */}
+        {/* SUCCESS MODAL MIGLIORATO */}
         {successModal && (
-          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md p-8 text-center animate-in fade-in zoom-in-95">
-              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-md p-8 text-center animate-fade-up">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/30 animate-scale-check">
+                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold font-poppins mb-1">Annuncio pubblicato!</h2>
+              <h2 className="text-2xl font-bold font-poppins mb-1">Annuncio pubblicato!</h2>
               <p className="text-muted-foreground text-sm mb-1">&quot;{successModal.title}&quot;</p>
-              <p className="text-xs text-muted-foreground mb-6">
-                {successModal.vetrina ? "Vetrina programmata con successo." : "Ora visibile a tutti gli utenti."}
-              </p>
+              <div className="inline-flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-xs px-3 py-1.5 rounded-full mb-6">
+                <Sparkles className="w-3 h-3" />
+                {successModal.vetrina ? "Vetrina programmata con successo" : "Ora visibile a tutti gli utenti"}
+              </div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button className="flex-1" onClick={() => { setSuccessModal(null); window.scrollTo(0, 0); }}>
-                  OK, grazie!
+                <Button className="flex-1 gap-2" onClick={() => { setSuccessModal(null); window.scrollTo(0, 0); }}>
+                  <CheckCircle2 className="w-4 h-4" /> OK, grazie!
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => { setSuccessModal(null); }}>
-                  Pubblica altro
+                <Button variant="outline" className="flex-1 gap-2" onClick={() => { setSuccessModal(null); }}>
+                  <Plus className="w-4 h-4" /> Pubblica altro
                 </Button>
               </div>
             </Card>
