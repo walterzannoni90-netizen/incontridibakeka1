@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 const PRICE_MAP: Record<number, string> = {
   10: "price_1To8sPDxJ0tOArXhsUpAmd4t",
@@ -26,11 +25,8 @@ export function useStripe() {
         const origin = window.location.origin;
         const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
+          // text/plain evita il CORS preflight (simple request)
+          headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             price_id: priceId,
             user_id: user.id,
