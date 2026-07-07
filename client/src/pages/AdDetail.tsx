@@ -88,6 +88,31 @@ export default function AdDetail() {
     loadAd();
   }, [loadAd]);
 
+  useEffect(() => {
+    if (!ad) return;
+    document.title = `${ad.title} — Incontri a ${ad.city} | Incontri di Bakeka`;
+    let desc = `Annuncio: ${ad.title}. ${ad.city}, ${ad.category}. ${ad.description?.slice(0, 150)}`;
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute("content", desc);
+    else {
+      const meta = document.createElement("meta");
+      meta.name = "description";
+      meta.content = desc;
+      document.head.appendChild(meta);
+    }
+    let metaOg = document.querySelector('meta[property="og:title"]');
+    if (metaOg) metaOg.setAttribute("content", `${ad.title} — Incontri di Bakeka`);
+    let metaOgDesc = document.querySelector('meta[property="og:description"]');
+    if (metaOgDesc) metaOgDesc.setAttribute("content", desc);
+    let linkCanonical = document.querySelector('link[rel="canonical"]');
+    if (!linkCanonical) {
+      linkCanonical = document.createElement("link");
+      linkCanonical.rel = "canonical";
+      document.head.appendChild(linkCanonical);
+    }
+    linkCanonical.setAttribute("href", window.location.href.split("?")[0]);
+  }, [ad]);
+
   const handleReport = async () => {
     if (!reportReason.trim()) {
       toast.error("Inserisci un motivo per la segnalazione");

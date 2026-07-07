@@ -45,6 +45,13 @@ jobs:
           VITE_BASE_PATH: "/"
         run: pnpm build
 
+      - name: Generate sitemap
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SITE_URL: "https://incontridibakeka.com"
+        run: node scripts/generate-sitemap.mjs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

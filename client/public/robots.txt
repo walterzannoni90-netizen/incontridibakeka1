@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /ad/
+Disallow: /*?path=
 
-Sitemap: https://incontridibakeka.it/sitemap.xml
+Sitemap: https://incontridibakeka.com/sitemap.xml

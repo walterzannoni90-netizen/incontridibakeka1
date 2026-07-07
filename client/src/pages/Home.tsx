@@ -89,7 +89,7 @@ const CATEGORIES = [
 // No demo data - real data only from Supabase
 const DEMO_ADS: Ad[] = [];
 
-export default function Home() {
+export default function Home({ initialCity }: { initialCity?: string | null }) {
   const { navigate } = useRouter();
   const { user: currentUser, login, logout, updateUser } = useAuth();
   const { handlePaymentCallback: stripePaymentCallback } = useStripe();
@@ -136,7 +136,7 @@ export default function Home() {
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(initialCity || null);
   const [selectedCountry, setSelectedCountry] = useState("IT");
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
@@ -151,13 +151,32 @@ export default function Home() {
 
   useEffect(() => {
     loadAds(true);
-    // Gestione callback pagamento delegata a useStripe (rimossa la versione duplicata locale)
     handlePaymentResult();
     if (!localStorage.getItem("ageAccepted")) {
       setShowDisclaimer(true);
     }
     setSavedAds(JSON.parse(localStorage.getItem("savedAds") || "[]"));
   }, []);
+
+  useEffect(() => {
+    let title = "Incontri di Bakeka — Marketplace Affidabile";
+    let desc = "Il marketplace più affidabile per incontri e amicizie in Italia. Profili verificati, connessioni reali.";
+    if (selectedCity && categoryFilter) {
+      const cat = CATEGORIES.find(c => c.id === categoryFilter);
+      title = `${cat?.name || "Annunci"} a ${selectedCity} — Incontri di Bakeka`;
+      desc = `Trova annunci di ${cat?.name?.toLowerCase() || "incontri"} a ${selectedCity}. Profili verificati, annunci reali.`;
+    } else if (selectedCity) {
+      title = `Incontri a ${selectedCity} — Annunci di incontri | Incontri di Bakeka`;
+      desc = `Trova annunci di incontri a ${selectedCity}. Profili verificati, annunci reali. ${selectedCity} incontri, amicizie e molto altro.`;
+    } else if (categoryFilter) {
+      const cat = CATEGORIES.find(c => c.id === categoryFilter);
+      title = `${cat?.name || "Annunci"} — Incontri di Bakeka`;
+      desc = `Trova annunci di ${cat?.name?.toLowerCase() || "incontri"}. Profili verificati, annunci reali su Incontri di Bakeka.`;
+    }
+    document.title = title;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute("content", desc);
+  }, [selectedCity, categoryFilter]);
 
   // Processa il risultato del callback Stripe (usando useStripe) e aggiorna i crediti
   const handlePaymentResult = async () => {
