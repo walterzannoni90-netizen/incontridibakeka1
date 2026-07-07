@@ -49,6 +49,7 @@ interface Ad {
   is_active: boolean;
   is_premium: boolean;
   is_sponsored: boolean;
+  has_paid?: boolean;
   is_verified: boolean;
   rating: number;
   review_count: number;
@@ -248,7 +249,7 @@ export default function AdDetail() {
                   📸 Nessuna immagine
                 </div>
               )}
-              {ad.is_premium && (
+              {(ad.is_premium || ad.has_paid) && !ad.is_sponsored && (
                 <Badge className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0 shadow-lg">
                   <Crown className="w-3 h-3 mr-1" /> Premium
                 </Badge>
@@ -408,14 +409,22 @@ export default function AdDetail() {
             )}
             {/* Pulsanti contatto migliorati */}
             <div className="flex gap-3 mb-6">
-              {ad.whatsapp && !ad.calls_only && (
-                <Button variant="outline" className="flex-1 gap-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 shadow-lg transition-all duration-200 hover:scale-[1.02]" asChild>
+              {ad.whatsapp && (
+                <Button
+                  variant={ad.calls_only ? "outline" : "outline"}
+                  className={`flex-1 gap-2 shadow-lg transition-all duration-200 hover:scale-[1.02] ${
+                    ad.calls_only
+                      ? "border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      : "border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30"
+                  }`}
+                  asChild
+                >
                   <a
                     href={`https://wa.me/${ad.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`)}`}
                     target="_blank" rel="noopener noreferrer"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    WhatsApp
+                    {ad.calls_only ? "Scrivi (non preferito)" : "WhatsApp"}
                   </a>
                 </Button>
               )}
@@ -423,7 +432,7 @@ export default function AdDetail() {
                 <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all duration-200 hover:scale-[1.02]" asChild>
                   <a href={`tel:${ad.whatsapp}`}>
                     <Phone className="w-4 h-4" />
-                    {ad.calls_only ? "Chiama ora" : "Chiama"}
+                    Chiama
                   </a>
                 </Button>
               )}

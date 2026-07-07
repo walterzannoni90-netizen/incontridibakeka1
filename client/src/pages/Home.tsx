@@ -37,7 +37,7 @@ const SERVICE_OPTIONS = [
 
 // Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
 function isAdBoosted(ad: Ad): boolean {
-  if (ad.is_premium || ad.is_sponsored) return true;
+  if (ad.is_premium || ad.is_sponsored || ad.has_paid) return true;
   if (ad.boosted_until) {
     const until = new Date(ad.boosted_until).getTime();
     const start = ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0;
@@ -1174,7 +1174,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   key={ad.id}
                   className={`group overflow-hidden cursor-pointer transition-all duration-500 ${
                     ad.is_sponsored ? "ring-1 ring-accent/40" : ""
-                  } ${ad.is_premium ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
+                  } ${(ad.is_premium || ad.has_paid) ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
                   onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
                 >
                     <div className="relative h-36 md:h-52 bg-gradient-to-br from-primary/20 to-purple-300/20 overflow-hidden">
@@ -1210,7 +1210,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           <Star className="w-3 h-3 fill-white" /> SuperTop
                         </div>
                       )}
-                      {ad.is_premium && !ad.is_sponsored && (
+                      {(ad.is_premium || ad.has_paid) && !ad.is_sponsored && (
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-primary to-purple-600 text-white px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center gap-1">
                           <Crown className="w-3 h-3" /> Premium
                         </div>
@@ -1240,7 +1240,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         <h3 className="font-bold text-sm md:text-base line-clamp-1 group-hover:text-primary transition-colors duration-300">
                           {ad.title}
                         </h3>
-                        {ad.is_premium && (
+                        {(ad.is_premium || ad.has_paid) && (
                           <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                         )}
                       </div>
@@ -1263,10 +1263,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         </p>
                       )}
                       {/* Indicatore boost in fondo card */}
-                      {boosted && (
+                      {(boosted || ad.has_paid) && (
                         <div className="mt-2 flex items-center gap-1 text-[9px] text-purple-500 font-medium">
                           <Zap className="w-2.5 h-2.5" />
-                          {ad.is_sponsored ? "In Vetrina" : "Premium"}
+                          {ad.is_sponsored ? "In Vetrina" : ad.has_paid ? "Utente Premium" : "Premium"}
                         </div>
                       )}
                     </div>
