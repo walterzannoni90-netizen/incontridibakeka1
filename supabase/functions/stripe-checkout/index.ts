@@ -130,7 +130,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           stripe_session_id: session.id,
           user_id,
           credits,
-          amount: session.amount_total ?? null,
+          amount: session.amount_total ? (session.amount_total / 100) : null,
           status: "pending",
         })
         .select()

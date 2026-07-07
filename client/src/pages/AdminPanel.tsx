@@ -822,7 +822,7 @@ export default function AdminPanel() {
                           <TableRow key={tx.id}>
                             <TableCell className="whitespace-nowrap">{formatDate(tx.created_at)}</TableCell>
                             <TableCell>{tx.profiles?.name || tx.user_id?.slice(0, 8) || "—"}</TableCell>
-                            <TableCell>€{(tx.amount / 100).toFixed(2)}</TableCell>
+                            <TableCell>€{Number(tx.amount).toFixed(2)}</TableCell>
                             <TableCell>{tx.credits}</TableCell>
                             <TableCell>
                               <Badge variant={tx.status === "completed" ? "default" : "secondary"}>
