@@ -12,12 +12,9 @@ const PRICE_MAP: Record<number, string> = {
 
 export function useStripe() {
   const createCheckoutSession = useCallback(
-    async (_userId: string, credits: number) => {
+    async (userId: string, credits: number) => {
       try {
         if (!supabase) throw new Error("Supabase non configurato");
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-        if (!user) throw new Error("Devi effettuare il login");
 
         const priceId = PRICE_MAP[credits];
         if (!priceId) throw new Error("Pacchetto crediti non valido");
@@ -29,7 +26,7 @@ export function useStripe() {
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             price_id: priceId,
-            user_id: user.id,
+            user_id: userId,
             credits,
             success_url: `${origin}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}/shop?payment=cancel`,
