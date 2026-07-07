@@ -10,6 +10,7 @@ import AdDetail from "./pages/AdDetail";
 import AdminPanel from "./pages/AdminPanel";
 import Shop from "./pages/Shop";
 import MyAds from "./pages/MyAds";
+import Profile from "./pages/Profile";
 
 const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/ad/:slug"} component={AdDetail} />
       <Route path={"/shop"} component={Shop} />
       <Route path={"/my-ads"} component={MyAds} />
+      <Route path={"/profile"} component={Profile} />
       <Route path={"/admin"} component={AdminPanel} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

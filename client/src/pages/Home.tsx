@@ -10,7 +10,7 @@ import { useStripe } from "@/hooks/useStripe";
 import { supabase } from "@/lib/supabaseClient";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown, Package } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -699,12 +699,24 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   <span className="text-accent">💰</span>
                   <span className="font-semibold">{currentUser.credits || 0}</span>
                 </Button>
-                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/my-ads")}
+                  className="gap-1.5 text-gray-700 dark:text-gray-200"
+                  title="I miei annunci"
+                >
+                  <Package className="w-4 h-4" />
+                </Button>
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="flex items-center gap-2 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
                   <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
                     {currentUser.name?.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{currentUser.name}</span>
-                </div>
+                </button>
                 {currentUser.is_admin && (
                   <Button
                     variant="outline"
@@ -856,6 +868,22 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     onClick={() => { openPublish(); setMobileMenuOpen(false); }}
                   >
                     <Plus className="w-4 h-4" /> Pubblica Annuncio
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                    onClick={() => { navigate("/profile"); setMobileMenuOpen(false); }}
+                  >
+                    <Package className="w-4 h-4" /> Il mio Profilo
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                    onClick={() => { navigate("/my-ads"); setMobileMenuOpen(false); }}
+                  >
+                    <Package className="w-4 h-4" /> I miei Annunci
                   </Button>
 
                   {currentUser.is_admin && (

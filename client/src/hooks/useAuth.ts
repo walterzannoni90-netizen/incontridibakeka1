@@ -5,6 +5,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   is_admin: boolean;
   credits?: number;
   has_paid?: boolean;
@@ -17,6 +18,7 @@ interface ProfileRow {
   id: string;
   email: string;
   name: string;
+  phone: string;
   is_admin: boolean;
   credits: number;
   has_paid: boolean;
@@ -30,6 +32,7 @@ function toUser(row: ProfileRow): User {
     id: row.id,
     email: row.email,
     name: row.name,
+    phone: row.phone ?? undefined,
     is_admin: !!row.is_admin,
     credits: row.credits ?? 0,
     has_paid: !!row.has_paid,
@@ -47,7 +50,7 @@ export function useAuth() {
     if (!supabase) return null;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id,email,name,is_admin,credits,has_paid,subscription_tier,ads_count,is_verified")
+      .select("id,email,name,phone,is_admin,credits,has_paid,subscription_tier,ads_count,is_verified")
       .eq("id", userId)
       .single();
     if (error || !data) {
