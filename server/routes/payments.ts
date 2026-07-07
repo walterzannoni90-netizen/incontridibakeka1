@@ -14,10 +14,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 });
 
 const PRICE_MAP: Record<number, { price: number; stripePriceId: string }> = {
-  10: { price: 4.99, stripePriceId: process.env.VITE_STRIPE_PRICE_10 || "" },
-  30: { price: 9.99, stripePriceId: process.env.VITE_STRIPE_PRICE_30 || "" },
-  70: { price: 19.99, stripePriceId: process.env.VITE_STRIPE_PRICE_70 || "" },
-  150: { price: 34.99, stripePriceId: process.env.VITE_STRIPE_PRICE_150 || "" },
+  10: { price: 4.99, stripePriceId: process.env.STRIPE_PRICE_10 || "" },
+  30: { price: 9.99, stripePriceId: process.env.STRIPE_PRICE_30 || "" },
+  70: { price: 19.99, stripePriceId: process.env.STRIPE_PRICE_70 || "" },
+  150: { price: 34.99, stripePriceId: process.env.STRIPE_PRICE_150 || "" },
 };
 
 // ========== CREATE CHECKOUT SESSION ==========
