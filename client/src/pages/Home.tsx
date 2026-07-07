@@ -598,7 +598,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       </button>
 
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <img src="/logo.svg" alt="Incontri di Bakeka" className="h-9 w-auto" />
@@ -609,17 +609,17 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             {/* City selector */}
             <div className="relative">
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted/70 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 onClick={() => { setCityDropdownOpen(!cityDropdownOpen); setCountryDropdownOpen(false); }}
               >
-                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                 {selectedCity || "Tutte le citta"}
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               </button>
               {cityDropdownOpen && (
-                <div className="absolute top-full right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-white dark:bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute top-full right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
                   <button
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                     onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
                   >
                     Tutte le citta
@@ -627,7 +627,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   {ITALIAN_CITIES.map((city) => (
                     <button
                       key={city}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                       onClick={() => { setSelectedCity(city); setCityDropdownOpen(false); }}
                     >
                       {city}
@@ -640,18 +640,18 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             {/* Country selector */}
             <div className="relative">
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted/70 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 onClick={() => { setCountryDropdownOpen(!countryDropdownOpen); setCityDropdownOpen(false); }}
               >
                 {COUNTRIES.find(c => c.code === selectedCountry)?.flag} {COUNTRIES.find(c => c.code === selectedCountry)?.name}
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               </button>
               {countryDropdownOpen && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-72 overflow-y-auto bg-white dark:bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-72 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
                   {COUNTRIES.map((c) => (
                     <button
                       key={c.code}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-gray-700 dark:text-gray-200"
                       onClick={() => handleCountrySelect(c.code)}
                     >
                       <span>{c.flag}</span> {c.name}
@@ -664,7 +664,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             {/* Dark mode toggle */}
             {toggleTheme && (
               <button
-                className="flex items-center justify-center w-9 h-9 rounded-lg border border-border text-foreground hover:bg-muted/70 transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 onClick={toggleTheme}
                 aria-label="Cambia tema"
               >
@@ -674,7 +674,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
             <Input
               placeholder="Cerca annunci..."
-              className="w-48"
+              className="w-48 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900"
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -686,23 +686,23 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate("/shop")}
-                  className="gap-1.5"
+                  className="gap-1.5 text-gray-700 dark:text-gray-200"
                 >
                   <span className="text-accent">💰</span>
                   <span className="font-semibold">{currentUser.credits || 0}</span>
                 </Button>
-                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/70 border border-border">
+                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
                     {currentUser.name?.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium text-foreground">{currentUser.name}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{currentUser.name}</span>
                 </div>
                 {currentUser.is_admin && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/admin")}
-                    className="gap-1.5"
+                    className="gap-1.5 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                   >
                     <span>⚙️</span> Admin
                   </Button>
@@ -711,7 +711,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   variant="outline"
                   size="sm"
                   onClick={logout}
-                  className="gap-1.5"
+                  className="gap-1.5 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                 >
                   <LogOut className="w-4 h-4" /> Esci
                 </Button>
@@ -724,10 +724,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2 text-foreground">
+          <div className="md:hidden flex items-center gap-2">
             {toggleTheme && (
               <button
-                className="flex items-center justify-center w-9 h-9 rounded-lg border border-border text-foreground hover:bg-muted/70 transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 onClick={toggleTheme}
                 aria-label="Cambia tema"
               >
@@ -735,7 +735,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               </button>
             )}
             <button
-              className="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-foreground hover:bg-muted/70 transition-colors"
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Menu"
             >
@@ -750,25 +750,25 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-white dark:bg-card text-foreground">
+          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
             <div className="container py-4 space-y-3">
                 {/* City selector mobile */}
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Citta</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Citta</label>
                   <button
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border text-sm"
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm"
                     onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
                   >
                     <span className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                       {selectedCity || "Tutte le citta"}
                     </span>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   </button>
                   {cityDropdownOpen && (
-                    <div className="mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg py-1">
+                    <div className="mt-1 w-full max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg py-1 bg-white dark:bg-gray-900">
                       <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                         onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
                       >
                         Tutte le citta
@@ -776,7 +776,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                       {ITALIAN_CITIES.map((city) => (
                         <button
                           key={city}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
                           onClick={() => { setSelectedCity(city); setCityDropdownOpen(false); }}
                         >
                           {city}
@@ -788,22 +788,22 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
                 {/* Country selector mobile */}
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Paese</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Paese</label>
                   <button
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border text-sm"
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-sm"
                     onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                   >
                     <span className="flex items-center gap-1.5">
                       {COUNTRIES.find(c => c.code === selectedCountry)?.flag} {COUNTRIES.find(c => c.code === selectedCountry)?.name}
                     </span>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   </button>
                   {countryDropdownOpen && (
-                    <div className="mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg py-1">
+                    <div className="mt-1 w-full max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg py-1 bg-white dark:bg-gray-900">
                       {COUNTRIES.map((c) => (
                         <button
                           key={c.code}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-gray-700 dark:text-gray-200"
                           onClick={() => handleCountrySelect(c.code)}
                         >
                           <span>{c.flag}</span> {c.name}
@@ -820,17 +820,18 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900"
               />
 
               {currentUser ? (
                 <>
                   {/* User info bar */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold">
                       {currentUser.name?.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{currentUser.name}</p>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate">{currentUser.name}</p>
                       <button
                         className="text-xs text-accent font-semibold flex items-center gap-1"
                         onClick={() => { navigate("/shop"); setMobileMenuOpen(false); }}
@@ -852,7 +853,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   {currentUser.is_admin && (
                     <Button
                       variant="outline"
-                      className="w-full gap-2"
+                      className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                       onClick={() => { navigate("/admin"); setMobileMenuOpen(false); }}
                     >
                       <span>⚙️</span> Pannello Admin
@@ -861,7 +862,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
                   <Button
                     variant="outline"
-                    className="w-full gap-2"
+                    className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                     onClick={() => { navigate("/shop"); setMobileMenuOpen(false); }}
                   >
                     <span>💰</span> Acquista Crediti
@@ -869,7 +870,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
                   <Button
                     variant="outline"
-                    className="w-full gap-2 text-destructive hover:bg-destructive/5 border-destructive/20"
+                    className="w-full gap-2 border-gray-300 dark:border-gray-600 text-destructive hover:bg-destructive/5"
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
                   >
                     <LogOut className="w-4 h-4" /> Esci
@@ -885,7 +886,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full gap-2"
+                    className="w-full gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200"
                     onClick={() => { setAuthModal("register"); setMobileMenuOpen(false); }}
                   >
                     <Sparkles className="w-4 h-4" /> Registrati
