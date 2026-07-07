@@ -182,6 +182,8 @@ export default function AdminPanel() {
     open: boolean;
     item: CategoryItem | null;
   }>({ open: false, item: null });
+  const [creditsDialog, setCreditsDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: "", userName: "" });
+  const [manualCredits, setManualCredits] = useState(10);
 
   const loadData = useCallback(async (tab?: string) => {
     if (!supabase) return;
@@ -320,6 +322,34 @@ export default function AdminPanel() {
 
   const showConfirm = (title: string, message: string, action: () => Promise<void>) => {
     setConfirmDialog({ open: true, title, message, action });
+  };
+
+  const addCredits = async () => {
+    if (!supabase || !creditsDialog.userId) return;
+    try {
+      const { error: rpcErr } = await supabase.rpc("increment_credits", {
+        p_user_id: creditsDialog.userId,
+        p_credits: manualCredits,
+      });
+      if (rpcErr) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("credits")
+          .eq("id", creditsDialog.userId)
+          .single();
+        const newCredits = (profile?.credits ?? 0) + manualCredits;
+        const { error: updErr } = await supabase
+          .from("profiles")
+          .update({ credits: newCredits, has_paid: true })
+          .eq("id", creditsDialog.userId);
+        if (updErr) throw updErr;
+      }
+      toast.success(`${manualCredits} crediti aggiunti a ${creditsDialog.userName}`);
+      setCreditsDialog({ open: false, userId: "", userName: "" });
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || "Errore aggiunta crediti");
+    }
   };
 
   const toggleAdmin = async (userId: string, isAdminUser: boolean) => {
@@ -637,6 +667,14 @@ export default function AdminPanel() {
                             >
                               <Ban className="w-4 h-4" />
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setManualCredits(10); setCreditsDialog({ open: true, userId: u.id, userName: u.name }); }}
+                              title="Aggiungi crediti"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
                       </Card>
@@ -888,6 +926,32 @@ export default function AdminPanel() {
             </Button>
             <Button variant="destructive" onClick={confirmDialog.action}>
               Conferma
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={creditsDialog.open} onOpenChange={(open) => setCreditsDialog(d => ({ ...d, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aggiungi crediti</DialogTitle>
+            <DialogDescription>Quanti crediti aggiungere a {creditsDialog.userName}?</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              type="number"
+              min={1}
+              value={manualCredits}
+              onChange={(e) => setManualCredits(Math.max(1, parseInt(e.target.value) || 1))}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCreditsDialog({ open: false, userId: "", userName: "" })}>
+              Annulla
+            </Button>
+            <Button onClick={addCredits}>
+              <Plus className="w-4 h-4 mr-1" />
+              Aggiungi {manualCredits} crediti
             </Button>
           </DialogFooter>
         </DialogContent>
