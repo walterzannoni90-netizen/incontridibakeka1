@@ -61,7 +61,7 @@ export default function MyAds() {
   const [loadingAds, setLoadingAds] = useState(true);
   const [busyBoost, setBusyBoost] = useState<string | null>(null);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
-  const [editForm, setEditForm] = useState({ title: "", description: "", city: "", price: "", image: "" });
+  const [editForm, setEditForm] = useState({ title: "", description: "", city: "", price: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Ad | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -139,7 +139,7 @@ export default function MyAds() {
     setEditingAd(ad);
     setEditForm({
       title: ad.title, description: ad.description, city: ad.city,
-      price: ad.price || "", image: ad.image || "",
+      price: ad.price || "",
     });
   };
 
@@ -330,10 +330,6 @@ export default function MyAds() {
               <div>
                 <label className="text-sm font-medium mb-1 block">Prezzo</label>
                 <Input value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Immagine URL</label>
-                <Input value={editForm.image} onChange={(e) => setEditForm({ ...editForm, image: e.target.value })} />
               </div>
             </div>
             <div className="flex gap-2 mt-6">
