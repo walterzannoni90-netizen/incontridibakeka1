@@ -1474,7 +1474,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                      <Input
                        placeholder="WhatsApp (es. 333 1234567)"
                        value={publishForm.whatsapp}
-                       onChange={(e) => setPublishForm({ ...publishForm, whatsapp: e.target.value })}
+                       onChange={(e) => setPublishForm({ ...publishForm, whatsapp: formatPhone(e.target.value) })}
                     />
                     <Textarea
                       className="md:col-span-2"
