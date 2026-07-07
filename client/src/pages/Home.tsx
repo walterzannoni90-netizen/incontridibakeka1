@@ -73,6 +73,13 @@ interface Ad {
   created_at?: string;
 }
 
+function formatPhone(val: string): string {
+  const digits = val.replace(/\D/g, "");
+  if (val.startsWith("+")) return val;
+  if (!digits) return val;
+  return "+39" + digits;
+}
+
 const CATEGORIES = [
   { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&h=600&fit=crop", count: "180+ annunci" },
   { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop", count: "20+ annunci" },
@@ -1459,15 +1466,15 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                       value={publishForm.price}
                       onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
                     />
-                    <Input
-                      placeholder="Telefono (es. +39 333 1234567)"
-                      value={publishForm.phone}
-                      onChange={(e) => setPublishForm({ ...publishForm, phone: e.target.value })}
-                    />
-                    <Input
-                      placeholder="WhatsApp (es. +39 333 1234567)"
-                      value={publishForm.whatsapp}
-                      onChange={(e) => setPublishForm({ ...publishForm, whatsapp: e.target.value })}
+                     <Input
+                       placeholder="Telefono (es. 333 1234567)"
+                       value={publishForm.phone}
+                       onChange={(e) => setPublishForm({ ...publishForm, phone: formatPhone(e.target.value) })}
+                     />
+                     <Input
+                       placeholder="WhatsApp (es. 333 1234567)"
+                       value={publishForm.whatsapp}
+                       onChange={(e) => setPublishForm({ ...publishForm, whatsapp: e.target.value })}
                     />
                     <Textarea
                       className="md:col-span-2"
