@@ -151,6 +151,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [infoModal, setInfoModal] = useState<string | null>(null);
   const [savedAds, setSavedAds] = useState<string[]>([]);
+  // Statistiche personali per la dashboard
+  const [myStats, setMyStats] = useState({ adsCount: 0, boostedCount: 0 });
 
   // Numero massimo di foto in base allo stato premium dell'utente
   const maxPhotos = currentUser?.has_paid ? 5 : 1;
@@ -165,6 +167,31 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     }
     setSavedAds(JSON.parse(localStorage.getItem("savedAds") || "[]"));
   }, []);
+
+  // Carica statistiche personali per la dashboard
+  const loadMyStats = useCallback(async () => {
+    if (!currentUser || !SUPABASE_CONFIGURED) return;
+    try {
+      const token = (await supabase!.auth.getSession()).data.session?.access_token;
+      if (!token) return;
+      const [adsRes, boostedRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&is_active=eq.true`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&or=(is_sponsored.eq.true,is_premium.eq.true)`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      const adsData = await adsRes.json();
+      const boostedData = await boostedRes.json();
+      setMyStats({
+        adsCount: Array.isArray(adsData) ? adsData.length : 0,
+        boostedCount: Array.isArray(boostedData) ? boostedData.length : 0,
+      });
+    } catch {}
+  }, [currentUser]);
+
+  useEffect(() => { if (currentUser) loadMyStats(); }, [currentUser, loadMyStats]);
 
   useEffect(() => {
     let title = "Incontri di Bakeka — Marketplace Affidabile";
@@ -970,7 +997,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <p className="text-2xl md:text-3xl font-bold">{ads.filter(a => a.user_id === currentUser.id).length || currentUser.ads_count || 0}</p>
+                    <p className="text-2xl md:text-3xl font-bold">{myStats.adsCount}</p>
                     <p className="text-[10px] md:text-xs text-white/70 mt-1">Annunci pubblicati</p>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
@@ -978,7 +1005,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <p className="text-[10px] md:text-xs text-white/70 mt-1">Crediti</p>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <p className="text-2xl md:text-3xl font-bold">{ads.filter(a => a.is_sponsored || a.is_premium).length || 0}</p>
+                    <p className="text-2xl md:text-3xl font-bold">{myStats.boostedCount}</p>
                     <p className="text-[10px] md:text-xs text-white/70 mt-1">Annunci in vetrina</p>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">

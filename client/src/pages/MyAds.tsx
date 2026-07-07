@@ -272,7 +272,8 @@ export default function MyAds() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {ads.map((ad) => {
-              const isBoosted = ad.is_premium || ad.is_sponsored || (ad.boosted_until && new Date(ad.boosted_until).getTime() > Date.now());
+              const boostActive = ad.boosted_until && new Date(ad.boosted_until).getTime() > Date.now();
+              const isBoosted = boostActive || ad.is_premium || ad.is_sponsored;
               return (
                 <Card key={ad.id} className="overflow-hidden">
                   <div className="relative aspect-video bg-muted">
@@ -310,7 +311,7 @@ export default function MyAds() {
                     </div>
 
                     {/* STATO BOOST ATTUALE */}
-                    {isBoosted && ad.boosted_until && (
+                    {isBoosted && ad.boosted_until && boostActive && (
                       <div className="flex items-center gap-2 p-2 mb-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
                         <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
                         <div className="text-[10px]">
