@@ -37,6 +37,7 @@ interface Ad {
   is_active: boolean;
   is_premium: boolean;
   is_sponsored: boolean;
+  has_paid?: boolean;
   views: number;
   created_at: string;
   boosted_until?: string | null;
@@ -273,7 +274,7 @@ export default function MyAds() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {ads.map((ad) => {
               const boostActive = ad.boosted_until && new Date(ad.boosted_until).getTime() > Date.now();
-              const isBoosted = boostActive || ad.is_premium || ad.is_sponsored;
+              const isBoosted = boostActive || ad.is_premium || ad.is_sponsored || ad.has_paid;
               return (
                 <Card key={ad.id} className="overflow-hidden">
                   <div className="relative aspect-video bg-muted">
@@ -284,7 +285,7 @@ export default function MyAds() {
                         Nessuna immagine
                       </div>
                     )}
-                    {ad.is_premium && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
+                    {(ad.is_premium || ad.has_paid) && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
                     {ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />In Vetrina</Badge>}
                     {!isBoosted && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">

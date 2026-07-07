@@ -407,15 +407,15 @@ export default function AdDetail() {
                 Solo chiamate — contatta solo telefonicamente
               </div>
             )}
-            {/* Pulsanti contatto migliorati */}
+             {/* Pulsanti contatto migliorati */}
             <div className="flex gap-3 mb-6">
               {ad.whatsapp && (
                 <Button
-                  variant={ad.calls_only ? "outline" : "outline"}
+                  variant={ad.calls_only ? "outline" : "default"}
                   className={`flex-1 gap-2 shadow-lg transition-all duration-200 hover:scale-[1.02] ${
                     ad.calls_only
                       ? "border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                      : "border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30"
+                      : "border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40"
                   }`}
                   asChild
                 >
@@ -428,9 +428,9 @@ export default function AdDetail() {
                   </a>
                 </Button>
               )}
-              {ad.whatsapp && (
+              {(ad.phone || ad.whatsapp) && (
                 <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all duration-200 hover:scale-[1.02]" asChild>
-                  <a href={`tel:${ad.whatsapp}`}>
+                  <a href={`tel:${ad.phone || ad.whatsapp}`}>
                     <Phone className="w-4 h-4" />
                     Chiama
                   </a>
@@ -479,7 +479,7 @@ export default function AdDetail() {
               )}
               {!ad.phone && !ad.whatsapp && !(ad.user_id && user && user.id !== ad.user_id) && (
                 <div className="w-full text-center text-sm text-muted-foreground bg-muted/50 rounded-xl py-4">
-                  Nessun contatto disponibile per questo annuncio
+                  {ad.user_id && user && user.id === ad.user_id ? "Aggiungi un numero nell'editor annuncio" : "Nessun contatto disponibile per questo annuncio"}
                 </div>
               )}
             </div>

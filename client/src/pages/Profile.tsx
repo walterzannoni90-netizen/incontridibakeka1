@@ -34,6 +34,7 @@ interface Ad {
   is_active: boolean;
   is_premium: boolean;
   is_sponsored: boolean;
+  has_paid?: boolean;
   views: number;
   created_at: string;
   boosted_until?: string | null;
@@ -403,7 +404,7 @@ export default function Profile() {
                           Nessuna immagine
                         </div>
                       )}
-                      {ad.is_premium && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
+                      {(ad.is_premium || ad.has_paid) && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
                       {ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />Sponsorizzato</Badge>}
                     </div>
                     <div className="p-4">
