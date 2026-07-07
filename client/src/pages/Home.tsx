@@ -950,39 +950,77 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         )}
       </nav>
 
-      {/* HERO SECTION */}
-        <section className="relative min-h-[420px] md:h-[480px] overflow-hidden flex items-center">
+      {/* HERO SECTION — DASHBOARD per loggati, MARKETING per visitatori */}
+        <section className="relative min-h-[320px] md:min-h-[400px] overflow-hidden flex items-center">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-primary to-purple-600" />
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: "url(https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1600&h=600&fit=crop)",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1600&h=600&fit=crop)", backgroundSize: "cover", backgroundPosition: "center" }} />
           <div className="absolute inset-0 bg-gradient-to-t from-purple-950/50 via-transparent to-transparent" />
-          <div className="relative container flex flex-col items-center justify-center text-center text-white py-12 md:py-0 z-10">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-4 text-sm">
-              <Shield className="w-4 h-4" />
-              <span>Profili verificati. Connessioni reali.</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-3 md:mb-4 font-poppins drop-shadow-lg">
-              Connessioni Autentiche
-            </h1>
-            <p className="text-lg md:text-2xl mb-6 md:mb-8 opacity-90 max-w-2xl px-2">
-              Il marketplace piu affidabile per incontri e amicizie in Italia
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto px-4 sm:px-0">
-              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto shadow-lg" onClick={runSearch}>
-                <Search className="w-5 h-5" />
-                Scopri Annunci
-              </Button>
-              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto bg-white/90 hover:bg-white border-white text-primary shadow-lg" onClick={openPublish}>
-                <Plus className="w-5 h-5" />
-                Pubblica Annuncio
-              </Button>
-            </div>
+          <div className="relative container z-10 text-white py-8 md:py-0">
+            {currentUser ? (
+              /* DASHBOARD UTENTE LOGGATO */
+              <div className="max-w-3xl mx-auto">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-2xl font-bold shrink-0 border-2 border-white/30">
+                    {currentUser.name?.charAt(0).toUpperCase() || "?"}
+                  </div>
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-bold font-poppins">{currentUser.name}</h1>
+                    <p className="text-white/70 text-sm">{currentUser.email}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <p className="text-2xl md:text-3xl font-bold">{ads.filter(a => a.user_id === currentUser.id).length || currentUser.ads_count || 0}</p>
+                    <p className="text-[10px] md:text-xs text-white/70 mt-1">Annunci pubblicati</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <p className="text-2xl md:text-3xl font-bold">{currentUser.credits || 0}</p>
+                    <p className="text-[10px] md:text-xs text-white/70 mt-1">Crediti</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <p className="text-2xl md:text-3xl font-bold">{ads.filter(a => a.is_sponsored || a.is_premium).length || 0}</p>
+                    <p className="text-[10px] md:text-xs text-white/70 mt-1">Annunci in vetrina</p>
+                  </div>
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <p className="text-2xl md:text-3xl font-bold">{currentUser.has_paid ? "Sì" : "No"}</p>
+                    <p className="text-[10px] md:text-xs text-white/70 mt-1">Pagante</p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button size="lg" className="gap-2 shadow-lg flex-1" onClick={openPublish}>
+                    <Plus className="w-5 h-5" /> Pubblica Annuncio
+                  </Button>
+                  <Button size="lg" variant="secondary" className="gap-2 shadow-lg flex-1" onClick={() => navigate("/my-ads")}>
+                    <Package className="w-5 h-5" /> I miei Annunci
+                  </Button>
+                  <Button size="lg" variant="outline" className="gap-2 bg-white/20 hover:bg-white/30 border-white/40 text-white shadow-lg flex-1" onClick={() => navigate("/shop")}>
+                    <Coins className="w-5 h-5" /> Acquista Crediti
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* HERO MARKETING PER VISITATORI */
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-4 text-sm">
+                  <Shield className="w-4 h-4" />
+                  <span>Profili verificati. Connessioni reali.</span>
+                </div>
+                <h1 className="text-4xl md:text-6xl font-bold mb-3 md:mb-4 font-poppins drop-shadow-lg">
+                  Connessioni Autentiche
+                </h1>
+                <p className="text-lg md:text-2xl mb-6 md:mb-8 opacity-90 max-w-2xl px-2">
+                  Il marketplace piu affidabile per incontri e amicizie in Italia
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto px-4 sm:px-0">
+                  <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto shadow-lg" onClick={runSearch}>
+                    <Search className="w-5 h-5" /> Scopri Annunci
+                  </Button>
+                  <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto bg-white/90 hover:bg-white border-white text-primary shadow-lg" onClick={() => setAuthModal("register")}>
+                    <Sparkles className="w-5 h-5" /> Iscriviti
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -1799,12 +1837,17 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 </div>
               </div>
 
-              {/* Pubblica annuncio bar */}
+              {/* CTA finale */}
               <div className="border-t border-border pt-6 mb-6 text-center">
-                <Button onClick={openPublish} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Pubblica il tuo Annuncio
-                </Button>
+                {currentUser ? (
+                  <Button onClick={openPublish} className="gap-2">
+                    <Plus className="w-4 h-4" /> Pubblica Annuncio
+                  </Button>
+                ) : (
+                  <Button onClick={() => setAuthModal("register")} className="gap-2">
+                    <Sparkles className="w-4 h-4" /> Iscriviti — Pubblica il tuo annuncio
+                  </Button>
+                )}
               </div>
 
               <div className="border-t border-border pt-6 text-center text-sm text-muted-foreground">

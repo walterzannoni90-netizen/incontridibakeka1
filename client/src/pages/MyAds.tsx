@@ -247,9 +247,14 @@ export default function MyAds() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6 flex-wrap">
           <h1 className="text-3xl font-bold">I miei annunci</h1>
           <Badge variant="outline" className="text-sm">{ads.length} totali</Badge>
+          {user.has_paid && (
+            <Badge className="bg-green-500/10 text-green-600 border-green-200 dark:border-green-800 gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Pagante
+            </Badge>
+          )}
         </div>
 
         {loadingAds ? (
@@ -304,12 +309,26 @@ export default function MyAds() {
                       </Button>
                     </div>
 
+                    {/* STATO BOOST ATTUALE */}
+                    {isBoosted && ad.boosted_until && (
+                      <div className="flex items-center gap-2 p-2 mb-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                        <div className="text-[10px]">
+                          <p className="font-semibold text-green-700 dark:text-green-400">
+                            {ad.is_premium ? "Premium" : "In Vetrina"} — Attivo
+                          </p>
+                          <p className="text-green-600/70">
+                            Scade tra {Math.ceil((new Date(ad.boosted_until).getTime() - Date.now()) / 86400000)} giorni
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     {/* RICCA SEZIONE PROMOZIONE */}
                     <div className="border-t pt-3 mt-2">
                       <div className="flex items-center gap-1.5 mb-2">
                         <Rocket className="w-3.5 h-3.5 text-purple-500" />
                         <p className="text-xs font-bold text-purple-600 dark:text-purple-400">
-                          {isBoosted ? "Già promosso — prolunga:" : "Promuovi annuncio:"}
+                          {isBoosted ? "Prolunga promozione:" : "Promuovi annuncio:"}
                         </p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
