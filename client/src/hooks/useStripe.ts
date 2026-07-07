@@ -61,12 +61,26 @@ export function useStripe() {
   const verifyPayment = useCallback(async (sessionId: string) => {
     try {
       if (!supabase) return null;
-      const { data } = await supabase
+      const { data: tx } = await supabase
         .from("transactions")
         .select("*")
         .eq("stripe_session_id", sessionId)
         .single();
-      return { transaction: data };
+      if (!tx) return null;
+      if (tx.status === "completed") {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("credits, has_paid")
+          .eq("id", tx.user_id)
+          .single();
+        return {
+          status: "completed",
+          credits: tx.credits,
+          totalCredits: profile?.credits ?? 0,
+          has_paid: profile?.has_paid ?? false,
+        };
+      }
+      return { status: "pending", credits: tx.credits, totalCredits: 0, has_paid: false };
     } catch (error) {
       console.error("Errore verifica pagamento:", error);
       return null;

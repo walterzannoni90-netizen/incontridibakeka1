@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
-import { useApi } from "@/hooks/useApi";
 import { useRouter } from "@/hooks/useRouter";
+import { supabase } from "@/lib/supabaseClient";
 import {
   ArrowLeft,
   Users,
@@ -32,7 +32,7 @@ interface Stats {
   totalRevenue: number;
 }
 
-interface User {
+interface UserRow {
   id: string;
   name: string;
   email: string;
@@ -43,7 +43,7 @@ interface User {
   created_at: string;
 }
 
-interface Ad {
+interface AdRow {
   id: string;
   title: string;
   city: string;
@@ -54,56 +54,81 @@ interface Ad {
   views: number;
 }
 
-interface Report {
+interface ReportRow {
   id: string;
   ad_id: string;
   reason: string;
   status: string;
   created_at: string;
-  ads?: { title: string };
-  profiles?: { name: string; email: string };
+  ads: { title: string } | null;
+  profiles: { name: string; email: string } | null;
+}
+
+async function count(table: string, filter?: string, value?: any): Promise<number> {
+  if (!supabase) return 0;
+  let q = supabase.from(table).select("*", { count: "exact", head: true });
+  if (filter && value !== undefined) q = q.eq(filter, value);
+  const { count: c } = await q;
+  return c ?? 0;
+}
+
+async function sum(table: string, column: string): Promise<number> {
+  if (!supabase) return 0;
+  const { data } = await supabase.from(table).select(column);
+  if (!data) return 0;
+  return data.reduce((s: number, r: any) => s + (Number(r[column]) || 0), 0);
 }
 
 export default function AdminPanel() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
-  const { get, patch } = useApi();
 
   const [stats, setStats] = useState<Stats | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [ads, setAds] = useState<Ad[]>([]);
-  const [reports, setReports] = useState<Report[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [ads, setAds] = useState<AdRow[]>([]);
+  const [reports, setReports] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "ads" | "reports">("overview");
   const [searchQuery, setSearchQuery] = useState("");
 
   const loadData = useCallback(async () => {
+    if (!supabase) return;
     try {
       setLoading(true);
-      const [statsData, usersData, adsData, reportsData] = await Promise.all([
-        get("/api/admin/stats"),
-        get("/api/admin/users"),
-        get("/api/admin/ads"),
-        get("/api/admin/reports"),
+      const [
+        totalUsers, totalAds, activeAds, pendingReports,
+        totalTransactions, totalRevenue, usersData, adsData, reportsData,
+      ] = await Promise.all([
+        count("profiles"),
+        count("ads"),
+        count("ads", "is_active", true),
+        count("ad_reports", "status", "pending"),
+        count("transactions", "status", "completed"),
+        sum("transactions", "amount"),
+        supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(200).then((r) => r.data || []),
+        supabase.from("ads").select("*").order("created_at", { ascending: false }).limit(200).then((r) => r.data || []),
+        supabase.from("ad_reports").select("*, ads(title), profiles(name,email)").order("created_at", { ascending: false }).limit(200).then((r) => r.data || []),
       ]);
-      setStats(statsData.stats);
-      setUsers(usersData.users || []);
-      setAds(adsData.ads || []);
-      setReports(reportsData.reports || []);
+      setStats({ totalUsers, totalAds, activeAds, pendingReports, totalTransactions, totalRevenue });
+      setUsers(usersData as UserRow[]);
+      setAds(adsData as AdRow[]);
+      setReports(reportsData as unknown as ReportRow[]);
     } catch (e: any) {
       toast.error(e.message || "Errore caricamento dati admin");
     } finally {
       setLoading(false);
     }
-  }, [get]);
+  }, []);
 
   useEffect(() => {
     if (isAdmin) loadData();
   }, [isAdmin, loadData]);
 
-  const toggleAdmin = async (userId: string, isAdmin: boolean) => {
+  const toggleAdmin = async (userId: string, isAdminUser: boolean) => {
+    if (!supabase) return;
     try {
-      await patch(`/api/admin/users/${userId}/admin`, { is_admin: !isAdmin });
+      const { error } = await supabase.from("profiles").update({ is_admin: !isAdminUser }).eq("id", userId);
+      if (error) throw error;
       toast.success("Ruolo aggiornato");
       loadData();
     } catch (e: any) {
@@ -112,8 +137,10 @@ export default function AdminPanel() {
   };
 
   const toggleAdStatus = async (adId: string, isActive: boolean) => {
+    if (!supabase) return;
     try {
-      await patch(`/api/admin/ads/${adId}/status`, { is_active: !isActive });
+      const { error } = await supabase.from("ads").update({ is_active: !isActive }).eq("id", adId);
+      if (error) throw error;
       toast.success("Stato annuncio aggiornato");
       loadData();
     } catch (e: any) {
@@ -122,8 +149,10 @@ export default function AdminPanel() {
   };
 
   const handleReport = async (reportId: string, status: string) => {
+    if (!supabase) return;
     try {
-      await patch(`/api/admin/reports/${reportId}`, { status });
+      const { error } = await supabase.from("ad_reports").update({ status }).eq("id", reportId);
+      if (error) throw error;
       toast.success("Segnalazione aggiornata");
       loadData();
     } catch (e: any) {
@@ -269,7 +298,6 @@ export default function AdminPanel() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="max-w-md"
-                    icon={<Search className="w-4 h-4" />}
                   />
                 </div>
                 <div className="space-y-2">
