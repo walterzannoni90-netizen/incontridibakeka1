@@ -38,7 +38,7 @@
           history.replaceState(
             null,
             null,
-            l.pathname + (path ? path : "/") + (search ? "?" + search : "") + hash
+            l.pathname.replace(/\/+$/, "") + (path ? path : "/") + (search ? "?" + search : "") + hash
           );
         }
       })();
