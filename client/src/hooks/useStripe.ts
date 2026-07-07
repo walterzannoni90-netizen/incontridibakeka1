@@ -1,16 +1,43 @@
 import { useCallback } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+const PRICE_MAP: Record<number, string> = {
+  10: "price_1To8sPDxJ0tOArXhsUpAmd4t",
+  30: "price_1To8sQDxJ0tOArXhllfiAgT8",
+  70: "price_1To8sRDxJ0tOArXhhiUcQJVB",
+  150: "price_1To8sRDxJ0tOArXhV5p91wTG",
+};
 
 export function useStripe() {
   const createCheckoutSession = useCallback(
-    async (userId: string, credits: number) => {
+    async (_userId: string, credits: number) => {
       try {
-        const response = await fetch(`${API_URL}/api/payments/checkout`, {
+        if (!supabase) throw new Error("Supabase non configurato");
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData.session?.user;
+        if (!user) throw new Error("Devi effettuare il login");
+
+        const priceId = PRICE_MAP[credits];
+        if (!priceId) throw new Error("Pacchetto crediti non valido");
+
+        const origin = window.location.origin;
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ credits }),
+          headers: {
+            "Content-Type": "application/json",
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({
+            price_id: priceId,
+            user_id: user.id,
+            credits,
+            success_url: `${origin}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/shop?payment=cancel`,
+          }),
         });
 
         const data = await response.json();
@@ -33,10 +60,13 @@ export function useStripe() {
 
   const verifyPayment = useCallback(async (sessionId: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/payments/verify/${sessionId}`, {
-        credentials: "include",
-      });
-      return await response.json();
+      if (!supabase) return null;
+      const { data } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("stripe_session_id", sessionId)
+        .single();
+      return { transaction: data };
     } catch (error) {
       console.error("Errore verifica pagamento:", error);
       return null;
