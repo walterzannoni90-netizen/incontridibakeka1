@@ -464,7 +464,6 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         image: mainImage,
         images: uploadedImages.length > 0 ? uploadedImages : null,
         price: publishForm.price || null,
-        phone: publishForm.phone || null,
         whatsapp: publishForm.whatsapp || null,
         user_id: currentUser.id,
         has_paid: hasPaid,
