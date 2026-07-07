@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "@/hooks/useRouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useStripe } from "@/hooks/useStripe";
+import { supabase } from "@/lib/supabaseClient";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown } from "lucide-react";
@@ -90,7 +91,7 @@ const DEMO_ADS: Ad[] = [];
 
 export default function Home() {
   const { navigate } = useRouter();
-  const { user: currentUser, login, logout } = useAuth();
+  const { user: currentUser, login, logout, updateUser } = useAuth();
   const { handlePaymentCallback: stripePaymentCallback } = useStripe();
   const { theme, toggleTheme } = useTheme();
   const [ads, setAds] = useState<Ad[]>([]);
@@ -162,7 +163,6 @@ export default function Home() {
   const handlePaymentResult = async () => {
     const result = stripePaymentCallback();
     if (!result) return;
-    // Pulisci i parametri payment dall'URL
     const newUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, "", newUrl);
 
@@ -170,27 +170,21 @@ export default function Home() {
       alert("Pagamento annullato.");
       return;
     }
-    const userId = result.userId;
-    const credits = result.credits;
-    if (userId && SUPABASE_CONFIGURED) {
+    if (currentUser) {
       try {
-        const stored = localStorage.getItem("currentUser");
-        const localUser = stored ? JSON.parse(stored) : null;
-        const authToken = localStorage.getItem("authToken");
-        if (localUser && authToken && localUser.id === userId) {
-          const resp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=credits,has_paid&id=eq.${userId}`, {
-            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${authToken}` },
-          });
-          const profiles = await resp.json();
-          if (profiles?.[0]) {
-            login({ ...localUser, credits: profiles[0].credits, has_paid: profiles[0].has_paid }, authToken);
-          }
+        const { data: profile } = await supabase!
+          .from("profiles")
+          .select("credits, has_paid")
+          .eq("id", currentUser.id)
+          .single();
+        if (profile) {
+          updateUser({ credits: profile.credits, has_paid: profile.has_paid });
         }
       } catch (e) {
         console.error("Errore aggiornamento crediti:", e);
       }
     }
-    alert(`Pagamento riuscito! ${credits || ""} crediti aggiunti.`);
+    alert(`Pagamento riuscito! ${result.credits || ""} crediti aggiunti.`);
   };
 
   const loadAds = async (reset = false) => {
@@ -336,73 +330,17 @@ export default function Home() {
       return;
     }
 
-    if (!SUPABASE_CONFIGURED) {
-      alert("Database non configurato. Crea un file .env con le credenziali Supabase per abilitare l'autenticazione.");
-      return;
-    }
-
     setBusy(true);
     try {
-      const endpoint =
-        authModal === "login"
-          ? `${SUPABASE_URL}/auth/v1/token?grant_type=password`
-          : `${SUPABASE_URL}/auth/v1/signup`;
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          apikey: SUPABASE_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: authForm.email,
-          password: authForm.password,
-          data: { name: authForm.name || authForm.email.split("@")[0] },
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error_description || data.msg || data.error || "Accesso non riuscito");
-
-      const authUser = data.user;
-      const token = data.access_token;
-      if (!authUser || !token) {
-        alert("Controlla la tua email per confermare l'account, poi accedi.");
-        setAuthModal("login");
-        return;
-      }
-
-      const profile = {
-        id: authUser.id,
-        email: authUser.email || authForm.email,
-        name: authForm.name || authUser.user_metadata?.name || authForm.email.split("@")[0],
-        is_admin: false,
-        role: "user",
-        credits: authModal === "register" ? 20 : 0,
-      };
-
       if (authModal === "register") {
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
-          method: "POST",
-          headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Prefer: "resolution=merge-duplicates,return=representation",
-          },
-          body: JSON.stringify(profile),
-        }).catch(() => {});
+        await register(authForm.email, authForm.password, authForm.name || authForm.email.split("@")[0]);
       } else {
-        const profileResp = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${authUser.id}`, {
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-        }).catch(() => null);
-        const profiles = profileResp?.ok ? await profileResp.json() : [];
-        if (profiles?.[0]) Object.assign(profile, profiles[0]);
+        await login(authForm.email, authForm.password);
       }
-
-      login(profile, token);
       setAuthModal(null);
       setAuthForm({ name: "", email: "", password: "" });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Errore accesso.");
+      alert(error instanceof Error ? error.message : "Accesso non riuscito.");
     } finally {
       setBusy(false);
     }
@@ -486,7 +424,7 @@ export default function Home() {
             },
             body: JSON.stringify({ credits: newCredits }),
           }).catch(() => {});
-          login({ ...currentUser, credits: newCredits }, token);
+          updateUser({ credits: newCredits });
         }
       }
 
