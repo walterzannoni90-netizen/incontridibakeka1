@@ -1,13 +1,11 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import { supabase } from "../middleware/supabaseClient";
+import { supabase, supabaseAnon } from "../middleware/supabaseClient";
 import { authMiddleware } from "../middleware/auth";
 import type { AuthenticatedRequest } from "../types";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
-const SALT_ROUNDS = 12;
 
 // ========== REGISTER ==========
 router.post("/register", async (req, res) => {
@@ -32,9 +30,6 @@ router.post("/register", async (req, res) => {
     if (existing) {
       return res.status(409).json({ error: "Email già registrata" });
     }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     // Crea utente con Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -90,7 +85,7 @@ router.post("/login", async (req, res) => {
     }
 
     // Login con Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabaseAnon.auth.signInWithPassword({
       email,
       password,
     });

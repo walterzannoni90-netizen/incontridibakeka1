@@ -11,11 +11,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Import routes
-import authRouter from "./routes/auth.js";
-import adsRouter from "./routes/ads.js";
-import paymentsRouter from "./routes/payments.js";
-import uploadRouter from "./routes/upload.js";
-import adminRouter from "./routes/admin.js";
+import authRouter from "./routes/auth";
+import adsRouter from "./routes/ads";
+import paymentsRouter from "./routes/payments";
+import uploadRouter from "./routes/upload";
+import adminRouter from "./routes/admin";
 
 async function startServer() {
   const app = express();

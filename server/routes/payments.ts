@@ -1,4 +1,5 @@
 import { Router } from "express";
+import express from "express";
 import Stripe from "stripe";
 import { supabase } from "../middleware/supabaseClient";
 import { authMiddleware } from "../middleware/auth";
