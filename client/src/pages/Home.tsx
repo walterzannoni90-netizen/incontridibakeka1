@@ -33,7 +33,6 @@ const SERVICE_OPTIONS = [
   "Donna con donna",
   "Uomo con donna",
   "Videochiamata",
-  "Massaggio integrale",
 ];
 
 // Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
@@ -1657,7 +1656,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                        <span className="text-xs font-semibold text-foreground tracking-wide">CHIAMATE</span>
+                        <span className="text-xs font-semibold text-foreground tracking-wide">WHATSAPP</span>
                       </div>
                       <Input
                         placeholder="es. 333 1234567"
