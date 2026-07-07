@@ -598,18 +598,18 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       </button>
 
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm text-foreground">
+      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <img src="/logo.svg" alt="Incontri di Bakeka" className="h-9 w-auto" />
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
             {/* City selector */}
             <div className="relative">
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted/70 transition-colors"
                 onClick={() => { setCityDropdownOpen(!cityDropdownOpen); setCountryDropdownOpen(false); }}
               >
                 <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -640,7 +640,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             {/* Country selector */}
             <div className="relative">
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm hover:bg-muted transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-foreground text-sm hover:bg-muted/70 transition-colors"
                 onClick={() => { setCountryDropdownOpen(!countryDropdownOpen); setCityDropdownOpen(false); }}
               >
                 {COUNTRIES.find(c => c.code === selectedCountry)?.flag} {COUNTRIES.find(c => c.code === selectedCountry)?.name}
@@ -664,7 +664,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             {/* Dark mode toggle */}
             {toggleTheme && (
               <button
-                className="flex items-center justify-center w-9 h-9 rounded-lg border border-border hover:bg-muted transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-lg border border-border text-foreground hover:bg-muted/70 transition-colors"
                 onClick={toggleTheme}
                 aria-label="Cambia tema"
               >
@@ -691,7 +691,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   <span className="text-accent">💰</span>
                   <span className="font-semibold">{currentUser.credits || 0}</span>
                 </Button>
-                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted">
+                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/70 border border-border">
                   <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
                     {currentUser.name?.charAt(0).toUpperCase()}
                   </div>
@@ -727,7 +727,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           <div className="md:hidden flex items-center gap-2 text-foreground">
             {toggleTheme && (
               <button
-                className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-lg border border-border text-foreground hover:bg-muted/70 transition-colors"
                 onClick={toggleTheme}
                 aria-label="Cambia tema"
               >
@@ -735,7 +735,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               </button>
             )}
             <button
-              className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-muted transition-colors"
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-foreground hover:bg-muted/70 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Menu"
             >
