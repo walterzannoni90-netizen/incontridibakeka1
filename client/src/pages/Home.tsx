@@ -248,7 +248,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
   // Carica le foto su Supabase Storage (bucket 'ads') e ritorna gli URL pubblici
   const uploadPhotos = async (files: File[]): Promise<string[]> => {
-    const token = localStorage.getItem("authToken");
+    if (!supabase) throw new Error("Database non configurato");
+    const { data: session } = await supabase.auth.getSession();
+    const token = session?.session?.access_token;
+    if (!token) throw new Error("Utente non autenticato");
     const urls: string[] = [];
     for (const file of files) {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -291,8 +294,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
   // Conta quanti annunci l'utente ha pubblicato nelle ultime 24 ore
   const checkDailyLimit = async (): Promise<number> => {
-    if (!currentUser || !SUPABASE_CONFIGURED) return 0;
-    const token = localStorage.getItem("authToken");
+    if (!currentUser || !SUPABASE_CONFIGURED || !supabase) return 0;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session?.session?.access_token;
+    if (!token) return 0;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     try {
       const resp = await fetch(
@@ -366,7 +371,9 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   };
 
   const handlePublish = async () => {
-    const token = localStorage.getItem("authToken");
+    if (!supabase) return;
+    const { data: session } = await supabase.auth.getSession();
+    const token = session?.session?.access_token;
     if (!currentUser || !token) {
       setAuthModal("login");
       return;
