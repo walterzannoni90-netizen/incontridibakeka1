@@ -337,7 +337,10 @@ export default function AdDetail() {
               )}
               {ad.whatsapp && (
                 <Button variant="outline" className="flex-1 gap-2" asChild>
-                  <a href={`https://wa.me/${ad.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={`https://wa.me/${ad.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Ciao! Ho visto il tuo annuncio "${ad.title}" su Incontri di Bakeka (incontridibakeka.com) e mi ha colpito. Sarei felice di fare due chiacchiere e conoscerci meglio. Fammi sapere quando sei libero/a!`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                  >
                     <MessageCircle className="w-4 h-4" />
                     WhatsApp
                   </a>
