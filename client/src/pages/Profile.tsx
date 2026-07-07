@@ -151,7 +151,7 @@ export default function Profile() {
       await new Promise(r => setTimeout(r, 400));
       const token = await getToken();
       const boostedUntil = new Date(Date.now() + days * 86400000).toISOString();
-      const updates: Record<string, any> = { boosted_until: boostedUntil };
+      const updates: Record<string, any> = { boosted_until: boostedUntil, boost_end_at: boostedUntil, boost_start_at: new Date().toISOString() };
       if (type === "premium") updates.is_premium = true;
       else updates.is_sponsored = true;
       setBoostStep("Aggiornamento annuncio...");

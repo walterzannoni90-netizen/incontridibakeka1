@@ -88,6 +88,7 @@ interface AdRow {
   is_verified: boolean;
   is_premium: boolean;
   is_sponsored: boolean;
+  has_paid?: boolean;
   created_at: string;
   views: number;
   profiles?: { name: string; email: string } | null;
@@ -641,7 +642,7 @@ export default function AdminPanel() {
                             </div>
                             <p className="text-sm text-muted-foreground truncate">{u.email}</p>
                             <div className="flex flex-wrap gap-1.5 mt-1.5">
-                              <Badge variant={u.has_paid ? "default" : "secondary"} className="text-xs">
+                              <Badge variant={u.has_paid ? "default" : "secondary"} className={`text-xs ${u.has_paid ? "bg-amber-500 hover:bg-amber-600 border-0" : ""}`}>
                                 {u.has_paid ? "Premium" : "Gratuito"}
                               </Badge>
                               <Badge variant="outline" className="text-xs">{u.credits} crediti</Badge>
@@ -721,7 +722,7 @@ export default function AdminPanel() {
                             <div className="flex items-center gap-2">
                               <p className="font-medium truncate">{ad.title}</p>
                               {ad.is_sponsored && <Badge variant="default" className="shrink-0 bg-amber-500 hover:bg-amber-600">Sponsor</Badge>}
-                              {ad.is_premium && <Badge variant="secondary" className="shrink-0">Premium</Badge>}
+                              {(ad.is_premium || ad.has_paid) && <Badge variant="secondary" className="shrink-0">Premium</Badge>}
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
                               {ad.city} · {ad.category} · {ad.views} views

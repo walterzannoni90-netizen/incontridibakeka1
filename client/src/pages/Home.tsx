@@ -522,6 +522,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         weight: publishForm.weight ? Number(publishForm.weight) : null,
         calls_only: publishForm.calls_only || false,
         boosted_until: boostedUntil,
+        boost_end_at: boostedUntil,
+        boost_start_at: vetrinaScheduledAt || (boostedUntil ? new Date().toISOString() : null),
         vetrina_scheduled_at: vetrinaScheduledAt,
         vetrina_duration_days: vetrinaDurationDays,
         is_active: true,

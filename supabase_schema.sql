@@ -227,6 +227,10 @@ DROP POLICY IF EXISTS "profiles_insert_own" ON profiles;
 CREATE POLICY "profiles_insert_own" ON profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
+CREATE POLICY "profiles_update_admin" ON profiles FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.is_admin = true));
+
 -- ============================================
 -- RLS POLICIES - ADS
 -- ============================================
@@ -510,18 +514,30 @@ RETURNS INTEGER AS $$
 DECLARE
   expired_count INTEGER;
 BEGIN
+  -- Scade boost gestiti via boost_type + boost_end_at (server route)
   UPDATE ads
   SET 
     boost_type = NULL,
     boost_start_at = NULL,
     boost_end_at = NULL,
-    is_premium = CASE WHEN boost_type = 'premium' THEN FALSE ELSE is_premium END,
-    is_sponsored = CASE WHEN boost_type = 'sponsored' THEN FALSE ELSE is_sponsored END
+    is_premium = FALSE,
+    is_sponsored = FALSE
   WHERE boost_type IS NOT NULL
     AND boost_end_at IS NOT NULL
     AND boost_end_at < NOW();
 
   GET DIAGNOSTICS expired_count = ROW_COUNT;
+
+  -- Scade boost gestiti via boosted_until (frontend direct PATCH)
+  UPDATE ads
+  SET
+    boosted_until = NULL,
+    is_premium = FALSE,
+    is_sponsored = FALSE
+  WHERE boosted_until IS NOT NULL
+    AND boosted_until < NOW();
+
+  GET DIAGNOSTICS expired_count = expired_count + ROW_COUNT;
   RETURN expired_count;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -620,6 +636,8 @@ CREATE INDEX IF NOT EXISTS idx_conversations_buyer ON conversations(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_seller ON conversations(seller_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_profiles_admin ON profiles(is_admin) WHERE is_admin = true;
+CREATE INDEX IF NOT EXISTS idx_conversations_ad_id ON conversations(ad_id);
 
 -- Abilita Realtime per messages
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
