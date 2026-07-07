@@ -66,13 +66,9 @@ function validateBody(body: CheckoutRequestBody): string | null {
 // Main
 // ---------------------------------------------------------------------------
 Deno.serve(async (req: Request): Promise<Response> => {
-  // CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { status: 204, headers: corsHeaders });
-  }
-
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    // Return CORS headers for any non-POST (browser preflight or otherwise)
+    return new Response("ok", { status: 204, headers: corsHeaders });
   }
 
   // Config check
