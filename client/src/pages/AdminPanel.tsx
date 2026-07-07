@@ -196,7 +196,12 @@ export default function AdminPanel() {
         count("ads", "is_active", true),
         count("ad_reports", "status", "pending"),
         count("transactions", "status", "completed"),
-        sum("transactions", "amount"),
+        (async () => {
+          if (!supabase) return 0;
+          const { data } = await supabase.from("transactions").select("amount").eq("status", "completed");
+          if (!data) return 0;
+          return data.reduce((s, r: any) => s + (Number(r.amount) || 0), 0);
+        })(),
       ];
 
       if (currentTab === "users") {
@@ -246,6 +251,7 @@ export default function AdminPanel() {
           supabase
             .from("ad_reports")
             .select("*, ads(title,user_id), profiles(name,email)")
+            .eq("status", "pending")
             .order("created_at", { ascending: false })
             .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1)
             .then(r => {
@@ -257,6 +263,7 @@ export default function AdminPanel() {
           supabase
             .from("ad_reports")
             .select("*", { count: "exact", head: true })
+            .eq("status", "pending")
             .then(r => setTotalItems(r.count ?? 0))
         );
       }

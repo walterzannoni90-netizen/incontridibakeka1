@@ -45,6 +45,7 @@ interface Ad {
   price: string | null;
   phone: string | null;
   whatsapp: string | null;
+  calls_only: boolean;
   is_active: boolean;
   is_premium: boolean;
   is_sponsored: boolean;
@@ -398,17 +399,16 @@ export default function AdDetail() {
               )}
             </div>
 
+            {/* Solo chiamate badge */}
+            {ad.calls_only && (
+              <div className="flex items-center gap-2 mb-4 px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm font-medium text-amber-800 dark:text-amber-300">
+                <Phone className="w-4 h-4" />
+                Solo chiamate — contatta solo telefonicamente
+              </div>
+            )}
             {/* Pulsanti contatto migliorati */}
             <div className="flex gap-3 mb-6">
-              {ad.phone && (
-                <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all duration-200 hover:scale-[1.02]" asChild>
-                  <a href={`tel:${ad.phone}`}>
-                    <Phone className="w-4 h-4" />
-                    Chiama
-                  </a>
-                </Button>
-              )}
-              {ad.whatsapp && (
+              {ad.whatsapp && !ad.calls_only && (
                 <Button variant="outline" className="flex-1 gap-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 shadow-lg transition-all duration-200 hover:scale-[1.02]" asChild>
                   <a
                     href={`https://wa.me/${ad.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`)}`}
@@ -416,6 +416,14 @@ export default function AdDetail() {
                   >
                     <MessageCircle className="w-4 h-4" />
                     WhatsApp
+                  </a>
+                </Button>
+              )}
+              {ad.whatsapp && (
+                <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all duration-200 hover:scale-[1.02]" asChild>
+                  <a href={`tel:${ad.whatsapp}`}>
+                    <Phone className="w-4 h-4" />
+                    {ad.calls_only ? "Chiama ora" : "Chiama"}
                   </a>
                 </Button>
               )}

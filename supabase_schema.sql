@@ -98,6 +98,7 @@ ALTER TABLE ads ADD COLUMN IF NOT EXISTS services TEXT;
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS availability_hours TEXT;
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS height INTEGER;
 ALTER TABLE ads ADD COLUMN IF NOT EXISTS weight INTEGER;
+ALTER TABLE ads ADD COLUMN IF NOT EXISTS calls_only BOOLEAN DEFAULT FALSE;
 
 -- ============================================
 -- 3. REPORTS TABLE (vecchia tabella segnalazioni)

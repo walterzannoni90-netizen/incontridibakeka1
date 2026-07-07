@@ -520,6 +520,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         availability_hours: publishForm.availability_hours || null,
         height: publishForm.height ? Number(publishForm.height) : null,
         weight: publishForm.weight ? Number(publishForm.weight) : null,
+        calls_only: publishForm.calls_only || false,
         boosted_until: boostedUntil,
         vetrina_scheduled_at: vetrinaScheduledAt,
         vetrina_duration_days: vetrinaDurationDays,
@@ -544,7 +545,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
       // Reset form
       setPublishOpen(false);
-      setPublishForm({ title: "", description: "", city: "Roma", country: "IT", age: "25", category: CATEGORIES[0].id, image: "", price: "", phone: "", whatsapp: "", hair_color: "", body_type: "", ethnicity: "", services: "", availability_hours: "", height: "", weight: "" });
+      setPublishForm({ title: "", description: "", city: "Roma", country: "IT", age: "25", category: CATEGORIES[0].id, image: "", price: "", phone: "", whatsapp: "", hair_color: "", body_type: "", ethnicity: "", services: "", availability_hours: "", height: "", weight: "", calls_only: false });
       photoFiles.forEach((_, i) => URL.revokeObjectURL(photoPreviewUrls[i]));
       setPhotoFiles([]);
       setPhotoPreviewUrls([]);
@@ -1653,7 +1654,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                       />
                     </div>
 
-                    <div>
+                    <div className="relative">
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                         <span className="text-xs font-semibold text-foreground tracking-wide">WHATSAPP</span>
@@ -1662,7 +1663,32 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         placeholder="es. 333 1234567"
                         value={publishForm.whatsapp}
                         onChange={(e) => setPublishForm({ ...publishForm, whatsapp: formatPhone(e.target.value) })}
+                        className={publishForm.calls_only ? "opacity-40" : ""}
+                        disabled={publishForm.calls_only}
                       />
+                      {publishForm.calls_only && (
+                        <span className="absolute right-3 top-9 text-xs text-muted-foreground">disabilitato</span>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2 flex items-center gap-3 py-1">
+                      <button
+                        type="button"
+                        onClick={() => setPublishForm({ ...publishForm, calls_only: !publishForm.calls_only })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          publishForm.calls_only ? "bg-primary" : "bg-input"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                            publishForm.calls_only ? "translate-x-[22px]" : "translate-x-[2px]"
+                          }`}
+                        />
+                      </button>
+                      <span className="text-sm font-medium">Solo chiamate</span>
+                      {publishForm.calls_only && (
+                        <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">WhatsApp disabilitato</span>
+                      )}
                     </div>
 
                     <div className="md:col-span-2">
