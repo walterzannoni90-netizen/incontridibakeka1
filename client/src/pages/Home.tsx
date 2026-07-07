@@ -572,7 +572,7 @@ export default function Home() {
       </button>
 
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-md border-b border-border shadow-sm text-foreground">
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <img src="/logo.svg" alt="Incontri di Bakeka" className="h-9 w-auto" />
@@ -698,7 +698,7 @@ export default function Home() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="md:hidden flex items-center gap-2 text-foreground">
             {toggleTheme && (
               <button
                 className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-muted transition-colors"
@@ -724,7 +724,7 @@ export default function Home() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-white dark:bg-card">
+          <div className="md:hidden border-t border-border bg-white dark:bg-card text-foreground">
             <div className="container py-4 space-y-3">
                 {/* City selector mobile */}
                 <div>
