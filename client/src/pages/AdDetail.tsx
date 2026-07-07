@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { useApi } from "@/hooks/useApi";
+import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "@/hooks/useRouter";
 import {
   ArrowLeft,
@@ -57,8 +57,7 @@ interface Ad {
 
 export default function AdDetail() {
   const { user } = useAuth();
-  const { navigate, params } = useRouter();
-  const { get, post } = useApi();
+  const { navigate, currentPath } = useRouter();
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
   const [reporting, setReporting] = useState(false);
@@ -66,20 +65,24 @@ export default function AdDetail() {
   const [liked, setLiked] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
 
-  const adId = params?.id || "";
+  const adId = currentPath.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)?.[0] || "";
 
   const loadAd = useCallback(async () => {
     if (!adId) return;
     try {
       setLoading(true);
-      const data = await get(`/api/ads/${adId}`);
-      setAd(data.ad);
+      const { data } = await supabase
+        .from("ads")
+        .select("*")
+        .eq("id", adId)
+        .single();
+      setAd(data as unknown as Ad | null);
     } catch (e: any) {
       toast.error(e.message || "Annuncio non trovato");
     } finally {
       setLoading(false);
     }
-  }, [adId, get]);
+  }, [adId]);
 
   useEffect(() => {
     loadAd();
@@ -91,7 +94,11 @@ export default function AdDetail() {
       return;
     }
     try {
-      await post(`/api/ads/${adId}/report`, { reason: reportReason });
+      await supabase.from("ad_reports").insert({
+        ad_id: adId,
+        reporter_id: user?.id,
+        reason: reportReason,
+      });
       toast.success("Segnalazione inviata. Grazie per la collaborazione!");
       setReporting(false);
       setReportReason("");
