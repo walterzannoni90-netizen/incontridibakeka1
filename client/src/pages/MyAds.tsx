@@ -16,21 +16,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { useApi } from "@/hooks/useApi";
 import { useRouter } from "@/hooks/useRouter";
+import { supabase } from "@/lib/supabaseClient";
 import {
-  ArrowLeft,
-  Eye,
-  Crown,
-  Store,
-  Pencil,
-  Trash2,
-  Plus,
-  Loader2,
-  Zap,
-  Coins,
-  Clock,
+  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles
 } from "lucide-react";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 interface Ad {
   id: string;
@@ -46,31 +39,24 @@ interface Ad {
   is_sponsored: boolean;
   views: number;
   created_at: string;
-  boost_type?: string | null;
-  boost_start_at?: string | null;
-  boost_end_at?: string | null;
+  boosted_until?: string | null;
 }
 
-type BoostOption = {
-  type: "premium" | "vetrina";
-  days: number;
-  credits: number;
-  label: string;
-  icon: typeof Crown;
-};
-
-const BOOST_OPTIONS: BoostOption[] = [
-  { type: "premium", days: 30, credits: 10, label: "Rendi Premium", icon: Crown },
-  { type: "vetrina", days: 1, credits: 10, label: "Metti in vetrina 1 giorno", icon: Store },
-  { type: "vetrina", days: 3, credits: 25, label: "Metti in vetrina 3 giorni", icon: Store },
-  { type: "vetrina", days: 7, credits: 50, label: "Metti in vetrina 7 giorni", icon: Store },
+const BOOST_OPTIONS = [
+  { days: 1, credits: 10, label: "Vetrina 1 giorno", icon: Store },
+  { days: 3, credits: 25, label: "Vetrina 3 giorni", icon: Store },
+  { days: 7, credits: 50, label: "Vetrina 7 giorni", icon: Store },
+  { days: 30, credits: 10, label: "Premium 30 giorni", icon: Crown },
 ];
 
-export default function MyAds() {
-  const { user, loading: authLoading } = useAuth();
-  const { navigate } = useRouter();
-  const { get, patch, delete: deleteAd } = useApi();
+async function getToken() {
+  const session = (await supabase!.auth.getSession()).data.session;
+  return session?.access_token || "";
+}
 
+export default function MyAds() {
+  const { user, loading: authLoading, updateUser } = useAuth();
+  const { navigate } = useRouter();
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [busyBoost, setBusyBoost] = useState<string | null>(null);
@@ -81,38 +67,69 @@ export default function MyAds() {
   const [deleting, setDeleting] = useState(false);
 
   const loadAds = useCallback(async () => {
-    if (!user) {
-      setLoadingAds(false);
-      return;
-    }
+    if (!user) { setLoadingAds(false); return; }
     try {
       setLoadingAds(true);
-      const data = await get("/api/ads/my/ads");
-      setAds(data.ads || []);
-    } catch (e) {
-      console.error("Errore caricamento annunci:", e);
+      const token = await getToken();
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/ads?select=*&user_id=eq.${user.id}&order=created_at.desc`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error("Errore caricamento");
+      const data = await res.json();
+      setAds(data || []);
+    } catch {
       toast.error("Errore caricamento annunci");
     } finally {
       setLoadingAds(false);
     }
-  }, [user, get]);
+  }, [user]);
 
-  useEffect(() => {
-    loadAds();
-  }, [loadAds]);
+  useEffect(() => { loadAds(); }, [loadAds]);
 
-  const handleBoost = async (adId: string, option: BoostOption) => {
+  const handleBoost = async (adId: string, credits: number, days: number, type: "vetrina" | "premium") => {
     try {
-      setBusyBoost(adId + option.type + option.days);
-      const result = await patch(`/api/ads/${adId}/boost`, {
-        type: option.type,
-        duration_days: option.days,
-        credits: option.credits,
+      setBusyBoost(adId + type + days);
+      const token = await getToken();
+      if (!user || (user.credits || 0) < credits) {
+        toast.error("Crediti insufficienti");
+        return;
+      }
+      const boostedUntil = new Date(Date.now() + days * 86400000).toISOString();
+      const updates: Record<string, any> = {
+        boosted_until: boostedUntil,
+      };
+      if (type === "premium") {
+        updates.is_premium = true;
+      } else {
+        updates.is_sponsored = true;
+      }
+      const adRes = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${adId}`, {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(updates),
       });
-      toast.success(result.message || "Boost applicato!");
+      if (!adRes.ok) throw new Error("Errore aggiornamento annuncio");
+      const newCredits = (user.credits || 0) - credits;
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ credits: newCredits }),
+      });
+      updateUser({ credits: newCredits });
+      toast.success(`Annuncio potenziato! ${days} giorni di ${type}`);
       loadAds();
     } catch (e: any) {
-      toast.error(e.message || "Errore durante il boost");
+      toast.error(e?.message || "Errore boost");
     } finally {
       setBusyBoost(null);
     }
@@ -121,11 +138,8 @@ export default function MyAds() {
   const startEdit = (ad: Ad) => {
     setEditingAd(ad);
     setEditForm({
-      title: ad.title,
-      description: ad.description,
-      city: ad.city,
-      price: ad.price || "",
-      image: ad.image || "",
+      title: ad.title, description: ad.description, city: ad.city,
+      price: ad.price || "", image: ad.image || "",
     });
   };
 
@@ -133,12 +147,23 @@ export default function MyAds() {
     if (!editingAd) return;
     try {
       setSavingEdit(true);
-      await patch(`/api/ads/${editingAd.id}`, editForm);
+      const token = await getToken();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${editingAd.id}`, {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error("Errore salvataggio");
       toast.success("Annuncio aggiornato!");
       setEditingAd(null);
       loadAds();
     } catch (e: any) {
-      toast.error(e.message || "Errore salvataggio");
+      toast.error(e?.message || "Errore salvataggio");
     } finally {
       setSavingEdit(false);
     }
@@ -148,12 +173,16 @@ export default function MyAds() {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      await deleteAd(`/api/ads/${deleteTarget.id}`);
+      const token = await getToken();
+      await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+      });
       toast.success("Annuncio eliminato");
       setDeleteTarget(null);
       loadAds();
-    } catch (e: any) {
-      toast.error(e.message || "Errore eliminazione");
+    } catch {
+      toast.error("Errore eliminazione");
     } finally {
       setDeleting(false);
     }
@@ -184,8 +213,7 @@ export default function MyAds() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Torna agli annunci
+            <ArrowLeft className="w-4 h-4" /> Torna agli annunci
           </Button>
           <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
             <Coins className="w-4 h-4 text-primary" />
@@ -193,8 +221,10 @@ export default function MyAds() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold mb-2">I miei annunci</h1>
-        <p className="text-muted-foreground mb-8">Gestisci e potenzia i tuoi annunci</p>
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-3xl font-bold">I miei annunci</h1>
+          <Badge variant="outline" className="text-sm">{ads.length} totali</Badge>
+        </div>
 
         {loadingAds ? (
           <div className="flex justify-center py-12">
@@ -205,85 +235,76 @@ export default function MyAds() {
             <div className="text-4xl mb-4">📭</div>
             <p className="text-muted-foreground mb-4">Non hai ancora pubblicato annunci</p>
             <Button onClick={() => navigate("/")} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Pubblica il primo annuncio
+              <Plus className="w-4 h-4" /> Pubblica il primo annuncio
             </Button>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {ads.map((ad) => (
-              <Card key={ad.id} className="p-4 overflow-hidden">
-                <div className="relative aspect-video mb-4 rounded-lg overflow-hidden bg-muted">
-                  {ad.image ? (
-                    <img src={ad.image} alt={ad.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      Nessuna immagine
-                    </div>
-                  )}
-                  {ad.is_premium && (
-                    <Badge className="absolute top-2 left-2 bg-yellow-500">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Premium
-                    </Badge>
-                  )}
-                  {ad.is_sponsored && (
-                    <Badge className="absolute top-2 right-2 bg-purple-500">
-                      <Zap className="w-3 h-3 mr-1" />
-                      Sponsored
-                    </Badge>
-                  )}
-                </div>
-
-                <h3 className="font-semibold mb-1 truncate">{ad.title}</h3>
-                <p className="text-sm text-muted-foreground mb-2">{ad.city}</p>
-
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-4 h-4" />
-                    {ad.views}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {new Date(ad.created_at).toLocaleDateString("it-IT")}
-                  </span>
-                </div>
-
-                <div className="flex gap-2 mb-4">
-                  <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => startEdit(ad)}>
-                    <Pencil className="w-3 h-3" />
-                    Modifica
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1 gap-1 text-destructive" onClick={() => setDeleteTarget(ad)}>
-                    <Trash2 className="w-3 h-3" />
-                    Elimina
-                  </Button>
-                </div>
-
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium mb-2">Potenzia:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {BOOST_OPTIONS.map((opt) => {
-                      const Icon = opt.icon;
-                      const isBusy = busyBoost === ad.id + opt.type + opt.days;
-                      return (
-                        <Button
-                          key={opt.type + opt.days}
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs"
-                          onClick={() => handleBoost(ad.id, opt)}
-                          disabled={isBusy || (user.credits || 0) < opt.credits}
-                        >
-                          {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
-                          {opt.label} ({opt.credits}c)
-                        </Button>
-                      );
-                    })}
+            {ads.map((ad) => {
+              const isBoosted = ad.is_premium || ad.is_sponsored || (ad.boosted_until && new Date(ad.boosted_until).getTime() > Date.now());
+              return (
+                <Card key={ad.id} className="overflow-hidden">
+                  <div className="relative aspect-video bg-muted">
+                    {ad.image ? (
+                      <img src={ad.image} alt={ad.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                        Nessuna immagine
+                      </div>
+                    )}
+                    {ad.is_premium && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
+                    {ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />In Vetrina</Badge>}
+                    {!isBoosted && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <Badge className="bg-gray-800/80 text-white text-xs px-3 py-1.5">
+                          <Sparkles className="w-3 h-3 mr-1 inline" /> Promuovi per sbloccare
+                        </Badge>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </Card>
-            ))}
+                  <div className="p-4">
+                    <h3 className="font-semibold truncate">{ad.title}</h3>
+                    <p className="text-sm text-muted-foreground">{ad.city}</p>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2 mb-3">
+                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{ad.views}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(ad.created_at).toLocaleDateString("it-IT")}</span>
+                    </div>
+                    <div className="flex gap-2 mb-3">
+                      <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => startEdit(ad)}>
+                        <Pencil className="w-3 h-3" /> Modifica
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1 gap-1 text-destructive" onClick={() => setDeleteTarget(ad)}>
+                        <Trash2 className="w-3 h-3" /> Elimina
+                      </Button>
+                    </div>
+
+                    {/* Promuovi / Sblocca sezione */}
+                    <div className="border-t pt-3">
+                      <p className="text-xs font-medium mb-2 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-500" />
+                        {isBoosted ? "Già promosso — prolunga:" : "Promuovi annuncio:"}
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {BOOST_OPTIONS.map((opt) => {
+                          const Icon = opt.icon;
+                          const isBusy = busyBoost === ad.id + opt.label;
+                          return (
+                            <Button key={opt.label} variant="outline" size="sm"
+                              className="gap-1 text-xs"
+                              onClick={() => handleBoost(ad.id, opt.credits, opt.days, opt.label.includes("Premium") ? "premium" : "vetrina")}
+                              disabled={isBusy || (user.credits || 0) < opt.credits}
+                            >
+                              {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
+                              {opt.label} ({opt.credits}c)
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -316,8 +337,8 @@ export default function MyAds() {
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <Button variant="outline" className="flex-1" onClick={() => setEditingAd(null)}>Annulla</Button>
-              <Button className="flex-1" onClick={saveEdit} disabled={savingEdit}>
+              <Button variant="outline" onClick={() => setEditingAd(null)}>Annulla</Button>
+              <Button onClick={saveEdit} disabled={savingEdit}>
                 {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salva"}
               </Button>
             </div>
@@ -325,18 +346,15 @@ export default function MyAds() {
         </div>
       )}
 
-      {/* Delete Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Questa azione eliminerà permanentemente l'annuncio "{deleteTarget?.title}". Non può essere annullata.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Eliminare "{deleteTarget?.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>Questa azione è permanente e non può essere annullata.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground">
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Elimina"}
             </AlertDialogAction>
           </AlertDialogFooter>

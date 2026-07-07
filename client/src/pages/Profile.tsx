@@ -16,7 +16,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { useApi } from "@/hooks/useApi";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -37,30 +36,28 @@ interface Ad {
   is_sponsored: boolean;
   views: number;
   created_at: string;
-  boost_type?: string | null;
-  boost_start_at?: string | null;
-  boost_end_at?: string | null;
+  boosted_until?: string | null;
 }
 
-type BoostOption = {
-  type: "premium" | "vetrina";
-  days: number;
-  credits: number;
-  label: string;
-  icon: typeof Crown;
-};
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-const BOOST_OPTIONS: BoostOption[] = [
-  { type: "premium", days: 30, credits: 10, label: "Premium", icon: Crown },
-  { type: "vetrina", days: 1, credits: 10, label: "Vetrina 1g", icon: Store },
-  { type: "vetrina", days: 3, credits: 25, label: "Vetrina 3g", icon: Store },
-  { type: "vetrina", days: 7, credits: 50, label: "Vetrina 7g", icon: Store },
+async function getToken() {
+  if (!supabase) return "";
+  const session = (await supabase.auth.getSession()).data.session;
+  return session?.access_token || "";
+}
+
+const BOOST_OPTIONS = [
+  { days: 1, credits: 10, label: "Vetrina 1g", icon: Store, type: "vetrina" as const },
+  { days: 3, credits: 25, label: "Vetrina 3g", icon: Store, type: "vetrina" as const },
+  { days: 7, credits: 50, label: "Vetrina 7g", icon: Store, type: "vetrina" as const },
+  { days: 30, credits: 10, label: "Premium", icon: Crown, type: "premium" as const },
 ];
 
 export default function Profile() {
   const { user, loading: authLoading, logout, updateUser } = useAuth();
   const { navigate } = useRouter();
-  const { get, patch, delete: deleteAd } = useApi();
 
   const [activeTab, setActiveTab] = useState<"ads" | "info">("info");
   const [ads, setAds] = useState<Ad[]>([]);
@@ -85,14 +82,20 @@ export default function Profile() {
     if (!user) { setLoadingAds(false); return; }
     try {
       setLoadingAds(true);
-      const data = await get("/api/ads/my/ads");
-      setAds(data.ads || []);
+      const token = await getToken();
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/ads?select=*&user_id=eq.${user.id}&order=created_at.desc`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error("Errore caricamento");
+      const data = await res.json();
+      setAds(data || []);
     } catch {
       toast.error("Errore caricamento annunci");
     } finally {
       setLoadingAds(false);
     }
-  }, [user, get]);
+  }, [user]);
 
   useEffect(() => { if (activeTab === "ads") loadAds(); }, [activeTab, loadAds]);
 
@@ -128,16 +131,35 @@ export default function Profile() {
     }
   };
 
-  const handleBoost = async (adId: string, option: BoostOption) => {
+  const handleBoost = async (adId: string, credits: number, days: number, type: "vetrina" | "premium") => {
     try {
-      setBusyBoost(adId + option.type + option.days);
-      const result = await patch(`/api/ads/${adId}/boost`, {
-        type: option.type, duration_days: option.days, credits: option.credits,
+      setBusyBoost(adId + type + days);
+      if (!user || (user.credits || 0) < credits) {
+        toast.error("Crediti insufficienti");
+        return;
+      }
+      const token = await getToken();
+      const boostedUntil = new Date(Date.now() + days * 86400000).toISOString();
+      const updates: Record<string, any> = { boosted_until: boostedUntil };
+      if (type === "premium") updates.is_premium = true;
+      else updates.is_sponsored = true;
+      const adRes = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${adId}`, {
+        method: "PATCH",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify(updates),
       });
-      toast.success(result.message || "Boost applicato!");
+      if (!adRes.ok) throw new Error("Errore aggiornamento");
+      const newCredits = (user.credits || 0) - credits;
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, {
+        method: "PATCH",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ credits: newCredits }),
+      });
+      updateUser({ credits: newCredits });
+      toast.success(`Annuncio potenziato! ${days} giorni`);
       loadAds();
     } catch (e: any) {
-      toast.error(e.message || "Errore boost");
+      toast.error(e?.message || "Errore boost");
     } finally {
       setBusyBoost(null);
     }
@@ -155,12 +177,18 @@ export default function Profile() {
     if (!editingAd) return;
     try {
       setSavingEdit(true);
-      await patch(`/api/ads/${editingAd.id}`, editForm);
+      const token = await getToken();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${editingAd.id}`, {
+        method: "PATCH",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error("Errore salvataggio");
       toast.success("Annuncio aggiornato!");
       setEditingAd(null);
       loadAds();
     } catch (e: any) {
-      toast.error(e.message || "Errore salvataggio");
+      toast.error(e?.message || "Errore salvataggio");
     } finally {
       setSavingEdit(false);
     }
@@ -170,12 +198,16 @@ export default function Profile() {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      await deleteAd(`/api/ads/${deleteTarget.id}`);
+      const token = await getToken();
+      await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+      });
       toast.success("Annuncio eliminato");
       setDeleteTarget(null);
       loadAds();
-    } catch (e: any) {
-      toast.error(e.message || "Errore eliminazione");
+    } catch {
+      toast.error("Errore eliminazione");
     } finally {
       setDeleting(false);
     }
@@ -346,7 +378,7 @@ export default function Profile() {
                             const isBusy = busyBoost === ad.id + opt.type + opt.days;
                             return (
                               <Button key={opt.type + opt.days} variant="outline" size="sm"
-                                className="gap-1 text-xs" onClick={() => handleBoost(ad.id, opt)}
+                                className="gap-1 text-xs" onClick={() => handleBoost(ad.id, opt.credits, opt.days, opt.type)}
                                 disabled={isBusy || (user.credits || 0) < opt.credits}>
                                 {isBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}
                                 {opt.label} ({opt.credits}c)

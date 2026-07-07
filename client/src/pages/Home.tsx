@@ -98,7 +98,7 @@ const DEMO_ADS: Ad[] = [];
 
 export default function Home({ initialCity }: { initialCity?: string | null }) {
   const { navigate } = useRouter();
-  const { user: currentUser, login, logout, updateUser } = useAuth();
+  const { user: currentUser, login, register, logout, updateUser } = useAuth();
   const { handlePaymentCallback: stripePaymentCallback } = useStripe();
   const { theme, toggleTheme } = useTheme();
   const [ads, setAds] = useState<Ad[]>([]);
@@ -211,7 +211,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         console.error("Errore aggiornamento crediti:", e);
       }
     }
-    alert(`Pagamento riuscito! ${result.credits || ""} crediti aggiunti.`);
+    alert("Pagamento riuscito! I crediti sono stati aggiunti.");
   };
 
   const loadAds = async (reset = false) => {
