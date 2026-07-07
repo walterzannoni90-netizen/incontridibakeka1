@@ -142,6 +142,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   const [adsPostedToday, setAdsPostedToday] = useState(0);
   const [limitMessage, setLimitMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [successModal, setSuccessModal] = useState<{ title: string; vetrina: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(initialCity || null);
   const [selectedCountry, setSelectedCountry] = useState("IT");
@@ -515,7 +516,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       setVetrinaStartAt("");
       setLimitMessage(null);
       await loadAds(true);
-      alert(scheduleVetrina ? "Annuncio pubblicato e vetrina programmata!" : "Annuncio pubblicato.");
+      setSuccessModal({ title: publishForm.title, vetrina: scheduleVetrina });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Errore pubblicazione.");
     } finally {
@@ -1343,10 +1344,18 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
             onClick={() => setPublishOpen(false)}
           >
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold font-poppins">Pubblica Annuncio</h2>
-                <button onClick={() => setPublishOpen(false)} className="text-2xl text-muted-foreground hover:text-foreground">×</button>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold font-poppins">Pubblica Annuncio</h2>
+                    <p className="text-xs text-muted-foreground">Compila i campi e condividi il tuo profilo</p>
+                  </div>
+                </div>
+                <button onClick={() => setPublishOpen(false)} className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">×</button>
               </div>
 
               {/* Messaggio limite giornaliero */}
@@ -1371,10 +1380,13 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               ) : (
                 <>
                   {/* Info limite */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-4 bg-muted/50 rounded-lg px-3 py-2">
-                    <span>Annunci pubblicati oggi: <strong className="text-foreground">{adsPostedToday}/{dailyLimit}</strong></span>
-                    <span className="flex items-center gap-1">
-                      {hasPaid ? <><Crown className="w-3.5 h-3.5 text-amber-500" /> Account Premium</> : "Account gratuito"}
+                  <div className="flex items-center justify-between text-xs mb-5 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border border-purple-200/50 dark:border-purple-800/30 rounded-xl px-4 py-3">
+                    <span className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500" />
+                      Annunci oggi: <strong className="text-foreground">{adsPostedToday}/{dailyLimit}</strong>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {hasPaid ? <><Crown className="w-3.5 h-3.5 text-amber-500" /><span className="text-amber-700 dark:text-amber-400 font-medium">Premium</span></> : <span className="text-muted-foreground">Gratuito</span>}
                     </span>
                   </div>
 
@@ -1487,9 +1499,12 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
                   {/* CAMPI DETTAGLIO */}
                   <div className="mt-6 pt-6 border-t border-border">
-                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-primary">
-                      <Sparkles className="w-4 h-4" /> Dettagli (opzionale)
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <h3 className="text-sm font-bold">Dettagli (opzionali)</h3>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="mb-1.5 block text-xs">Colore capelli</Label>
@@ -1611,16 +1626,46 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     </div>
                   )}
 
-                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                    <Button className="flex-1" onClick={handlePublish} disabled={busy}>
-                      {busy ? (uploadingPhotos ? "Caricamento foto..." : "Pubblicazione...") : "Pubblica"}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-border">
+                    <Button className="flex-1 h-12 text-base gap-2" onClick={handlePublish} disabled={busy}>
+                      {busy ? (
+                        <><Loader2 className="w-5 h-5 animate-spin" /> {uploadingPhotos ? "Caricamento foto..." : "Pubblicazione..."}</>
+                      ) : (
+                        <><Sparkles className="w-5 h-5" /> Pubblica Annuncio</>
+                      )}
                     </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => setPublishOpen(false)}>
+                    <Button variant="outline" className="flex-1 h-12" onClick={() => setPublishOpen(false)}>
                       Annulla
                     </Button>
                   </div>
                 </>
               )}
+            </Card>
+          </div>
+        )}
+
+        {/* SUCCESS MODAL */}
+        {successModal && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <Card className="w-full max-w-md p-8 text-center animate-in fade-in zoom-in-95">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold font-poppins mb-1">Annuncio pubblicato!</h2>
+              <p className="text-muted-foreground text-sm mb-1">&quot;{successModal.title}&quot;</p>
+              <p className="text-xs text-muted-foreground mb-6">
+                {successModal.vetrina ? "Vetrina programmata con successo." : "Ora visibile a tutti gli utenti."}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button className="flex-1" onClick={() => { setSuccessModal(null); window.scrollTo(0, 0); }}>
+                  OK, grazie!
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => { setSuccessModal(null); }}>
+                  Pubblica altro
+                </Button>
+              </div>
             </Card>
           </div>
         )}
