@@ -1249,7 +1249,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         return;
                       }
                       const phone = (selectedAd as any).phone || (selectedAd as any).whatsapp || "+393331234567";
-                      const msg = `Ciao! Ho visto il tuo annuncio "${selectedAd.title}" su Incontri di Bakeka (incontridibakeka.com) e mi ha colpito. Sarei felice di fare due chiacchiere e conoscerci meglio. Fammi sapere quando sei libero/a!`;
+                      const msg = `Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`;
                       window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
                     }}
                   >
