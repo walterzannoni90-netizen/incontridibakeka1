@@ -1583,70 +1583,117 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      className="md:col-span-2"
-                      placeholder="Titolo annuncio"
-                      value={publishForm.title}
-                      onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
-                    />
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={publishForm.category}
-                      onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
-                    >
-                      {CATEGORIES.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={publishForm.city}
-                      onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
-                    >
-                      {ITALIAN_CITIES.map((city) => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
-                    <Input
-                      placeholder="Eta"
-                      type="number"
-                      min="18"
-                      value={publishForm.age}
-                      onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Prezzo o info"
-                      value={publishForm.price}
-                      onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
-                    />
-                     <Input
-                        placeholder="Chiamate (es. 333 1234567)"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">TITOLO ANNUNCIO</span>
+                      </div>
+                      <Input
+                        placeholder="Es. Bionda mozzafiato offre compagnia a Roma"
+                        value={publishForm.title}
+                        onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">CATEGORIA</span>
+                      </div>
+                      <select
+                        className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                        value={publishForm.category}
+                        onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
+                      >
+                        {CATEGORIES.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">CITTÀ</span>
+                      </div>
+                      <select
+                        className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                        value={publishForm.city}
+                        onChange={(e) => setPublishForm({ ...publishForm, city: e.target.value })}
+                      >
+                        {ITALIAN_CITIES.map((city) => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">ETÀ</span>
+                      </div>
+                      <Input
+                        placeholder="es. 25"
+                        type="number"
+                        min="18"
+                        value={publishForm.age}
+                        onChange={(e) => setPublishForm({ ...publishForm, age: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">PREZZO / INFO</span>
+                      </div>
+                      <Input
+                        placeholder="es. 50€ ora / trattabile"
+                        value={publishForm.price}
+                        onChange={(e) => setPublishForm({ ...publishForm, price: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">CHIAMATE</span>
+                      </div>
+                      <Input
+                        placeholder="es. 333 1234567"
                         value={publishForm.whatsapp}
                         onChange={(e) => setPublishForm({ ...publishForm, whatsapp: formatPhone(e.target.value) })}
-                     />
-                    <Textarea
-                      className="md:col-span-2"
-                      rows={5}
-                      placeholder="Descrizione"
-                      value={publishForm.description}
-                      onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
-                    />
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span className="text-xs font-semibold text-foreground tracking-wide">DESCRIZIONE</span>
+                      </div>
+                      <Textarea
+                        rows={4}
+                        placeholder="Descrivi te stesso/a, cosa offri e cosa cerchi..."
+                        value={publishForm.description}
+                        onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
+                      />
+                    </div>
                   </div>
 
                   {/* CAMPI DETTAGLIO */}
                   <div className="mt-6 pt-6 border-t border-border">
                     <div className="flex items-center gap-2 mb-4">
-                      <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+                        <Sparkles className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <h3 className="text-sm font-bold">Dettagli (opzionali)</h3>
+                      <h3 className="text-sm font-bold">Dettagli aggiuntivi</h3>
+                      <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">opzionale</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label className="mb-1.5 block text-xs">Colore capelli</Label>
+                        <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Colore capelli</Label>
                         <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
                           value={publishForm.hair_color}
                           onChange={(e) => setPublishForm({ ...publishForm, hair_color: e.target.value })}
                         >
@@ -1655,9 +1702,9 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         </select>
                       </div>
                       <div>
-                        <Label className="mb-1.5 block text-xs">Corporatura</Label>
+                        <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Corporatura</Label>
                         <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
                           value={publishForm.body_type}
                           onChange={(e) => setPublishForm({ ...publishForm, body_type: e.target.value })}
                         >
@@ -1666,7 +1713,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         </select>
                       </div>
                       <div>
-                        <Label className="mb-1.5 block text-xs">Orari disponibilita</Label>
+                        <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Orari disponibilità</Label>
                         <Input
                           placeholder="es. 10:00-22:00"
                           value={publishForm.availability_hours}
@@ -1674,7 +1721,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         />
                       </div>
                       <div>
-                        <Label className="mb-1.5 block text-xs">Altezza (cm)</Label>
+                        <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Altezza (cm)</Label>
                         <Input
                           type="number"
                           min="100"
@@ -1685,7 +1732,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         />
                       </div>
                       <div>
-                        <Label className="mb-1.5 block text-xs">Peso (kg)</Label>
+                        <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Peso (kg)</Label>
                         <Input
                           type="number"
                           min="30"
@@ -1696,7 +1743,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <Label className="mb-2 block text-xs">Servizi offerti (tocca per selezionare)</Label>
+                        <Label className="mb-2 block text-xs font-medium text-muted-foreground">Servizi offerti</Label>
                         <div className="flex flex-wrap gap-2">
                           {SERVICE_OPTIONS.map((svc) => {
                             const selected = publishForm.services?.split(",").map(s => s.trim()).includes(svc);
@@ -1711,12 +1758,13 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                                     : [...current, svc];
                                   setPublishForm({ ...publishForm, services: next.join(", ") });
                                 }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border-2 transition-all duration-200 ${
                                   selected
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : "bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-primary"
+                                    ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-600 shadow-lg shadow-purple-600/30 scale-105"
+                                    : "bg-background text-muted-foreground border-border hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50/50"
                                 }`}
                               >
+                                {selected && <span className="mr-1">✓ </span>}
                                 {svc}
                               </button>
                             );
