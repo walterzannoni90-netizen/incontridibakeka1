@@ -8,7 +8,7 @@
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
     "build": "vite build && tsc -p server/tsconfig.json",
-    "build:client": "vite build",
+    "build:client": "vite build && node scripts/generate-sitemap.mjs",
     "build:server": "tsc -p server/tsconfig.json",
     "start": "node dist/server/index.js",
     "preview": "vite preview",

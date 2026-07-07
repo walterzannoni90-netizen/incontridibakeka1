@@ -111,6 +111,22 @@ export default function AdDetail() {
       document.head.appendChild(linkCanonical);
     }
     linkCanonical.setAttribute("href", window.location.href.split("?")[0]);
+
+    const oldBreadcrumb = document.getElementById("ld-breadcrumb");
+    if (oldBreadcrumb) oldBreadcrumb.remove();
+    const breadScript = document.createElement("script");
+    breadScript.id = "ld-breadcrumb";
+    breadScript.type = "application/ld+json";
+    breadScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://incontridibakeka.com/" },
+        { "@type": "ListItem", "position": 2, "name": ad.city ? `Incontri a ${ad.city}` : "Annunci", "item": ad.city ? `https://incontridibakeka.com/incontri/${ad.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')}` : "https://incontridibakeka.com/" },
+        { "@type": "ListItem", "position": 3, "name": ad.title.slice(0, 60), "item": window.location.href.split("?")[0] },
+      ],
+    });
+    document.head.appendChild(breadScript);
   }, [ad]);
 
   const handleReport = async () => {
@@ -184,6 +200,7 @@ export default function AdDetail() {
                   src={allImages[currentImage]}
                   alt={ad.title}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">

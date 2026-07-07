@@ -46,6 +46,21 @@ export default function CityPage() {
         meta.content = `Trova annunci di incontri a ${cityName}. Profili verificati, annunci reali. ${cityName} incontri, amicizie e molto altro su Incontri di Bakeka.`;
         document.head.appendChild(meta);
       }
+
+      const oldBreadcrumb = document.getElementById("ld-breadcrumb");
+      if (oldBreadcrumb) oldBreadcrumb.remove();
+      const script = document.createElement("script");
+      script.id = "ld-breadcrumb";
+      script.type = "application/ld+json";
+      script.textContent = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://incontridibakeka.com/" },
+          { "@type": "ListItem", "position": 2, "name": `Incontri a ${cityName}`, "item": `https://incontridibakeka.com/incontri/${slugify(cityName)}` },
+        ],
+      });
+      document.head.appendChild(script);
     } else {
       navigate("/", { replace: true });
       return;
