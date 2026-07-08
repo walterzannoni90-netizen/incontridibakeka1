@@ -204,8 +204,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   }, [currentUser?.id]);
 
   useEffect(() => {
-    let title = "Incontri di Bakeka — Marketplace Affidabile";
-    let desc = "Il marketplace più affidabile per incontri e amicizie in Italia. Profili verificati, connessioni reali.";
+    let title = "Incontri di Bakeka — Annunci Verificati";
+    let desc = "Il sito più affidabile per incontri e amicizie in Italia. Profili verificati, connessioni reali.";
     if (selectedCity && categoryFilter) {
       const cat = CATEGORIES.find(c => c.id === categoryFilter);
       title = `${cat?.name || "Annunci"} a ${selectedCity} — Incontri di Bakeka`;
@@ -1049,7 +1049,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   Connessioni Autentiche
                 </h1>
                 <p className="text-lg md:text-2xl mb-6 md:mb-8 opacity-90 max-w-2xl px-2">
-                  Il marketplace piu affidabile per incontri e amicizie in Italia
+                  Il sito piu affidabile per incontri e amicizie in Italia
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto px-4 sm:px-0">
                   <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto shadow-lg" onClick={runSearch}>
@@ -1902,7 +1902,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <img src="/logo.svg" alt="Incontri di Bakeka" className="h-8 w-auto" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Il marketplace piu affidabile per connessioni autentiche in Italia.
+                    Il sito piu affidabile per connessioni autentiche in Italia.
                   </p>
                 </div>
                 <div>
