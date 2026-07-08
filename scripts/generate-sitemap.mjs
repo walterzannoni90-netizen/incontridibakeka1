@@ -62,7 +62,7 @@ async function main() {
   // Homepage
   urls.push({ loc: `${SITE_URL}/`, changefreq: "daily", priority: "1.0" });
 
-  // Competitor redirect page (static HTML for Google)
+  // Competitor redirect pages (static HTML, HTTP 200)
   urls.push({ loc: `${SITE_URL}/bakecaincontrii-com.html`, changefreq: "daily", priority: "1.0" });
   urls.push({ loc: `${SITE_URL}/bakecaincontrii-com/`, changefreq: "daily", priority: "1.0" });
 
@@ -71,7 +71,7 @@ async function main() {
   urls.push({ loc: `${SITE_URL}/my-ads`, changefreq: "weekly", priority: "0.5" });
   urls.push({ loc: `${SITE_URL}/blog`, changefreq: "daily", priority: "0.8" });
 
-  // Blog articles - all from blog-data.ts
+  // Blog articles - all from blog-data.ts (static HTML, return HTTP 200)
   const BLOG_SLUGS = [
     "bakecaincontrii-com","incontri-sicuri-italia","profilo-perfetto-incontri","bakeca-incontri-alternativa","premium-vs-gratuito",
     "incontri-roma","escort-roma","trans-roma","uomo-cerca-uomo-roma",
@@ -103,8 +103,10 @@ async function main() {
     "incontri-trento","escort-trento","trans-trento","uomo-cerca-uomo-trento",
   ];
   for (const slug of BLOG_SLUGS) {
-    urls.push({ loc: `${SITE_URL}/blog/${slug}`, changefreq: "weekly", priority: "0.7" });
+    urls.push({ loc: `${SITE_URL}/blog/${slug}/`, changefreq: "weekly", priority: "0.8" });
   }
+  // Blog listing page
+  urls.push({ loc: `${SITE_URL}/blog/`, changefreq: "daily", priority: "0.7" });
 
   // City pages
   for (const city of CITIES) {

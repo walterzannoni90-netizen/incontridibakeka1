@@ -10,3 +10,4 @@ database.sqlite-shm
 dist/
 bun.lock
 supabase/.temp/
+client/public/blog/
