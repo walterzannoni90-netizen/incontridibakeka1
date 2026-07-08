@@ -69,7 +69,7 @@ async function main() {
 
   // Blog articles - all from blog-data.ts
   const BLOG_SLUGS = [
-    "incontri-sicuri-italia","profilo-perfetto-incontri","bakeca-incontri-alternativa","premium-vs-gratuito",
+    "bakecaincontrii-com","incontri-sicuri-italia","profilo-perfetto-incontri","bakeca-incontri-alternativa","premium-vs-gratuito",
     "incontri-roma","escort-roma","trans-roma","uomo-cerca-uomo-roma",
     "incontri-milano","escort-milano","trans-milano","uomo-cerca-uomo-milano",
     "incontri-napoli","escort-napoli","trans-napoli","uomo-cerca-uomo-napoli",
