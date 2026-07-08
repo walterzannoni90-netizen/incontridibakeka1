@@ -65,6 +65,17 @@ async function main() {
   // Static pages
   urls.push({ loc: `${SITE_URL}/shop`, changefreq: "weekly", priority: "0.6" });
   urls.push({ loc: `${SITE_URL}/my-ads`, changefreq: "weekly", priority: "0.5" });
+  urls.push({ loc: `${SITE_URL}/blog`, changefreq: "daily", priority: "0.8" });
+
+  // Blog articles
+  const BLOG_SLUGS = [
+    "incontri-roma", "incontri-milano", "incontri-napoli",
+    "incontri-torino", "incontri-sicuri-italia",
+    "profilo-perfetto-incontri", "premium-vs-gratuito",
+  ];
+  for (const slug of BLOG_SLUGS) {
+    urls.push({ loc: `${SITE_URL}/blog/${slug}`, changefreq: "weekly", priority: "0.7" });
+  }
 
   // City pages
   for (const city of CITIES) {

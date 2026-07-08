@@ -12,6 +12,8 @@ import Shop from "./pages/Shop";
 import MyAds from "./pages/MyAds";
 import Profile from "./pages/Profile";
 import Messages from "./pages/Messages";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -28,6 +30,8 @@ function Router() {
       <Route path={"/messages"} component={Messages} />
       <Route path={"/messages/:id"} component={Messages} />
       <Route path={"/admin"} component={AdminPanel} />
+      <Route path={"/blog"} component={Blog} />
+      <Route path={"/blog/:slug"} component={BlogPost} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

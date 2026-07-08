@@ -742,6 +742,16 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => navigate("/blog")}
+                  className="gap-1.5 text-gray-700 dark:text-gray-200 hidden md:inline-flex"
+                  title="Blog"
+                >
+                  <span className="text-xs">📖</span>
+                  <span className="text-xs">Blog</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => navigate("/messages")}
                   className="gap-1.5 text-gray-700 dark:text-gray-200"
                   title="Messaggi"
@@ -1910,7 +1920,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li><button onClick={() => openInfoModal("chi-siamo")} className="hover:text-primary transition-colors text-left">Chi Siamo</button></li>
                     <li><button onClick={() => openInfoModal("contatti")} className="hover:text-primary transition-colors text-left">Contatti</button></li>
-                    <li><button onClick={() => openInfoModal("blog")} className="hover:text-primary transition-colors text-left">Blog</button></li>
+                     <li><button onClick={() => navigate("/blog")} className="hover:text-primary transition-colors text-left">Blog</button></li>
                   </ul>
                 </div>
                 <div>
