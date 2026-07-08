@@ -67,12 +67,36 @@ async function main() {
   urls.push({ loc: `${SITE_URL}/my-ads`, changefreq: "weekly", priority: "0.5" });
   urls.push({ loc: `${SITE_URL}/blog`, changefreq: "daily", priority: "0.8" });
 
-  // Blog articles
+  // Blog articles - all from blog-data.ts
   const BLOG_SLUGS = [
-    "incontri-roma", "incontri-milano", "incontri-napoli",
-    "incontri-torino", "incontri-sicuri-italia",
-    "profilo-perfetto-incontri",     "premium-vs-gratuito",
-    "bakeca-incontri-alternativa",
+    "incontri-sicuri-italia","profilo-perfetto-incontri","bakeca-incontri-alternativa","premium-vs-gratuito",
+    "incontri-roma","escort-roma","trans-roma","uomo-cerca-uomo-roma",
+    "incontri-milano","escort-milano","trans-milano","uomo-cerca-uomo-milano",
+    "incontri-napoli","escort-napoli","trans-napoli","uomo-cerca-uomo-napoli",
+    "incontri-torino","escort-torino","trans-torino","uomo-cerca-uomo-torino",
+    "incontri-firenze","escort-firenze","trans-firenze","uomo-cerca-uomo-firenze",
+    "incontri-bologna","escort-bologna","trans-bologna","uomo-cerca-uomo-bologna",
+    "incontri-catania","escort-catania","trans-catania","uomo-cerca-uomo-catania",
+    "incontri-palermo","escort-palermo","trans-palermo","uomo-cerca-uomo-palermo",
+    "incontri-genova","escort-genova","trans-genova","uomo-cerca-uomo-genova",
+    "incontri-bari","escort-bari","trans-bari","uomo-cerca-uomo-bari",
+    "incontri-verona","escort-verona","trans-verona","uomo-cerca-uomo-verona",
+    "incontri-venezia","escort-venezia","trans-venezia","uomo-cerca-uomo-venezia",
+    "incontri-padova","escort-padova","trans-padova","uomo-cerca-uomo-padova",
+    "incontri-trieste","escort-trieste","trans-trieste","uomo-cerca-uomo-trieste",
+    "incontri-parma","escort-parma","trans-parma","uomo-cerca-uomo-parma",
+    "incontri-perugia","escort-perugia","trans-perugia","uomo-cerca-uomo-perugia",
+    "incontri-cagliari","escort-cagliari","trans-cagliari","uomo-cerca-uomo-cagliari",
+    "incontri-lecce","escort-lecce","trans-lecce","uomo-cerca-uomo-lecce",
+    "incontri-bergamo","escort-bergamo","trans-bergamo","uomo-cerca-uomo-bergamo",
+    "incontri-brescia","escort-brescia","trans-brescia","uomo-cerca-uomo-brescia",
+    "incontri-livorno","escort-livorno","trans-livorno","uomo-cerca-uomo-livorno",
+    "incontri-ancona","escort-ancona","trans-ancona","uomo-cerca-uomo-ancona",
+    "incontri-pescara","escort-pescara","trans-pescara","uomo-cerca-uomo-pescara",
+    "incontri-salerno","escort-salerno","trans-salerno","uomo-cerca-uomo-salerno",
+    "incontri-rimini","escort-rimini","trans-rimini","uomo-cerca-uomo-rimini",
+    "incontri-sassari","escort-sassari","trans-sassari","uomo-cerca-uomo-sassari",
+    "incontri-trento","escort-trento","trans-trento","uomo-cerca-uomo-trento",
   ];
   for (const slug of BLOG_SLUGS) {
     urls.push({ loc: `${SITE_URL}/blog/${slug}`, changefreq: "weekly", priority: "0.7" });
