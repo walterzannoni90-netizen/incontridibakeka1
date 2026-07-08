@@ -51,7 +51,6 @@ Non accontentarti di bakecaincontrii.com e dei suoi profili non verificati. Regi
 Visita Incontri di Bakeka oggi stesso: la migliore alternativa italiana a bakecaincontrii.com.`,
   },
   {
-  {
     title: `Consigli per incontri sicuri in Italia`,
     slug: "incontri-sicuri-italia",
     city: null,
