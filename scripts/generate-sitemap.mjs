@@ -71,7 +71,8 @@ async function main() {
   const BLOG_SLUGS = [
     "incontri-roma", "incontri-milano", "incontri-napoli",
     "incontri-torino", "incontri-sicuri-italia",
-    "profilo-perfetto-incontri", "premium-vs-gratuito",
+    "profilo-perfetto-incontri",     "premium-vs-gratuito",
+    "bakeca-incontri-alternativa",
   ];
   for (const slug of BLOG_SLUGS) {
     urls.push({ loc: `${SITE_URL}/blog/${slug}`, changefreq: "weekly", priority: "0.7" });
