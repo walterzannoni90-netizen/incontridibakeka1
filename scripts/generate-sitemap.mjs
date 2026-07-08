@@ -62,6 +62,10 @@ async function main() {
   // Homepage
   urls.push({ loc: `${SITE_URL}/`, changefreq: "daily", priority: "1.0" });
 
+  // Competitor redirect page (static HTML for Google)
+  urls.push({ loc: `${SITE_URL}/bakecaincontrii-com.html`, changefreq: "daily", priority: "1.0" });
+  urls.push({ loc: `${SITE_URL}/bakecaincontrii-com/`, changefreq: "daily", priority: "1.0" });
+
   // Static pages
   urls.push({ loc: `${SITE_URL}/shop`, changefreq: "weekly", priority: "0.6" });
   urls.push({ loc: `${SITE_URL}/my-ads`, changefreq: "weekly", priority: "0.5" });
