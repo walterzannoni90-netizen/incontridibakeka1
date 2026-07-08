@@ -1,0 +1,44 @@
+name: SEO Ping
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # ogni lunedì alle 6:00 UTC
+  workflow_dispatch:  # eseguibile anche manualmente
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping IndexNow
+        run: |
+          curl -s -X POST "https://api.indexnow.org/IndexNow" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "host": "incontridibakeka.com",
+              "key": "e8f2c7a1b3d4e5f6a7b8c9d0e1f2a3b4",
+              "keyLocation": "https://incontridibakeka.com/e8f2c7a1b3d4e5f6a7b8c9d0e1f2a3b4.txt",
+              "urlList": [
+                "https://incontridibakeka.com/",
+                "https://incontridibakeka.com/blog",
+                "https://incontridibakeka.com/blog/incontri-roma",
+                "https://incontridibakeka.com/blog/incontri-milano",
+                "https://incontridibakeka.com/blog/incontri-napoli",
+                "https://incontridibakeka.com/blog/incontri-torino",
+                "https://incontridibakeka.com/blog/incontri-sicuri-italia",
+                "https://incontridibakeka.com/blog/profilo-perfetto-incontri",
+                "https://incontridibakeka.com/blog/premium-vs-gratuito",
+                "https://incontridibakeka.com/sitemap.xml"
+              ]
+            }' -w "\nIndexNow: HTTP %{http_code}"
+
+      - name: Ping-O-Matic
+        run: |
+          curl -s -X POST "https://rpc.pingomatic.com/" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "title=Incontri+di+Bakeka&blogurl=https://incontridibakeka.com&rssurl=https://incontridibakeka.com/sitemap.xml&chk_blogs=on&chk_weblogs=on&chk_news=on" \
+            -w "Ping-O-Matic: HTTP %{http_code}"
+
+      - name: Bing URL Submission
+        run: |
+          curl -s -X POST "https://www.bing.com/webmaster/api/submit-url?url=https://incontridibakeka.com&sitemap=https://incontridibakeka.com/sitemap.xml" \
+            -w "Bing: HTTP %{http_code}"
