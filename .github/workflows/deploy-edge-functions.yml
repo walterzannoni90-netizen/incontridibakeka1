@@ -46,3 +46,13 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
         run: supabase functions deploy stripe-webhook --no-verify-jwt
+
+      - name: Deploy auth-api
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
+        run: supabase functions deploy auth-api --no-verify-jwt
+
+      - name: Deploy boost
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
+        run: supabase functions deploy boost --no-verify-jwt
