@@ -185,6 +185,27 @@ export default function AdminPanel() {
   }>({ open: false, item: null });
   const [creditsDialog, setCreditsDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: "", userName: "" });
   const [manualCredits, setManualCredits] = useState(10);
+  const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
+  const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
+
+  useEffect(() => {
+    if (!supabase || !isAdmin) return;
+    (async () => {
+      const { data } = await supabase.from("ads").select("city,views");
+      if (data) {
+        const map: Record<string,number> = {};
+        data.forEach((a: any) => {
+          const c = a.city || "Sconosciuta";
+          map[c] = (map[c] || 0) + (a.views || 0);
+        });
+        setCityViews(Object.entries(map).map(([city, views]) => ({ city, views })).sort((a,b) => b.views - a.views));
+      }
+      const { data: top } = await supabase.from("ads").select("title,phone,views").order("views", { ascending: false }).limit(5);
+      if (top) setTopAds(top as any);
+    })();
+  }, [isAdmin]);
+
+  const totalViews = cityViews.reduce((s, c) => s + c.views, 0);
 
   const loadData = useCallback(async (tab?: string) => {
     if (!supabase) return;
@@ -468,28 +489,6 @@ export default function AdminPanel() {
     { id: "transactions" as const, label: "Transazioni", icon: DollarSign },
     { id: "categories" as const, label: "Categorie", icon: Tag },
   ];
-
-  const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
-  const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
-
-  useEffect(() => {
-    if (!supabase || !isAdmin) return;
-    (async () => {
-      const { data } = await supabase.from("ads").select("city,views");
-      if (data) {
-        const map: Record<string,number> = {};
-        data.forEach((a: any) => {
-          const c = a.city || "Sconosciuta";
-          map[c] = (map[c] || 0) + (a.views || 0);
-        });
-        setCityViews(Object.entries(map).map(([city, views]) => ({ city, views })).sort((a,b) => b.views - a.views));
-      }
-      const { data: top } = await supabase.from("ads").select("title,phone,views").order("views", { ascending: false }).limit(5);
-      if (top) setTopAds(top as any);
-    })();
-  }, [isAdmin]);
-
-  const totalViews = cityViews.reduce((s, c) => s + c.views, 0);
 
   const Pagination = () => {
     if (totalPages <= 1) return null;
