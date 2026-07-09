@@ -16,12 +16,12 @@ function slugify(text: string): string {
 }
 
 export default function CityPage() {
-  const { params, navigate } = useRouter();
+  const { navigate, currentPath } = useRouter();
   const [initialCity, setInitialCity] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const citySlug = params?.city;
+    const citySlug = currentPath.split("/incontri/").pop()?.split("/")[0]?.split("?")[0];
     if (!citySlug) {
       navigate("/");
       return;
@@ -67,7 +67,7 @@ export default function CityPage() {
     }
 
     setReady(true);
-  }, [params?.city]);
+  }, [currentPath]);
 
   if (!ready) return null;
 

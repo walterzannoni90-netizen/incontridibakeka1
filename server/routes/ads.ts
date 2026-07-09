@@ -16,6 +16,14 @@ router.get("/", async (_req, res) => {
       .order("is_premium", { ascending: false })
       .order("created_at", { ascending: false });
 
+    // Resetta boost scaduti
+    const now = new Date().toISOString();
+    await supabase
+      .from("ads")
+      .update({ is_sponsored: false, is_premium: false, boost_type: null, boost_end_at: null })
+      .lt("boost_end_at", now)
+      .neq("boost_end_at", null);
+
     if (error) {
       console.error("Get ads error:", error);
       return res.status(500).json({ error: "Errore caricamento annunci" });
@@ -34,6 +42,14 @@ router.get("/paginated", async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 12;
     const offset = (page - 1) * limit;
+
+    // Resetta boost scaduti
+    const now = new Date().toISOString();
+    await supabase
+      .from("ads")
+      .update({ is_sponsored: false, is_premium: false, boost_type: null, boost_end_at: null })
+      .lt("boost_end_at", now)
+      .neq("boost_end_at", null);
 
     const { data: ads, error, count } = await supabase
       .from("ads")
@@ -100,6 +116,14 @@ router.get("/category/:category", async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 12;
     const offset = (page - 1) * limit;
 
+    // Resetta boost scaduti
+    const now2 = new Date().toISOString();
+    await supabase
+      .from("ads")
+      .update({ is_sponsored: false, is_premium: false, boost_type: null, boost_end_at: null })
+      .lt("boost_end_at", now2)
+      .neq("boost_end_at", null);
+
     const { data: ads, error, count } = await supabase
       .from("ads")
       .select("*", { count: "exact" })
@@ -137,6 +161,14 @@ router.get("/city/:city", async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 12;
     const offset = (page - 1) * limit;
 
+    // Resetta boost scaduti
+    const now3 = new Date().toISOString();
+    await supabase
+      .from("ads")
+      .update({ is_sponsored: false, is_premium: false, boost_type: null, boost_end_at: null })
+      .lt("boost_end_at", now3)
+      .neq("boost_end_at", null);
+
     const { data: ads, error, count } = await supabase
       .from("ads")
       .select("*", { count: "exact" })
@@ -173,6 +205,14 @@ router.get("/search/:query", async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 12;
     const offset = (page - 1) * limit;
+
+    // Resetta boost scaduti
+    const now4 = new Date().toISOString();
+    await supabase
+      .from("ads")
+      .update({ is_sponsored: false, is_premium: false, boost_type: null, boost_end_at: null })
+      .lt("boost_end_at", now4)
+      .neq("boost_end_at", null);
 
     const { data: ads, error, count } = await supabase
       .from("ads")

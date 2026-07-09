@@ -469,6 +469,66 @@ export default function AdminPanel() {
     { id: "categories" as const, label: "Categorie", icon: Tag },
   ];
 
+  const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
+  const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
+
+  const AnalyticsPanel = () => {
+    useEffect(() => {
+      if (!supabase) return;
+      (async () => {
+        const { data } = await supabase.from("ads").select("city,views");
+        if (data) {
+          const map: Record<string,number> = {};
+          data.forEach((a: any) => {
+            const c = a.city || "Sconosciuta";
+            map[c] = (map[c] || 0) + (a.views || 0);
+          });
+          setCityViews(Object.entries(map).map(([city, views]) => ({ city, views })).sort((a,b) => b.views - a.views));
+        }
+        const { data: top } = await supabase.from("ads").select("title,phone,views").order("views", { ascending: false }).limit(5);
+        if (top) setTopAds(top as any);
+      })();
+    }, []);
+    if (cityViews.length === 0) return null;
+    const totalViews = cityViews.reduce((s, c) => s + c.views, 0);
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2"><Eye className="w-4 h-4" />Visualizzazioni per città</h3>
+          <div className="space-y-3">
+            {cityViews.map(({ city, views }) => (
+              <div key={city} className="flex items-center justify-between">
+                <span className="text-sm font-medium">{city}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${(views / totalViews) * 100}%` }} />
+                  </div>
+                  <span className="text-sm font-bold w-16 text-right">{views.toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="text-sm font-semibold">Totale</span>
+              <span className="text-sm font-bold">{totalViews.toLocaleString()}</span>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2"><Star className="w-4 h-4" />Annunci più visti</h3>
+          <div className="space-y-3">
+            {topAds.map((ad, i) => (
+              <div key={i} className="flex items-center justify-between gap-2">
+                <span className="text-sm truncate flex-1">{ad.title?.substring(0, 40)}...</span>
+                <span className="text-xs text-muted-foreground">{ad.phone}</span>
+                <span className="text-sm font-bold w-12 text-right">{ad.views}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
   const Pagination = () => {
     if (totalPages <= 1) return null;
     return (
@@ -612,6 +672,11 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 </Card>
+              </div>
+            )}
+            {activeTab === "overview" && stats && (
+              <div className="mt-6">
+                <AnalyticsPanel />
               </div>
             )}
 
