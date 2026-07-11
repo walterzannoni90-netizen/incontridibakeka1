@@ -1,15 +1,12 @@
-name: Deploy Supabase Edge Functions
+name: Deploy Supabase Backend
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - "supabase/functions/**"
   workflow_dispatch:
 
 jobs:
   deploy-functions:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -21,38 +18,38 @@ jobs:
       - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase link --project-ref rdqsmfgpbuswzilgbjyr --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply database migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase link --project-ref rdqsmfgpbuswzilgbjyr
+          supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
+          supabase db push --password "$SUPABASE_DB_PASSWORD"
 
       - name: Set edge function secrets
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_PRICE_10: ${{ secrets.VITE_STRIPE_PRICE_10 }}
+          STRIPE_PRICE_30: ${{ secrets.VITE_STRIPE_PRICE_30 }}
+          STRIPE_PRICE_70: ${{ secrets.VITE_STRIPE_PRICE_70 }}
+          STRIPE_PRICE_150: ${{ secrets.VITE_STRIPE_PRICE_150 }}
         run: |
           supabase secrets set \
             STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" \
             STRIPE_WEBHOOK_SECRET="$STRIPE_WEBHOOK_SECRET" \
-            SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
-            SUPABASE_URL=https://rdqsmfgpbuswzilgbjyr.supabase.co
+            STRIPE_PRICE_10="$STRIPE_PRICE_10" \
+            STRIPE_PRICE_30="$STRIPE_PRICE_30" \
+            STRIPE_PRICE_70="$STRIPE_PRICE_70" \
+            STRIPE_PRICE_150="$STRIPE_PRICE_150" \
+            SITE_URL=https://incontridibakeka.com \
+            ALLOWED_ORIGINS=https://incontridibakeka.com
 
-      - name: Deploy stripe-checkout
+      - name: Deploy edge functions and remove obsolete ones
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
-        run: supabase functions deploy stripe-checkout --no-verify-jwt
-
-      - name: Deploy stripe-webhook
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
-        run: supabase functions deploy stripe-webhook --no-verify-jwt
-
-      - name: Deploy auth-api
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
-        run: supabase functions deploy auth-api --no-verify-jwt
-
-      - name: Deploy boost
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ADMIN_TOKEN }}
-        run: supabase functions deploy boost --no-verify-jwt
+        run: supabase functions deploy --no-verify-jwt --prune

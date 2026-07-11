@@ -1,19 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@/hooks/useRouter";
-import { ITALIAN_CITIES } from "@shared/data";
+import { ITALIAN_CITIES, slugify } from "@shared/data";
 import Home from "./Home";
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/[\s]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
-}
 
 export default function CityPage() {
   const { navigate, currentPath } = useRouter();
@@ -67,7 +55,7 @@ export default function CityPage() {
     }
 
     setReady(true);
-  }, [currentPath]);
+  }, [currentPath, navigate]);
 
   if (!ready) return null;
 

@@ -1,20 +1,21 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import CityPage from "./pages/CityPage";
-import AdDetail from "./pages/AdDetail";
-import AdminPanel from "./pages/AdminPanel";
-import Shop from "./pages/Shop";
-import MyAds from "./pages/MyAds";
-import Profile from "./pages/Profile";
-import Messages from "./pages/Messages";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
+
+const Home = lazy(() => import("./pages/Home"));
+const CityPage = lazy(() => import("./pages/CityPage"));
+const AdDetail = lazy(() => import("./pages/AdDetail"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const Shop = lazy(() => import("./pages/Shop"));
+const MyAds = lazy(() => import("./pages/MyAds"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -35,12 +36,22 @@ function SpaRedirect() {
   return null;
 }
 
+function HomePage() {
+  return <Home />;
+}
+
 function Router() {
   return (
-    <>
+    <Suspense
+      fallback={(
+        <div className="min-h-screen grid place-items-center text-sm text-muted-foreground" aria-live="polite">
+          Caricamento…
+        </div>
+      )}
+    >
       <SpaRedirect />
       <Switch>
-        <Route path={"/"} component={Home} />
+        <Route path={"/"} component={HomePage} />
         <Route path={"/incontri/:city"} component={CityPage} />
         <Route path={"/ad"} component={AdDetail} />
         <Route path={"/ad/:slug"} component={AdDetail} />
@@ -55,7 +66,7 @@ function Router() {
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>
-    </>
+    </Suspense>
   );
 }
 

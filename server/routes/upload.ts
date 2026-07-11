@@ -37,7 +37,7 @@ router.post("/", authMiddleware, upload.array("photos", 5), async (req: Authenti
       const fileExt = file.mimetype.split("/")[1];
       const fileName = `ad-${userId}-${Date.now()}-${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from("ad-photos")
         .upload(fileName, file.buffer, {
           contentType: file.mimetype,
@@ -70,7 +70,7 @@ router.delete("/:filename", authMiddleware, async (req: AuthenticatedRequest, re
     const userId = req.user!.userId;
 
     // Verifica che il file appartenga all'utente
-    if (!filename.includes(`ad-${userId}`)) {
+    if (filename.includes("/") || !filename.startsWith(`ad-${userId}-`)) {
       return res.status(403).json({ error: "Non autorizzato a eliminare questo file" });
     }
 

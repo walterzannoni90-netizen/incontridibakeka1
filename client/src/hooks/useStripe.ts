@@ -2,35 +2,31 @@ import { useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-
-const PRICE_MAP: Record<number, string> = {
-  10: "price_1To8sPDxJ0tOArXhsUpAmd4t",
-  30: "price_1To8sQDxJ0tOArXhllfiAgT8",
-  70: "price_1To8sRDxJ0tOArXhhiUcQJVB",
-  150: "price_1To8sRDxJ0tOArXhV5p91wTG",
-};
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const VALID_CREDIT_PACKS = new Set([10, 30, 70, 150]);
 
 export function useStripe() {
   const createCheckoutSession = useCallback(
-    async (userId: string, credits: number) => {
+    async (credits: number) => {
       try {
         if (!supabase) throw new Error("Supabase non configurato");
 
-        const priceId = PRICE_MAP[credits];
-        if (!priceId) throw new Error("Pacchetto crediti non valido");
+        if (!VALID_CREDIT_PACKS.has(credits)) {
+          throw new Error("Pacchetto crediti non valido");
+        }
 
-        const origin = window.location.origin;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) throw new Error("Sessione scaduta: accedi di nuovo");
+
         const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
           method: "POST",
-          // text/plain evita il CORS preflight (simple request)
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            price_id: priceId,
-            user_id: userId,
-            credits,
-            success_url: `${origin}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${origin}/shop?payment=cancel`,
-          }),
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ credits }),
         });
 
         const data = await response.json();

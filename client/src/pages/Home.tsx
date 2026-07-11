@@ -8,9 +8,10 @@ import { useRouter } from "@/hooks/useRouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useStripe } from "@/hooks/useStripe";
 import { supabase } from "@/lib/supabaseClient";
+import { purchaseBoost } from "@/lib/boost";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, Phone, MessageCircle, Moon, Sun, Bookmark, Info, Shield, Eye, Sparkles, ImagePlus, Lock, UploadCloud, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Zap, Rocket, Coins } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Zap, Coins } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -23,7 +24,6 @@ const VETRINA_COSTS: Record<number, number> = { 1: 10, 3: 25, 7: 50 };
 
 const HAIR_COLORS = ["neri", "castani", "biondi", "rossi", "grigi", "altri"];
 const BODY_TYPES = ["snello", "normale", "formoso", "sportivo", "curvy"];
-const ETHNICITIES = ["italiana", "europea", "sudamericana", "asiatica", "africana", "mista"];
 const SERVICE_OPTIONS = [
   "Massaggio corpo a corpo",
   "Sex protetto",
@@ -140,6 +140,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     availability_hours: "",
     height: "",
     weight: "",
+    calls_only: false,
   });
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
@@ -168,6 +169,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   const maxPhotos = currentUser?.has_paid ? 5 : 1;
   const hasPaid = !!currentUser?.has_paid;
   const dailyLimit = hasPaid ? 2 : 1;
+  const currentUserId = currentUser?.id;
 
   useEffect(() => {
     loadAds(true);
@@ -176,20 +178,22 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       setShowDisclaimer(true);
     }
     setSavedAds(JSON.parse(localStorage.getItem("savedAds") || "[]"));
+    // Questa inizializzazione deve essere eseguita una sola volta al mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Carica statistiche personali per la dashboard
   useEffect(() => {
-    if (!currentUser || !SUPABASE_CONFIGURED || !supabase) return;
+    if (!currentUserId || !SUPABASE_CONFIGURED || !supabase) return;
     (async () => {
       try {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         if (!token) return;
         const [adsRes, boostedRes] = await Promise.all([
-          fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&is_active=eq.true`, {
+          fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUserId}&is_active=eq.true`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
           }),
-          fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUser.id}&or=(is_sponsored.eq.true,is_premium.eq.true)`, {
+          fetch(`${SUPABASE_URL}/rest/v1/ads?select=id&user_id=eq.${currentUserId}&or=(is_sponsored.eq.true,is_premium.eq.true)`, {
             headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -199,9 +203,11 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           adsCount: Array.isArray(adsData) ? adsData.length : 0,
           boostedCount: Array.isArray(boostedData) ? boostedData.length : 0,
         });
-      } catch {}
+      } catch {
+        // Le statistiche sono accessorie: la home resta utilizzabile se falliscono.
+      }
     })();
-  }, [currentUser?.id]);
+  }, [currentUserId]);
 
   useEffect(() => {
     let title = "Incontri di Bakeka — Annunci Verificati";
@@ -456,11 +462,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       }
       const mainImage = uploadedImages[0] || null;
 
-      // 2. Gestione vetrina (boost) con crediti
-      let boostedUntil: string | null = null;
+      // 2. Validazione vetrina; il costo verrà applicato atomicamente dal database.
       let vetrinaScheduledAt: string | null = null;
-      let vetrinaDurationDays: number | null = null;
-      let isSponsored = false;
       if (scheduleVetrina) {
         const cost = VETRINA_COSTS[vetrinaDuration] ?? 0;
         const userCredits = currentUser.credits || 0;
@@ -475,28 +478,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           setBusy(false);
           return;
         }
-        const untilDate = new Date(startAt.getTime() + vetrinaDuration * 24 * 60 * 60 * 1000);
         vetrinaScheduledAt = startAt.toISOString();
-        boostedUntil = untilDate.toISOString();
-        vetrinaDurationDays = vetrinaDuration;
-        // Se la vetrina parte subito, attiva is_sponsored
-        isSponsored = startAt.getTime() <= Date.now();
-
-        // Scala i crediti sul profilo
-        if (cost > 0) {
-          const newCredits = userCredits - cost;
-          await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
-            method: "PATCH",
-            headers: {
-              apikey: SUPABASE_KEY,
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-              Prefer: "return=representation",
-            },
-            body: JSON.stringify({ credits: newCredits }),
-          }).catch(() => {});
-          updateUser({ credits: newCredits });
-        }
       }
 
       const payload = {
@@ -512,7 +494,6 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         phone: publishForm.phone || null,
         whatsapp: publishForm.whatsapp || null,
         user_id: currentUser.id,
-        has_paid: hasPaid,
         hair_color: publishForm.hair_color || null,
         body_type: publishForm.body_type || null,
         ethnicity: publishForm.ethnicity || null,
@@ -521,16 +502,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         height: publishForm.height ? Number(publishForm.height) : null,
         weight: publishForm.weight ? Number(publishForm.weight) : null,
         calls_only: publishForm.calls_only || false,
-        boosted_until: boostedUntil,
-        boost_end_at: boostedUntil,
-        boost_start_at: vetrinaScheduledAt || (boostedUntil ? new Date().toISOString() : null),
-        vetrina_scheduled_at: vetrinaScheduledAt,
-        vetrina_duration_days: vetrinaDurationDays,
         is_active: true,
-        is_premium: false,
-        is_sponsored: isSponsored,
-        rating: 5,
-        review_count: 0,
       };
       const response = await fetch(`${SUPABASE_URL}/rest/v1/ads`, {
         method: "POST",
@@ -545,6 +517,27 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || data.error || "Pubblicazione non riuscita");
 
+      let vetrinaApplied = false;
+      const createdAd = Array.isArray(data) ? data[0] : data;
+      if (scheduleVetrina && createdAd?.id) {
+        try {
+          const result = await purchaseBoost({
+            adId: createdAd.id,
+            days: vetrinaDuration,
+            type: "vetrina",
+            startAt: vetrinaScheduledAt,
+          });
+          updateUser({ credits: result.remaining_credits });
+          vetrinaApplied = true;
+        } catch (boostError) {
+          alert(
+            `Annuncio pubblicato, ma la vetrina non è stata applicata: ${
+              boostError instanceof Error ? boostError.message : "errore sconosciuto"
+            }`,
+          );
+        }
+      }
+
       // Reset form
       setPublishOpen(false);
       setPublishForm({ title: "", description: "", city: "Roma", country: "IT", age: "25", category: CATEGORIES[0].id, image: "", price: "", phone: "", whatsapp: "", hair_color: "", body_type: "", ethnicity: "", services: "", availability_hours: "", height: "", weight: "", calls_only: false });
@@ -556,7 +549,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       setVetrinaStartAt("");
       setLimitMessage(null);
       await loadAds(true);
-      setSuccessModal({ title: publishForm.title, vetrina: scheduleVetrina });
+      setSuccessModal({ title: publishForm.title, vetrina: vetrinaApplied });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Errore pubblicazione.");
     } finally {

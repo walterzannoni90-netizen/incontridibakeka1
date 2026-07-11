@@ -117,20 +117,6 @@ export function useAuth() {
     if (error || !data.user) {
       throw new Error(error?.message || "Errore registrazione");
     }
-    if (data.session) {
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        email,
-        name,
-        phone: phone ?? null,
-        credits: 20,
-        subscription_tier: "free",
-        has_paid: false,
-        ads_count: 0,
-        is_admin: false,
-        is_verified: false,
-      });
-    }
     return data.user;
   }, []);
 

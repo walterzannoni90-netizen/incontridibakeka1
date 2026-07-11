@@ -1,8 +1,8 @@
 import { useRouter } from "@/hooks/useRouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, MapPin, ChevronRight } from "lucide-react";
-import { blogArticles, getAllCities } from "@/data/blog-data";
+import { ArrowLeft, MapPin } from "lucide-react";
+import { blogArticles } from "@/data/blog-data";
 
 const CITIES = [
   "Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna",

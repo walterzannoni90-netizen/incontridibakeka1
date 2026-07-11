@@ -1,101 +1,88 @@
-// supabase/functions/stripe-checkout/index.ts
-// Edge function: creates a Stripe Checkout Session and a pending transaction record.
 import Stripe from "npm:stripe@14";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// ---------------------------------------------------------------------------
-// CORS
-// ---------------------------------------------------------------------------
-const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SITE_URL = Deno.env.get("SITE_URL") ?? "https://incontridibakeka.com";
+
+const PRICE_MAP: Record<number, string | undefined> = {
+  10: Deno.env.get("STRIPE_PRICE_10"),
+  30: Deno.env.get("STRIPE_PRICE_30"),
+  70: Deno.env.get("STRIPE_PRICE_70"),
+  150: Deno.env.get("STRIPE_PRICE_150"),
 };
 
-function json(body: unknown, status = 200): Response {
+function allowedOrigins(): Set<string> {
+  const configured = (Deno.env.get("ALLOWED_ORIGINS") ?? SITE_URL)
+    .split(",")
+    .map((value) => value.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+
+  return new Set(configured);
+}
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const fallbackOrigin = SITE_URL.replace(/\/$/, "");
+  return {
+    "Access-Control-Allow-Origin": origin ?? fallbackOrigin,
+    "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+    "Vary": "Origin",
+  };
+}
+
+function json(body: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: corsHeaders,
+    headers: corsHeaders(origin),
   });
 }
 
-// ---------------------------------------------------------------------------
-// Env
-// ---------------------------------------------------------------------------
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL");
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-interface CheckoutRequestBody {
-  price_id?: string;
-  user_id?: string;
-  credits?: number;
-  success_url?: string;
-  cancel_url?: string;
-}
-
-function validateBody(body: CheckoutRequestBody): string | null {
-  if (!body.price_id || typeof body.price_id !== "string") {
-    return "Missing or invalid 'price_id'";
-  }
-  if (!body.user_id || typeof body.user_id !== "string") {
-    return "Missing or invalid 'user_id'";
-  }
-  if (
-    typeof body.credits !== "number" ||
-    !Number.isInteger(body.credits) ||
-    body.credits <= 0
-  ) {
-    return "Missing or invalid 'credits' (must be a positive integer)";
-  }
-  if (!body.success_url || typeof body.success_url !== "string") {
-    return "Missing or invalid 'success_url'";
-  }
-  if (!body.cancel_url || typeof body.cancel_url !== "string") {
-    return "Missing or invalid 'cancel_url'";
-  }
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 Deno.serve(async (req: Request): Promise<Response> => {
+  const requestOrigin = req.headers.get("origin")?.replace(/\/$/, "") ?? null;
+  const originAllowed = !requestOrigin || allowedOrigins().has(requestOrigin);
+
+  if (!originAllowed) {
+    return json({ error: "Origin non autorizzata" }, 403, null);
+  }
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders(requestOrigin) });
+  }
   if (req.method !== "POST") {
-    // Return CORS headers for any non-POST (browser preflight or otherwise)
-    return new Response("ok", { status: 204, headers: corsHeaders });
+    return json({ error: "Method not allowed" }, 405, requestOrigin);
   }
 
-  // Config check
-  if (!STRIPE_SECRET_KEY) {
-    return json({ error: "Server missing STRIPE_SECRET_KEY" }, 500);
+  if (!STRIPE_SECRET_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("Configurazione Stripe o Supabase incompleta");
+    return json({ error: "Server non configurato" }, 500, requestOrigin);
   }
 
-  let body: CheckoutRequestBody;
+  const authMatch = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i);
+  if (!authMatch) {
+    return json({ error: "Non autorizzato" }, 401, requestOrigin);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: userData, error: userError } = await supabase.auth.getUser(authMatch[1]);
+  if (userError || !userData.user) {
+    return json({ error: "Token non valido" }, 401, requestOrigin);
+  }
+
+  let credits: number;
   try {
-    body = await req.json();
+    const body = await req.json() as { credits?: unknown };
+    credits = Number(body.credits);
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return json({ error: "Body JSON non valido" }, 400, requestOrigin);
   }
 
-  const validationError = validateBody(body);
-  if (validationError) {
-    return json({ error: validationError }, 400);
-  }
-
-  const { price_id, user_id, credits, success_url, cancel_url } = body;
-
-  // Supabase client (service role) for the transaction record
-  let supabase: ReturnType<typeof createClient> | null = null;
-  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
+  if (!Number.isInteger(credits) || !PRICE_MAP[credits]) {
+    return json({ error: "Pacchetto crediti non valido" }, 400, requestOrigin);
   }
 
   const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -103,53 +90,44 @@ Deno.serve(async (req: Request): Promise<Response> => {
     httpClient: Stripe.createFetchHttpClient(),
   });
 
-  let session: Stripe.Checkout.Session;
+  const userId = userData.user.id;
+  const baseUrl = SITE_URL.replace(/\/$/, "");
+
   try {
-    session = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: [{ price: price_id, quantity: 1 }],
-      success_url,
-      cancel_url,
+      line_items: [{ price: PRICE_MAP[credits]!, quantity: 1 }],
+      success_url: `${baseUrl}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/shop?payment=cancel`,
       metadata: {
-        user_id,
+        user_id: userId,
         credits: String(credits),
       },
-      client_reference_id: user_id,
+      client_reference_id: userId,
+      customer_email: userData.user.email,
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Stripe error";
-    return json({ error: `Failed to create checkout session: ${message}` }, 502);
-  }
 
-  // Record a pending transaction (best-effort: does not block the response)
-  if (supabase && session.id) {
-    try {
-      const { error: txError } = await supabase
-        .from("transactions")
-        .insert({
-          stripe_session_id: session.id,
-          user_id,
-          credits,
-          amount: session.amount_total ? (session.amount_total / 100) : null,
-          status: "pending",
-        })
-        .select()
-        .single();
-
-      if (txError) {
-        console.error("Failed to insert transaction record:", txError.message);
-      }
-    } catch (err) {
-      console.error(
-        "Unexpected error inserting transaction:",
-        err instanceof Error ? err.message : err,
-      );
+    if (!session.url) {
+      return json({ error: "Stripe non ha restituito un URL" }, 502, requestOrigin);
     }
-  }
 
-  if (!session.url) {
-    return json({ error: "Stripe returned no checkout URL" }, 502);
-  }
+    const { error: transactionError } = await supabase.from("transactions").insert({
+      stripe_session_id: session.id,
+      user_id: userId,
+      credits,
+      amount: session.amount_total === null ? 0 : session.amount_total / 100,
+      status: "pending",
+    });
 
-  return json({ url: session.url });
+    if (transactionError) {
+      console.error("Errore creazione transazione:", transactionError.message);
+      await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+      return json({ error: "Impossibile registrare la transazione" }, 500, requestOrigin);
+    }
+
+    return json({ url: session.url }, 200, requestOrigin);
+  } catch (error) {
+    console.error("Errore Stripe Checkout:", error instanceof Error ? error.message : error);
+    return json({ error: "Impossibile avviare il pagamento" }, 502, requestOrigin);
+  }
 });

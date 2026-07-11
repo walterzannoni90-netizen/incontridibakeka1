@@ -18,8 +18,9 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
+import { purchaseBoost } from "@/lib/boost";
 import {
-  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, TrendingUp, CheckCircle2, Timer, Star, ImagePlus
+  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, CheckCircle2, ImagePlus
 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -105,28 +106,12 @@ export default function MyAds() {
       }
       setBoostStep("Preparazione...");
       await new Promise(r => setTimeout(r, 400));
-      const token = await getToken();
-      const boostedUntil = new Date(Date.now() + days * 86400000).toISOString();
-      const updates: Record<string, any> = { boosted_until: boostedUntil, boost_end_at: boostedUntil, boost_start_at: new Date().toISOString() };
-      if (type === "premium") updates.is_premium = true;
-      else updates.is_sponsored = true;
       setBoostStep("Aggiornamento annuncio...");
       await new Promise(r => setTimeout(r, 500));
-      const adRes = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${adId}`, {
-        method: "PATCH",
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
-        body: JSON.stringify(updates),
-      });
-      if (!adRes.ok) throw new Error("Errore aggiornamento annuncio");
+      const result = await purchaseBoost({ adId, days, type });
       setBoostStep("Aggiornamento crediti...");
       await new Promise(r => setTimeout(r, 400));
-      const newCredits = (user.credits || 0) - credits;
-      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, {
-        method: "PATCH",
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ credits: newCredits }),
-      });
-      updateUser({ credits: newCredits });
+      updateUser({ credits: result.remaining_credits });
       setBoostStep("Completato! 🎉");
       setShowConfetti(true);
       setConfettiKey(k => k + 1);
@@ -158,7 +143,7 @@ export default function MyAds() {
     try {
       setSavingEdit(true);
       const token = await getToken();
-      let payload: Record<string, any> = { ...editForm };
+      const payload: Record<string, any> = { ...editForm };
       if (editPhotos.length > 0) {
         setEditUploading(true);
         const urls: string[] = [];

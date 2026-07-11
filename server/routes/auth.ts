@@ -3,9 +3,9 @@ import jwt from "jsonwebtoken";
 import { supabase, supabaseAnon } from "../middleware/supabaseClient";
 import { authMiddleware } from "../middleware/auth";
 import type { AuthenticatedRequest } from "../types";
+import { requireJwtSecret } from "../config";
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
 
 // ========== REGISTER ==========
 router.post("/register", async (req, res) => {
@@ -45,18 +45,12 @@ router.post("/register", async (req, res) => {
     }
 
     // Crea profilo
-    const { error: profileError } = await supabase.from("profiles").insert({
+    const { error: profileError } = await supabase.from("profiles").upsert({
       id: authData.user.id,
       email,
       name,
       phone: phone || null,
-      credits: 20,
-      subscription_tier: "free",
-      has_paid: false,
-      ads_count: 0,
-      is_admin: false,
-      is_verified: false,
-    });
+    }, { onConflict: "id" });
 
     if (profileError) {
       console.error("Profile error:", profileError);
@@ -113,7 +107,7 @@ router.post("/login", async (req, res) => {
         isAdmin: profile.is_admin || false,
         role: profile.is_admin ? "admin" : "user",
       },
-      JWT_SECRET,
+      requireJwtSecret(),
       { expiresIn: "7d" }
     );
 
@@ -137,7 +131,6 @@ router.post("/login", async (req, res) => {
         ads_count: profile.ads_count || 0,
         is_verified: profile.is_verified || false,
       },
-      token,
     });
   } catch (error) {
     console.error("Login error:", error);

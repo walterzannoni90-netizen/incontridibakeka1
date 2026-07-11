@@ -20,11 +20,30 @@ const PRICE_MAP: Record<number, { price: number; stripePriceId: string }> = {
   150: { price: 34.99, stripePriceId: process.env.STRIPE_PRICE_150 || "" },
 };
 
+function getPaymentIntentId(session: Stripe.Checkout.Session): string | null {
+  if (typeof session.payment_intent === "string") return session.payment_intent;
+  return session.payment_intent?.id ?? null;
+}
+
+async function completePayment(session: Stripe.Checkout.Session) {
+  const { data, error } = await supabase.rpc("complete_stripe_transaction", {
+    p_session_id: session.id,
+    p_payment_id: getPaymentIntentId(session),
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}
+
 // ========== CREATE CHECKOUT SESSION ==========
 router.post("/checkout", authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const userId = req.user!.userId;
     const { credits } = req.body;
+    const clientUrl = process.env.CLIENT_URL?.replace(/\/$/, "");
+
+    if (!process.env.STRIPE_SECRET_KEY || !clientUrl) {
+      return res.status(500).json({ error: "Configurazione pagamenti incompleta" });
+    }
 
     if (!credits || !PRICE_MAP[credits]) {
       return res.status(400).json({ error: "Pacchetto crediti non valido" });
@@ -48,8 +67,8 @@ router.post("/checkout", authMiddleware, async (req: AuthenticatedRequest, res) 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price: stripePriceId, quantity: 1 }],
-      success_url: `${process.env.CLIENT_URL}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/shop?payment=cancel`,
+      success_url: `${clientUrl}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${clientUrl}/shop?payment=cancel`,
       metadata: {
         user_id: userId,
         credits: String(credits),
@@ -73,7 +92,8 @@ router.post("/checkout", authMiddleware, async (req: AuthenticatedRequest, res) 
 
     if (txError) {
       console.error("Errore salvataggio transazione:", txError);
-      // Non blocchiamo il checkout, ma logghiamo l'errore
+      await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
+      return res.status(500).json({ error: "Impossibile registrare la transazione" });
     }
 
     res.json({ url: session.url, session_id: session.id });
@@ -121,30 +141,18 @@ router.get("/verify/:sessionId", authMiddleware, async (req: AuthenticatedReques
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status === "paid") {
-        // Aggiorna transazione
-        await supabase
-          .from("transactions")
-          .update({ status: "completed", stripe_payment_id: session.payment_intent as string })
-          .eq("stripe_session_id", sessionId);
-
-        // Aggiungi crediti se non già aggiunti
+        await completePayment(session);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("credits")
+          .select("credits, has_paid")
           .eq("id", userId)
           .single();
-
-        const newCredits = (profile?.credits || 0) + transaction.credits;
-        await supabase
-          .from("profiles")
-          .update({ credits: newCredits, has_paid: true })
-          .eq("id", userId);
 
         return res.json({
           status: "completed",
           credits: transaction.credits,
-          totalCredits: newCredits,
-          has_paid: true,
+          totalCredits: profile?.credits || 0,
+          has_paid: profile?.has_paid || false,
         });
       }
     } catch (stripeError) {
@@ -187,42 +195,12 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.user_id;
-        const creditsStr = session.metadata?.credits;
-        const credits = creditsStr ? parseInt(creditsStr, 10) : 0;
+        if (session.payment_status === "paid") await completePayment(session);
+        break;
+      }
 
-        if (!userId || !credits) {
-          console.error("Webhook: missing user_id or credits in metadata", session.metadata);
-          break;
-        }
-
-        // Aggiorna transazione
-        await supabase
-          .from("transactions")
-          .update({
-            status: "completed",
-            stripe_payment_id: session.payment_intent as string,
-          })
-          .eq("stripe_session_id", session.id);
-
-        // Aggiungi crediti all'utente
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("credits, has_paid")
-          .eq("id", userId)
-          .single();
-
-        if (profile) {
-          await supabase
-            .from("profiles")
-            .update({
-              credits: (profile.credits || 0) + credits,
-              has_paid: true,
-            })
-            .eq("id", userId);
-
-          console.log(`Crediti aggiunti: ${credits} all'utente ${userId}`);
-        }
+      case "checkout.session.async_payment_succeeded": {
+        await completePayment(event.data.object as Stripe.Checkout.Session);
         break;
       }
 
@@ -232,7 +210,8 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         await supabase
           .from("transactions")
           .update({ status: "failed" })
-          .eq("stripe_session_id", session.id);
+          .eq("stripe_session_id", session.id)
+          .eq("status", "pending");
         console.log(`Transazione fallita: ${session.id}`);
         break;
       }
@@ -242,7 +221,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     }
   } catch (err: any) {
     console.error("Errore processing webhook:", err.message);
-    // Ritorniamo 200 per evitare retry di Stripe
+    return res.status(500).json({ error: "Errore elaborazione webhook" });
   }
 
   res.json({ received: true });
