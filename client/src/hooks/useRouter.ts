@@ -20,8 +20,8 @@ export function useRouter() {
   const [location, setLocation] = useLocation();
 
   const navigate = useCallback(
-    (path: string) => {
-      setLocation(withBase(path));
+    (path: string, options?: { replace?: boolean }) => {
+      setLocation(withBase(path), options);
     },
     [setLocation]
   );

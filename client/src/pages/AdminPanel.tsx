@@ -40,7 +40,6 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  Search,
   Eye,
   Ban,
   Check,
@@ -51,7 +50,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Edit,
   PanelTop,
 } from "lucide-react";
 
@@ -144,13 +142,6 @@ async function count(table: string, filter?: string, value?: any): Promise<numbe
   return c ?? 0;
 }
 
-async function sum(table: string, column: string): Promise<number> {
-  if (!supabase) return 0;
-  const { data } = await supabase.from(table).select(column);
-  if (!data) return 0;
-  return data.reduce((s: number, r: any) => s + (Number(r[column]) || 0), 0);
-}
-
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("it-IT", {
     day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -158,7 +149,7 @@ function formatDate(d: string) {
 }
 
 export default function AdminPanel() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -166,7 +157,7 @@ export default function AdminPanel() {
   const [ads, setAds] = useState<AdRow[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
-  const [categories, setCategories] = useState<CategoryItem[]>(DEFAULT_CATEGORIES);
+  const categories = DEFAULT_CATEGORIES;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "ads" | "reports" | "transactions" | "categories">("overview");
@@ -179,10 +170,6 @@ export default function AdminPanel() {
     message: string;
     action: () => Promise<void>;
   }>({ open: false, title: "", message: "", action: async () => {} });
-  const [editCategoryDialog, setEditCategoryDialog] = useState<{
-    open: boolean;
-    item: CategoryItem | null;
-  }>({ open: false, item: null });
   const [creditsDialog, setCreditsDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: "", userName: "" });
   const [manualCredits, setManualCredits] = useState(10);
   const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
@@ -214,7 +201,7 @@ export default function AdminPanel() {
       setError(null);
       const currentTab = tab || activeTab;
 
-      const promises: Promise<any>[] = [
+      const promises: PromiseLike<any>[] = [
         count("profiles"),
         count("ads"),
         count("ads", "is_active", true),
@@ -333,13 +320,10 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (isAdmin) loadData();
-  }, [isAdmin, activeTab, page]);
+  }, [isAdmin, loadData]);
 
   useEffect(() => {
-    if (isAdmin) {
-      setPage(0);
-      loadData();
-    }
+    setPage(0);
   }, [searchQuery]);
 
   const showConfirm = (title: string, message: string, action: () => Promise<void>) => {
@@ -353,19 +337,7 @@ export default function AdminPanel() {
         p_user_id: creditsDialog.userId,
         p_credits: manualCredits,
       });
-      if (rpcErr) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("credits")
-          .eq("id", creditsDialog.userId)
-          .single();
-        const newCredits = (profile?.credits ?? 0) + manualCredits;
-        const { error: updErr } = await supabase
-          .from("profiles")
-          .update({ credits: newCredits, has_paid: true })
-          .eq("id", creditsDialog.userId);
-        if (updErr) throw updErr;
-      }
+      if (rpcErr) throw rpcErr;
       toast.success(`${manualCredits} crediti aggiunti a ${creditsDialog.userName}`);
       setCreditsDialog({ open: false, userId: "", userName: "" });
       loadData();
@@ -387,12 +359,13 @@ export default function AdminPanel() {
   };
 
   const deactivateUserAds = async (userId: string, userName: string) => {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
     showConfirm(
       "Disattiva annunci utente",
       `Disattivare tutti gli annunci di "${userName}"?`,
       async () => {
-        const { error } = await supabase
+        const { error } = await client
           .from("ads")
           .update({ is_active: false })
           .eq("user_id", userId);
@@ -429,12 +402,13 @@ export default function AdminPanel() {
   };
 
   const deleteAd = async (adId: string, adTitle: string) => {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
     showConfirm(
       "Elimina annuncio",
       `Sei sicuro di voler eliminare definitivamente "${adTitle}"? Questa azione non può essere annullata.`,
       async () => {
-        const { error } = await supabase.from("ads").delete().eq("id", adId);
+        const { error } = await client.from("ads").delete().eq("id", adId);
         if (error) throw error;
         toast.success("Annuncio eliminato");
         setConfirmDialog(d => ({ ...d, open: false }));

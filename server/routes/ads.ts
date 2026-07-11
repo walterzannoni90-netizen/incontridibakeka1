@@ -347,12 +347,6 @@ router.post("/", authMiddleware, async (req: AuthenticatedRequest, res) => {
       return res.status(500).json({ error: "Errore creazione annuncio" });
     }
 
-    // Aggiorna ads_count del profilo
-    await supabase
-      .from("profiles")
-      .update({ ads_count: (profile.ads_count || 0) + 1 })
-      .eq("id", userId);
-
     res.status(201).json({ ad });
   } catch (error) {
     console.error("Create ad error:", error);
@@ -475,87 +469,11 @@ router.get("/my/ads", authMiddleware, async (req: AuthenticatedRequest, res) => 
   }
 });
 
-// ========== BOOST AD (authenticated) ==========
-router.post("/:id/boost", authMiddleware, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user!.userId;
-    const { type, duration_days, credits } = req.body;
-
-    if (!type || !duration_days || !credits) {
-      return res.status(400).json({ error: "Tipo, durata e crediti sono obbligatori" });
-    }
-
-    // Verifica proprietà annuncio
-    const { data: ad } = await supabase
-      .from("ads")
-      .select("user_id")
-      .eq("id", id)
-      .single();
-
-    if (!ad) {
-      return res.status(404).json({ error: "Annuncio non trovato" });
-    }
-
-    if (ad.user_id !== userId) {
-      return res.status(403).json({ error: "Non autorizzato" });
-    }
-
-    // Verifica crediti
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("credits")
-      .eq("id", userId)
-      .single();
-
-    if (!profile || (profile.credits || 0) < credits) {
-      return res.status(402).json({ error: "Crediti insufficienti" });
-    }
-
-    // Calcola date
-    const now = new Date();
-    const endAt = new Date(now.getTime() + duration_days * 24 * 60 * 60 * 1000);
-
-    // Aggiorna annuncio
-    const { data: updatedAd, error: updateError } = await supabase
-      .from("ads")
-      .update({
-        is_premium: type === "premium",
-        is_sponsored: type === "sponsored" || type === "vetrina",
-        boost_type: type,
-        boost_start_at: now.toISOString(),
-        boost_end_at: endAt.toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (updateError) {
-      return res.status(500).json({ error: "Errore boost annuncio" });
-    }
-
-    // Scala crediti
-    await supabase
-      .from("profiles")
-      .update({ credits: (profile.credits || 0) - credits })
-      .eq("id", userId);
-
-    // Registra boost
-    await supabase.from("ad_boosts").insert({
-      ad_id: id,
-      user_id: userId,
-      type,
-      duration_days,
-      start_at: now.toISOString(),
-      end_at: endAt.toISOString(),
-      credits_used: credits,
-    });
-
-    res.json({ ad: updatedAd, message: "Boost applicato con successo" });
-  } catch (error) {
-    console.error("Boost ad error:", error);
-    res.status(500).json({ error: "Errore interno del server" });
-  }
+// I boost passano esclusivamente dalla RPC atomica purchase_ad_boost.
+router.post("/:id/boost", authMiddleware, (_req, res) => {
+  res.status(410).json({
+    error: "Endpoint sostituito dalla procedura sicura purchase_ad_boost",
+  });
 });
 
 export default router;

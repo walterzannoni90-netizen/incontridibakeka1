@@ -77,7 +77,7 @@ export default function Shop() {
       toast.info("Reindirizzamento a Stripe in corso...", {
         description: `${credits} crediti in preparazione.`,
       });
-      await createCheckoutSession(user.id, credits);
+      await createCheckoutSession(credits);
     } catch (error) {
       console.error("Errore acquisto:", error);
       const message = error instanceof Error ? error.message : "Errore durante l'acquisto. Riprova.";

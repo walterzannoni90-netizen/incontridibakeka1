@@ -9,12 +9,12 @@ export const ITALIAN_CITIES = [
   "Lecce", "Pesaro", "Lucca", "Pisa", "Catanzaro", "Como", "Busto Arsizio",
   "Grosseto", "Siena", "Matera", "Pistoia", "Varese", "La Spezia",
   "Pordenone", "Gallarate", "Lodi", "Cremona", "Lecco", "Frosinone",
-  "Brindisi", "Massa", "Pisa", "Alessandria", "Asti", "L'Aquila",
+  "Brindisi", "Massa", "Alessandria", "Asti", "L'Aquila",
   "Campobasso", "Potenza", "Cosenza", "Trani", "Bisceglie", "Caserta",
   "Crotone", "Vibo Valentia", "Enna", "Nuoro", "Olbia", "Oristano",
   "Aosta", "Belluno", "Rovigo", "Treviso", "Gorizia", "Isernia",
   "Teramo", "Chieti", "Ascoli Piceno", "Macerata", "Fermo",
-  "Viterbo", "Rieti", "Terni", "Avellino", "Benevento", "Isernia",
+  "Viterbo", "Rieti", "Avellino", "Benevento",
 ];
 
 export const COUNTRIES = [

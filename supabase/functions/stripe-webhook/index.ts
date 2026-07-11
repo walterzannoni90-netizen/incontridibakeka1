@@ -74,12 +74,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        await handleCheckoutCompleted(supabase, event);
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.payment_status === "paid") {
+          await handleCheckoutCompleted(supabase, session);
+        }
+        break;
+      }
+      case "checkout.session.async_payment_succeeded": {
+        await handleCheckoutCompleted(
+          supabase,
+          event.data.object as Stripe.Checkout.Session,
+        );
         break;
       }
       case "checkout.session.expired":
-      case "checkout.session.async_failed":
-      case "checkout.session.failed": {
+      case "checkout.session.async_payment_failed": {
         await handleCheckoutFailed(supabase, event);
         break;
       }
@@ -88,12 +97,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
         console.log(`Unhandled event type: ${event.type}`);
     }
   } catch (err) {
-    // Log but still return 200 to avoid Stripe retries on our processing bugs.
-    // Critical DB failures can be reconciled manually.
     console.error(
       `Error processing event ${event.type} (${event.id}):`,
       err instanceof Error ? err.message : err,
     );
+    // Stripe deve riprovare: complete_stripe_transaction è idempotente.
+    return json({ error: "Webhook processing failed" }, 500);
   }
 
   return json({ received: true });
@@ -104,72 +113,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
 // ---------------------------------------------------------------------------
 async function handleCheckoutCompleted(
   supabase: ReturnType<typeof createClient>,
-  event: Stripe.Event,
+  session: Stripe.Checkout.Session,
 ): Promise<void> {
-  const session = event.data.object as Stripe.Checkout.Session;
   const sessionId = session.id;
+  const paymentIntent = typeof session.payment_intent === "string"
+    ? session.payment_intent
+    : session.payment_intent?.id ?? null;
 
-  const userId = session.metadata?.user_id ?? session.client_reference_id ?? null;
-  const creditsStr = session.metadata?.credits ?? null;
-  const credits = creditsStr ? parseInt(creditsStr, 10) : NaN;
-
-  if (!userId || !Number.isFinite(credits) || credits <= 0) {
-    console.error(
-      `checkout.session.completed (${sessionId}): missing user_id or credits in metadata`,
-      { userId, creditsStr },
-    );
-    // Still mark the transaction completed so it's not left "pending" forever.
-    await safeUpdateTransaction(supabase, sessionId, "completed");
-    return;
-  }
-
-  // 1. Update the transaction status -> completed
-  await safeUpdateTransaction(supabase, sessionId, "completed");
-
-  // 2. Increment profile credits and set has_paid = true
-  const { error: profileError } = await supabase.rpc("increment_credits", {
-    p_user_id: userId,
-    p_credits: credits,
+  const { data, error } = await supabase.rpc("complete_stripe_transaction", {
+    p_session_id: sessionId,
+    p_payment_id: paymentIntent,
   });
 
-  if (profileError) {
-    // Fallback: manual update if the RPC doesn't exist
-    console.warn(
-      "increment_credits RPC failed, falling back to direct update:",
-      profileError.message,
-    );
-    const { data: profile, error: fetchErr } = await supabase
-      .from("profiles")
-      .select("credits")
-      .eq("id", userId)
-      .single();
-
-    if (fetchErr) {
-      console.error(`Failed to fetch profile ${userId}:`, fetchErr.message);
-    } else {
-      const newCredits = (profile?.credits ?? 0) + credits;
-      const { error: updErr } = await supabase
-        .from("profiles")
-        .update({ credits: newCredits, has_paid: true })
-        .eq("id", userId);
-      if (updErr) {
-        console.error(`Failed to update profile ${userId}:`, updErr.message);
-      }
-    }
-  } else {
-    // Ensure has_paid is set even if the RPC only touched credits
-    const { error: paidErr } = await supabase
-      .from("profiles")
-      .update({ has_paid: true })
-      .eq("id", userId);
-    if (paidErr) {
-      console.error(`Failed to set has_paid for ${userId}:`, paidErr.message);
-    }
+  if (error) {
+    throw new Error(`complete_stripe_transaction failed: ${error.message}`);
   }
 
-  console.log(
-    `checkout.session.completed: user=${userId} credits=+${credits} session=${sessionId}`,
-  );
+  console.log("Pagamento elaborato in modo idempotente", {
+    sessionId,
+    result: data,
+  });
 }
 
 async function handleCheckoutFailed(
@@ -178,24 +141,11 @@ async function handleCheckoutFailed(
 ): Promise<void> {
   const session = event.data.object as Stripe.Checkout.Session;
   const sessionId = session.id;
-  await safeUpdateTransaction(supabase, sessionId, "failed");
-  console.log(`checkout failed/expired: session=${sessionId} -> status=failed`);
-}
-
-async function safeUpdateTransaction(
-  supabase: ReturnType<typeof createClient>,
-  sessionId: string,
-  status: "completed" | "failed",
-): Promise<void> {
   const { error } = await supabase
     .from("transactions")
-    .update({ status })
-    .eq("stripe_session_id", sessionId);
-
-  if (error) {
-    console.error(
-      `Failed to update transaction ${sessionId} -> ${status}:`,
-      error.message,
-    );
-  }
+    .update({ status: "failed" })
+    .eq("stripe_session_id", sessionId)
+    .eq("status", "pending");
+  if (error) throw new Error(`Failed to mark transaction failed: ${error.message}`);
+  console.log(`checkout failed/expired: session=${sessionId} -> status=failed`);
 }

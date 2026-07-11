@@ -72,13 +72,6 @@ async function restDelete(table: string, query: string = ""): Promise<any> {
   return res.json();
 }
 
-function parseQuery(q: { table: string; query: string }) {
-  const { table, query } = q;
-  const cleaned = query.replace(/^\?/, "");
-  const params = new URLSearchParams(cleaned);
-  return { table, params };
-}
-
 function parseEndpoint(endpoint: string): { table: string; params: URLSearchParams } {
   const path = endpoint.replace(/^\/api\//, "");
   const parts = path.split("?");
@@ -98,7 +91,6 @@ export function useApi() {
     if (endpoint.startsWith("/api/ads/") && endpoint.includes("/report")) {
       const parts = endpoint.split("/");
       const adId = parts[3];
-      const reason = ""; 
       return restPost("ad_reports", { ad_id: adId, reason: "" });
     }
     if (endpoint.startsWith("/api/ads/")) {

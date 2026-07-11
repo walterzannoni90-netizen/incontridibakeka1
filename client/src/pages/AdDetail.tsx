@@ -15,10 +15,8 @@ import {
   Eye,
   Crown,
   Zap,
-  Shield,
   Clock,
   AlertTriangle,
-  Loader2,
   Heart,
   Share2,
   Flag,
@@ -29,7 +27,6 @@ import {
   Ruler,
   Weight,
   Palette,
-  User,
 } from "lucide-react";
 
 interface Ad {
@@ -78,14 +75,19 @@ export default function AdDetail() {
   const adId = currentPath.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)?.[0] || "";
 
   const loadAd = useCallback(async () => {
-    if (!adId) return;
+    const client = supabase;
+    if (!adId || !client) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const { data } = await supabase
+      const { data, error } = await client
         .from("ads")
         .select("*")
         .eq("id", adId)
         .single();
+      if (error) throw error;
       setAd(data as unknown as Ad | null);
     } catch (e: any) {
       toast.error(e.message || "Annuncio non trovato");
@@ -101,8 +103,8 @@ export default function AdDetail() {
   useEffect(() => {
     if (!ad) return;
     document.title = `${ad.title} — Incontri a ${ad.city} | Incontri di Bakeka`;
-    let desc = `Annuncio: ${ad.title}. ${ad.city}, ${ad.category}. ${ad.description?.slice(0, 150)}`;
-    let metaDesc = document.querySelector('meta[name="description"]');
+    const desc = `Annuncio: ${ad.title}. ${ad.city}, ${ad.category}. ${ad.description?.slice(0, 150)}`;
+    const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute("content", desc);
     else {
       const meta = document.createElement("meta");
@@ -110,11 +112,11 @@ export default function AdDetail() {
       meta.content = desc;
       document.head.appendChild(meta);
     }
-    let metaOg = document.querySelector('meta[property="og:title"]');
+    const metaOg = document.querySelector('meta[property="og:title"]');
     if (metaOg) metaOg.setAttribute("content", `${ad.title} — Incontri di Bakeka`);
-    let metaOgDesc = document.querySelector('meta[property="og:description"]');
+    const metaOgDesc = document.querySelector('meta[property="og:description"]');
     if (metaOgDesc) metaOgDesc.setAttribute("content", desc);
-    let linkCanonical = document.querySelector('link[rel="canonical"]');
+    let linkCanonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!linkCanonical) {
       linkCanonical = document.createElement("link");
       linkCanonical.rel = "canonical";
@@ -144,12 +146,17 @@ export default function AdDetail() {
       toast.error("Inserisci un motivo per la segnalazione");
       return;
     }
+    if (!supabase || !user) {
+      toast.error("Accedi per inviare una segnalazione");
+      return;
+    }
     try {
-      await supabase.from("ad_reports").insert({
+      const { error } = await supabase.from("ad_reports").insert({
         ad_id: adId,
-        reporter_id: user?.id,
+        reporter_id: user.id,
         reason: reportReason,
       });
+      if (error) throw error;
       toast.success("Segnalazione inviata. Grazie per la collaborazione!");
       setReporting(false);
       setReportReason("");
@@ -468,6 +475,7 @@ export default function AdDetail() {
                           }),
                         }
                       );
+                      if (!createRes.ok) throw new Error("Conversazione non creata");
                       const created = await createRes.json();
                       navigate(`/messages/${created[0]?.id || created.id}`);
                     } catch { toast.error("Errore creazione conversazione"); }

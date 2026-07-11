@@ -3,11 +3,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
-import { ArrowLeft, MessageCircle, Send, Loader2, User, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, MessageCircle, Send, Loader2 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -66,7 +65,7 @@ export default function Messages() {
       if (ids.size > 0) {
         const pid = Array.from(ids).map(id => `id.eq.${id}`).join(",");
         const pRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?select=id,name&or=(${pid})`,
+          `${SUPABASE_URL}/rest/v1/public_profiles?select=id,name&or=(${pid})`,
           { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } }
         );
         const pData = await pRes.json();
@@ -100,7 +99,7 @@ export default function Messages() {
       loadConversations();
       loadMessages(convId);
     }
-  }, [convId]);
+  }, [convId, loadConversations, loadMessages, selectedConv]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
@@ -137,13 +136,10 @@ export default function Messages() {
         body: JSON.stringify(msg),
       });
       if (!res.ok) throw new Error();
-      const created = await res.json();
-      setMessages(prev => [...prev, created]);
-      await fetch(`${SUPABASE_URL}/rest/v1/conversations?id=eq.${selectedConv}`, {
-        method: "PATCH",
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ last_message: newMessage.trim(), last_message_at: new Date().toISOString() }),
-      });
+      const createdRows = await res.json();
+      const created = Array.isArray(createdRows) ? createdRows[0] : createdRows;
+      if (!created) throw new Error("Messaggio non creato");
+      setMessages(prev => [...prev, created as Message]);
       setNewMessage("");
       loadConversations();
     } catch { toast.error("Errore invio messaggio"); }

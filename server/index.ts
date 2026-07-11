@@ -26,9 +26,9 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'", "https://*.supabase.co", "https://api.stripe.com", "https://*.stripe.com"],
+        connectSrc: ["'self'", "https://*.supabase.co", "wss://*.supabase.co", "https://api.stripe.com", "https://*.stripe.com"],
         imgSrc: ["'self'", "https:", "data:", "blob:"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://forge.butterfly-effect.dev", "https://maps.googleapis.com", "https://maps.gstatic.com"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         fontSrc: ["'self'", "https:", "data:"],
       },
@@ -56,6 +56,7 @@ async function startServer() {
     message: { error: "Troppe richieste, riprova più tardi." },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => req.originalUrl.startsWith("/api/payments/webhook"),
   });
   app.use("/api/", generalLimiter);
 
@@ -96,7 +97,7 @@ async function startServer() {
 
   // Serve static files
   const staticPath = process.env.NODE_ENV === "production"
-    ? path.resolve(__dirname, "public")
+    ? path.resolve(__dirname, "..", "public")
     : path.resolve(__dirname, "..", "dist", "public");
 
   app.use(express.static(staticPath));
