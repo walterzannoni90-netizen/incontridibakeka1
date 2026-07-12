@@ -305,7 +305,7 @@ BEGIN
     WHERE advertisement.user_id = auth.uid()
       AND advertisement.created_at >= NOW() - INTERVAL '24 hours';
 
-    IF v_recent_ads >= CASE WHEN COALESCE(v_has_paid, FALSE) THEN 2 ELSE 1 END THEN
+    IF v_recent_ads >= (CASE WHEN COALESCE(v_has_paid, FALSE) THEN 2 ELSE 1 END) THEN
       RAISE EXCEPTION 'Limite giornaliero di annunci raggiunto'
         USING ERRCODE = 'P0001';
     END IF;
