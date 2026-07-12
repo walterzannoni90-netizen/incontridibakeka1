@@ -39,14 +39,11 @@ const SERVICE_OPTIONS = [
 
 // Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
 function isAdBoosted(ad: Ad): boolean {
-  if (ad.is_premium || ad.is_sponsored || ad.has_paid) return true;
-  if (ad.boosted_until) {
-    const until = new Date(ad.boosted_until).getTime();
-    const start = ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0;
-    const now = Date.now();
-    return now >= start && now < until;
-  }
-  return false;
+  if (!ad.boosted_until) return false;
+  const until = new Date(ad.boosted_until).getTime();
+  const start = ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0;
+  const now = Date.now();
+  return Number.isFinite(until) && now >= start && now < until;
 }
 
 interface Ad {
@@ -608,7 +605,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   });
 
   const INFO_CONTENT: Record<string, { title: string; body: string }> = {
-    "chi-siamo": { title: "Chi Siamo", body: "Incontri di Bakeka e la piattaforma leader in Italia per annunci personali. Offriamo uno spazio sicuro e verificato dove adulti consenzienti possono connettersi. Lavoriamo ogni giorno per garantire sicurezza, privacy e qualita. Tutti i nostri profili Premium sono verificati manualmente." },
+    "chi-siamo": { title: "Chi Siamo", body: "Incontri di Bakeka è una piattaforma italiana per annunci personali tra adulti. Offriamo strumenti per pubblicare, cercare, contattare e segnalare contenuti, con attenzione a privacy e sicurezza." },
     "contatti": { title: "Contatti", body: "Per qualsiasi domanda o supporto, scrivici a: supporto@incontridibakeka.it\n\nRispondiamo entro 24 ore. Per segnalazioni di abuso o contenuti inappropriate, utilizza il pulsante 'Segnala' presente in ogni annuncio." },
     "blog": { title: "Blog", body: "Il nostro blog arrivera presto! Pubblicheremo guide su sicurezza negli incontri, consigli per creare annunci efficaci, e storie di successo dei nostri utenti. Resta sintonizzato." },
     "termini": { title: "Termini e Condizioni", body: "1. Il sito e destinato esclusivamente a maggiori di 18 anni.\n2. Tutti gli annunci devono rispettare le leggi italiane.\n3. E vietato pubblicare contenuti illegali, offensivi o non consensuali.\n4. La piattaforma non si rende responsabile degli incontri tra utenti.\n5. Ogni utente e responsabile dei propri annunci e comportamenti.\n6. I crediti acquistati non sono rimborsabili.\n7. La pubblicazione di annunci falsi comporta ban permanente." },
@@ -1207,7 +1204,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   key={ad.id}
                   className={`group overflow-hidden cursor-pointer transition-all duration-500 ${
                     ad.is_sponsored ? "ring-1 ring-accent/40" : ""
-                  } ${(ad.is_premium || ad.has_paid) ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
+                  } ${isAdBoosted(ad) ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
                   onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
                 >
                     <div className="relative h-36 md:h-52 bg-gradient-to-br from-primary/20 to-purple-300/20 overflow-hidden">
@@ -1243,7 +1240,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           <Star className="w-3 h-3 fill-white" /> SuperTop
                         </div>
                       )}
-                      {(ad.is_premium || ad.has_paid) && !ad.is_sponsored && (
+                      {isAdBoosted(ad) && ad.is_premium && !ad.is_sponsored && (
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-primary to-purple-600 text-white px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center gap-1">
                           <Crown className="w-3 h-3" /> Premium
                         </div>
@@ -1273,7 +1270,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         <h3 className="font-bold text-sm md:text-base line-clamp-1 group-hover:text-primary transition-colors duration-300">
                           {ad.title}
                         </h3>
-                        {(ad.is_premium || ad.has_paid) && (
+                        {isAdBoosted(ad) && ad.is_premium && (
                           <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                         )}
                       </div>
@@ -1286,8 +1283,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           <span className="truncate max-w-[60px]">{ad.city || "Italia"}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-accent text-accent" />
-                          <span className="font-medium">{ad.rating > 0 ? ad.rating : "Nuovo"}</span>
+                          <Eye className="w-3 h-3 text-primary" />
+                          <span className="font-medium">{ad.views || 0} visite</span>
                         </div>
                       </div>
                       {ad.price && (
@@ -1335,8 +1332,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                   <Shield className="w-6 h-6 text-green-600" />
                 </div>
-                <h3 className="font-bold text-sm mb-1">Profili Verificati</h3>
-                <p className="text-xs text-muted-foreground">Tutti i profili Premium sono verificati manualmente</p>
+                <h3 className="font-bold text-sm mb-1">Segnalazioni controllate</h3>
+                <p className="text-xs text-muted-foreground">Gli utenti possono segnalare contenuti non conformi</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
