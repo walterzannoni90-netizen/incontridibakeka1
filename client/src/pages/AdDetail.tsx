@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "@/hooks/useRouter";
+import SitePromoBanner from "@/components/SitePromoBanner";
 import {
   ArrowLeft,
   MapPin,
@@ -190,6 +191,7 @@ export default function AdDetail() {
             </div>
           </div>
         </div>
+        <SitePromoBanner variant="publish" compact />
       </div>
     );
   }
