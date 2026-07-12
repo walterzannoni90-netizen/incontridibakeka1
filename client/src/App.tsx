@@ -4,7 +4,6 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { lazy, Suspense, useEffect } from "react";
-import SitePromoBanner from "./components/SitePromoBanner";
 
 const Home = lazy(() => import("./pages/Home"));
 const CityPage = lazy(() => import("./pages/CityPage"));
@@ -78,7 +77,6 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          <SitePromoBanner variant="safe" compact />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

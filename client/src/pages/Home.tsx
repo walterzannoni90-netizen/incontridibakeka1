@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { purchaseBoost } from "@/lib/boost";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Zap, Coins } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Coins } from "lucide-react";
 import SitePromoBanner from "@/components/SitePromoBanner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -92,16 +92,16 @@ function formatPhone(val: string): string {
 }
 
 const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://unsplash.com/photos/MuY9_BzPX98/download?force=true&w=900", count: "180+ annunci" },
-  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://unsplash.com/photos/NH7zbSHsbP8/download?force=true&w=900", count: "20+ annunci" },
-  { id: "trans", name: "Trans", image: "https://unsplash.com/photos/f626lgQvTQo/download?force=true&w=900", count: "15+ annunci" },
-  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://unsplash.com/photos/XPkd47xw4jc/download?force=true&w=900", count: "10+ annunci" },
-  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://unsplash.com/photos/rxawtWogcjQ/download?force=true&w=900", count: "8+ annunci" },
-  { id: "coppie", name: "Coppie", image: "https://unsplash.com/photos/xgK6o8h1L6M/download?force=true&w=900", count: "5+ annunci" },
-  { id: "massaggi", name: "Massaggi", image: "https://unsplash.com/photos/-AakIaAPV0w/download?force=true&w=900", count: "12+ annunci" },
-  { id: "accompagnatrici", name: "Accompagnatrici", image: "https://unsplash.com/photos/t29xtYbNvLQ/download?force=true&w=900", count: "25+ annunci" },
-  { id: "evento-festa", name: "Eventi e Feste", image: "https://unsplash.com/photos/cn1WbzOMO2I/download?force=true&w=900", count: "3+ annunci" },
-  { id: "amicizia", name: "Amicizia", image: "https://unsplash.com/photos/ijn7NJsjoMM/download?force=true&w=900", count: "7+ annunci" },
+  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://unsplash.com/photos/MuY9_BzPX98/download?force=true&w=900" },
+  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://unsplash.com/photos/NH7zbSHsbP8/download?force=true&w=900" },
+  { id: "trans", name: "Trans", image: "https://unsplash.com/photos/f626lgQvTQo/download?force=true&w=900" },
+  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://unsplash.com/photos/XPkd47xw4jc/download?force=true&w=900" },
+  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://unsplash.com/photos/rxawtWogcjQ/download?force=true&w=900" },
+  { id: "coppie", name: "Coppie", image: "https://unsplash.com/photos/xgK6o8h1L6M/download?force=true&w=900" },
+  { id: "massaggi", name: "Massaggi", image: "https://unsplash.com/photos/-AakIaAPV0w/download?force=true&w=900" },
+  { id: "accompagnatrici", name: "Accompagnatrici", image: "https://unsplash.com/photos/t29xtYbNvLQ/download?force=true&w=900" },
+  { id: "evento-festa", name: "Eventi e Feste", image: "https://unsplash.com/photos/cn1WbzOMO2I/download?force=true&w=900" },
+  { id: "amicizia", name: "Amicizia", image: "https://unsplash.com/photos/ijn7NJsjoMM/download?force=true&w=900" },
 ];
 
 // No demo data - real data only from Supabase
@@ -113,6 +113,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   const { handlePaymentCallback: stripePaymentCallback } = useStripe();
   const { theme, toggleTheme } = useTheme();
   const [ads, setAds] = useState<Ad[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -181,6 +182,23 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     setSavedAds(JSON.parse(localStorage.getItem("savedAds") || "[]"));
     // Questa inizializzazione deve essere eseguita una sola volta al mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // I conteggi mostrati nelle categorie arrivano dagli annunci attivi reali.
+  useEffect(() => {
+    if (!SUPABASE_CONFIGURED || !supabase) return;
+    (async () => {
+      const { data } = await supabase
+        .from("ads")
+        .select("category")
+        .eq("is_active", true);
+      if (!data) return;
+      const counts = data.reduce<Record<string, number>>((result, row) => {
+        if (row.category) result[row.category] = (result[row.category] ?? 0) + 1;
+        return result;
+      }, {});
+      setCategoryCounts(counts);
+    })();
   }, []);
 
   // Carica statistiche personali per la dashboard
@@ -1097,7 +1115,9 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent transition-all group-hover:from-black/75" />
                   <div className="absolute inset-x-0 bottom-0 p-3 text-left">
                     <p className="text-xs font-bold text-white drop-shadow md:text-sm">{cat.name}</p>
-                    <p className="mt-0.5 text-[10px] font-medium text-white/75">{cat.count}</p>
+                    <p className="mt-0.5 text-[10px] font-medium text-white/75">
+                      {categoryCounts[cat.id] ?? 0} annunci attivi
+                    </p>
                   </div>
                   {categoryFilter === cat.id && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
@@ -1110,8 +1130,6 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
           </div>
         </section>
-
-        <SitePromoBanner variant="publish" />
 
         {/* ADS SECTION */}
         <section className="py-8 md:py-16" id="ads-section">
@@ -1254,7 +1272,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
                         {ad.description}
                       </p>
                       <div className="flex items-center justify-between text-xs">
@@ -1272,13 +1290,12 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           <TrendingUp className="w-3 h-3" /> {ad.price}
                         </p>
                       )}
-                      {/* Indicatore boost in fondo card */}
-                      {(boosted || ad.has_paid) && (
-                        <div className="mt-2 flex items-center gap-1 text-[9px] text-purple-500 font-medium">
-                          <Zap className="w-2.5 h-2.5" />
-                          {ad.is_sponsored ? "In Vetrina" : ad.has_paid ? "Utente Premium" : "Premium"}
-                        </div>
-                      )}
+                      <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
+                        <span className="text-[10px] text-muted-foreground">
+                          {ad.created_at ? new Date(ad.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }) : "Nuovo"}
+                        </span>
+                        <span className="text-[10px] font-semibold text-primary">Visualizza →</span>
+                      </div>
                     </div>
                   </Card>
                 );
@@ -1901,6 +1918,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
         )}
 
+        <SitePromoBanner variant="safe" compact />
+
         {/* FOOTER */}
         <footer className="bg-muted/50 dark:bg-card/50 border-t border-border py-8 md:py-12 mt-0">
             <div className="container">
@@ -1982,6 +2001,16 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               </div>
             </div>
           </footer>
+
+          <div className="fixed inset-x-3 bottom-3 z-40 md:hidden">
+            <Button
+              className="h-12 w-full gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-base font-bold shadow-2xl shadow-violet-950/30"
+              onClick={currentUser ? openPublish : () => setAuthModal("register")}
+            >
+              {currentUser ? <Plus className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+              {currentUser ? "Pubblica annuncio" : "Iscriviti e pubblica"}
+            </Button>
+          </div>
       </div>
     );
   }
