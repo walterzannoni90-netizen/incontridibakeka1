@@ -1047,7 +1047,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
                     <p className="text-2xl md:text-3xl font-bold">{currentUser.has_paid ? "Sì" : "No"}</p>
-                    <p className="text-[10px] md:text-xs text-white/70 mt-1">Pagante</p>
+                    <p className="text-[10px] md:text-xs text-white/70 mt-1">Ha acquistato crediti</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
