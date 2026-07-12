@@ -1,5 +1,7 @@
 name: Deploy Supabase Backend
 
+# Production deploys are scoped to Supabase migrations and Edge Functions.
+
 on:
   workflow_dispatch:
   push:
