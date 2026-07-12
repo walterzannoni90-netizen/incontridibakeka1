@@ -1,0 +1,12 @@
+{
+  "name": "Incontri di Bakeka",
+  "short_name": "Incontri",
+  "description": "Annunci personali per adulti nelle città italiane",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

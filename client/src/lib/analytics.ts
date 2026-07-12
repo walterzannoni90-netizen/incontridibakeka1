@@ -5,7 +5,7 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 export type ConversionEvent =
   | "page_view" | "sign_up" | "login" | "ad_publish" | "contact_open"
-  | "checkout_start" | "checkout_created" | "payment_completed";
+  | "checkout_start" | "checkout_created" | "payment_completed" | "share";
 
 function visitorId(): string {
   const key = "idb_visitor_id";
@@ -39,4 +39,3 @@ export async function trackEvent(eventName: ConversionEvent, metadata: Record<st
     // Analytics never blocks the user journey.
   }
 }
-
