@@ -2,6 +2,12 @@ name: Deploy Supabase Backend
 
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+      - ".github/workflows/deploy-edge-functions.yml"
 
 jobs:
   deploy-functions:
