@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "@/hooks/useRouter";
 import SitePromoBanner from "@/components/SitePromoBanner";
+import { trackEvent } from "@/lib/analytics";
 import {
   ArrowLeft,
   MapPin,
@@ -61,6 +62,26 @@ interface Ad {
   weight: number | null;
   created_at: string;
   user_id: string;
+}
+
+function setMetaProperty(property: string, content: string) {
+  let meta = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute("property", property);
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+}
+
+function setMetaName(name: string, content: string) {
+  let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = name;
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
 }
 
 export default function AdDetail() {
@@ -124,6 +145,10 @@ export default function AdDetail() {
       document.head.appendChild(linkCanonical);
     }
     linkCanonical.setAttribute("href", window.location.href.split("?")[0]);
+    const shareImage = ad.images?.[0] || ad.image || "https://incontridibakeka.com/images/site-promo-banner.png";
+    setMetaProperty("og:image", shareImage);
+    setMetaProperty("og:url", window.location.href.split("?")[0]);
+    setMetaName("twitter:image", shareImage);
 
     const oldBreadcrumb = document.getElementById("ld-breadcrumb");
     if (oldBreadcrumb) oldBreadcrumb.remove();
@@ -168,8 +193,13 @@ export default function AdDetail() {
 
   const handleShare = async () => {
     try {
+      void trackEvent("share", { ad_id: ad?.id, city: ad?.city });
+      if (navigator.share && ad) {
+        await navigator.share({ title: ad.title, text: `Guarda questo annuncio a ${ad.city}`, url: window.location.href });
+        return;
+      }
       await navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copiato negli appunti!");
+      toast.success("Link copiato: condividilo dove preferisci!");
     } catch {
       toast.error("Errore copia link");
     }
