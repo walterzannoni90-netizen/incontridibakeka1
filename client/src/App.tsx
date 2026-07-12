@@ -4,6 +4,7 @@ import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { lazy, Suspense, useEffect } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 const Home = lazy(() => import("./pages/Home"));
 const CityPage = lazy(() => import("./pages/CityPage"));
@@ -40,6 +41,14 @@ function HomePage() {
   return <Home />;
 }
 
+function ConversionTracker() {
+  const [location] = useLocation();
+  useEffect(() => {
+    void trackEvent("page_view");
+  }, [location]);
+  return null;
+}
+
 function Router() {
   return (
     <Suspense
@@ -50,6 +59,7 @@ function Router() {
       )}
     >
       <SpaRedirect />
+      <ConversionTracker />
       <Switch>
         <Route path={"/"} component={HomePage} />
         <Route path={"/incontri/:city"} component={CityPage} />

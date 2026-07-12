@@ -13,6 +13,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Coins } from "lucide-react";
 import SitePromoBanner from "@/components/SitePromoBanner";
+import { trackEvent } from "@/lib/analytics";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -273,6 +274,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
         console.error("Errore aggiornamento crediti:", e);
       }
     }
+    void trackEvent("payment_completed");
     alert("Pagamento riuscito! I crediti sono stati aggiunti.");
   };
 
@@ -428,8 +430,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     try {
       if (authModal === "register") {
         await register(authForm.email, authForm.password, authForm.name || authForm.email.split("@")[0]);
+        void trackEvent("sign_up");
       } else {
         await login(authForm.email, authForm.password);
+        void trackEvent("login");
       }
       setAuthModal(null);
       setAuthForm({ name: "", email: "", password: "" });
@@ -568,6 +572,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       setVetrinaStartAt("");
       setLimitMessage(null);
       await loadAds(true);
+      void trackEvent("ad_publish", { category: publishForm.category, city: publishForm.city });
       setSuccessModal({ title: publishForm.title, vetrina: vetrinaApplied });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Errore pubblicazione.");

@@ -174,6 +174,7 @@ export default function AdminPanel() {
   const [manualCredits, setManualCredits] = useState(10);
   const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
   const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
+  const [conversionEvents, setConversionEvents] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!supabase || !isAdmin) return;
@@ -189,6 +190,17 @@ export default function AdminPanel() {
       }
       const { data: top } = await supabase.from("ads").select("title,phone,views").order("views", { ascending: false }).limit(5);
       if (top) setTopAds(top as any);
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: events } = await supabase
+        .from("analytics_events")
+        .select("event_name")
+        .gte("created_at", since);
+      if (events) {
+        setConversionEvents(events.reduce<Record<string, number>>((result, event) => {
+          result[event.event_name] = (result[event.event_name] ?? 0) + 1;
+          return result;
+        }, {}));
+      }
     })();
   }, [isAdmin]);
 
@@ -644,6 +656,31 @@ export default function AdminPanel() {
                   </div>
                 </Card>
               </div>
+            )}
+
+            {activeTab === "overview" && (
+              <Card className="mt-6 p-6">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">Conversioni ultimi 30 giorni</h3>
+                    <p className="text-xs text-muted-foreground">Dati proprietari, senza IP o user-agent</p>
+                  </div>
+                  <Badge variant="secondary">Live</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {[
+                    ["page_view", "Visite"],
+                    ["sign_up", "Registrazioni"],
+                    ["ad_publish", "Annunci pubblicati"],
+                    ["checkout_created", "Checkout creati"],
+                  ].map(([event, label]) => (
+                    <div key={event} className="rounded-xl border border-border bg-muted/30 p-4">
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="mt-1 text-2xl font-bold">{conversionEvents[event] ?? 0}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             )}
 
             {activeTab === "users" && (
