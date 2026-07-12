@@ -238,7 +238,7 @@ export default function MyAds() {
         >
           <div className="flex flex-wrap gap-2">
             <Badge className="border-white/20 bg-white/10 px-3 py-2 text-white">{ads.length} annunci</Badge>
-            {user.has_paid && <Badge className="border-0 bg-emerald-400 px-3 py-2 text-emerald-950"><CheckCircle2 className="mr-1 h-3 w-3" /> Premium</Badge>}
+            {user.has_paid && <Badge className="border-0 bg-emerald-400 px-3 py-2 text-emerald-950"><CheckCircle2 className="mr-1 h-3 w-3" /> Cliente</Badge>}
           </div>
         </PageIntro>
 

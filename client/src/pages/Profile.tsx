@@ -522,7 +522,7 @@ export default function Profile() {
               </div>
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Tipo account</span>
-                <span>{user.has_paid ? <Badge className="bg-amber-500">Premium</Badge> : "Gratuito"}</span>
+                <span>{user.has_paid ? <Badge className="bg-emerald-600">Cliente</Badge> : "Nessun acquisto"}</span>
               </div>
               <div className="flex justify-between py-2">
                 <span className="text-muted-foreground">Annunci pubblicati</span>

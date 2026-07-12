@@ -720,7 +720,7 @@ export default function AdminPanel() {
                             <p className="text-sm text-muted-foreground truncate">{u.email}</p>
                             <div className="flex flex-wrap gap-1.5 mt-1.5">
                               <Badge variant={u.has_paid ? "default" : "secondary"} className={`text-xs ${u.has_paid ? "bg-amber-500 hover:bg-amber-600 border-0" : ""}`}>
-                                {u.has_paid ? "Premium" : "Gratuito"}
+                                {u.has_paid ? "Cliente" : "Nessun acquisto"}
                               </Badge>
                               <Badge variant="outline" className="text-xs">{u.credits} crediti</Badge>
                               <Badge variant="outline" className="text-xs">{u.ads_count || 0} annunci</Badge>
