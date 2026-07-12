@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { trackEvent } from "@/lib/analytics";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -19,6 +20,8 @@ export function useStripe() {
         const accessToken = sessionData.session?.access_token;
         if (!accessToken) throw new Error("Sessione scaduta: accedi di nuovo");
 
+        void trackEvent("checkout_start", { credits });
+
         const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
           method: "POST",
           headers: {
@@ -35,6 +38,7 @@ export function useStripe() {
         }
 
         if (data.url) {
+          void trackEvent("checkout_created", { credits });
           window.location.href = data.url;
         } else {
           throw new Error("Stripe non ha restituito un URL di checkout");
