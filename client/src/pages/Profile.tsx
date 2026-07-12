@@ -149,13 +149,9 @@ export default function Profile() {
         toast.error("Crediti insufficienti");
         return;
       }
-      setBoostStep("Preparazione...");
-      await new Promise(r => setTimeout(r, 400));
       setBoostStep("Aggiornamento annuncio...");
-      await new Promise(r => setTimeout(r, 500));
       const result = await purchaseBoost({ adId, days, type });
       setBoostStep("Aggiornamento crediti...");
-      await new Promise(r => setTimeout(r, 400));
       updateUser({ credits: result.remaining_credits });
       setBoostStep("Completato! 🎉");
       setShowConfetti(true);
@@ -392,8 +388,8 @@ export default function Profile() {
                           Nessuna immagine
                         </div>
                       )}
-                      {(ad.is_premium || ad.has_paid) && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
-                      {ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />Sponsorizzato</Badge>}
+                    {!!ad.boosted_until && Date.now() < new Date(ad.boosted_until).getTime() && ad.is_premium && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
+                      {!!ad.boosted_until && Date.now() < new Date(ad.boosted_until).getTime() && ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />Sponsorizzato</Badge>}
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold truncate">{ad.title}</h3>
@@ -425,7 +421,7 @@ export default function Profile() {
                               <button
                                 key={opt.type + opt.days}
                                 onClick={() => handleBoost(ad.id, opt.credits, opt.days, opt.type)}
-                                disabled={!!isBusy}
+                                disabled={!!busyBoost || !canAfford}
                                 className={`relative group rounded-xl p-2.5 text-left transition-all duration-300 border ${
                                   canAfford
                                     ? "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40 border-purple-200 dark:border-purple-800 hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-0.5"

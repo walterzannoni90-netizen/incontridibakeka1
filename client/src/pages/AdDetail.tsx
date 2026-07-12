@@ -11,7 +11,6 @@ import {
   MapPin,
   Phone,
   MessageCircle,
-  Star,
   Eye,
   Crown,
   Zap,
@@ -51,6 +50,7 @@ interface Ad {
   rating: number;
   review_count: number;
   views: number;
+  boosted_until?: string | null;
   hair_color: string | null;
   body_type: string | null;
   ethnicity: string | null;
@@ -211,19 +211,21 @@ export default function AdDetail() {
   }
 
   const allImages = ad.images?.length ? ad.images : ad.image ? [ad.image] : [];
+  const boostActive = !!ad.boosted_until && Date.now() < new Date(ad.boosted_until).getTime();
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8">
         <Button variant="ghost" onClick={() => navigate("/")} className="mb-6 gap-2">
           <ArrowLeft className="w-4 h-4" />
           Torna agli annunci
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="relative grid grid-cols-1 gap-8 overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-50/70 p-4 shadow-2xl shadow-violet-950/10 md:p-7 lg:grid-cols-[1.08fr_.92fr] dark:border-violet-900/50 dark:from-background dark:via-background dark:to-violet-950/20">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-fuchsia-400/10 blur-3xl" />
           {/* Images migliorato */}
           <div className="animate-fade-up">
-            <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted mb-4 group">
+            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-muted mb-4 group shadow-lg">
               {allImages.length > 0 ? (
                 <>
                   <img
@@ -256,12 +258,12 @@ export default function AdDetail() {
                   📸 Nessuna immagine
                 </div>
               )}
-              {(ad.is_premium || ad.has_paid) && !ad.is_sponsored && (
+              {boostActive && ad.is_premium && !ad.is_sponsored && (
                 <Badge className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0 shadow-lg">
                   <Crown className="w-3 h-3 mr-1" /> Premium
                 </Badge>
               )}
-              {ad.is_sponsored && (
+              {boostActive && ad.is_sponsored && (
                 <Badge className="absolute top-3 right-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 shadow-lg">
                   <Zap className="w-3 h-3 mr-1" /> In Vetrina
                 </Badge>
@@ -291,7 +293,7 @@ export default function AdDetail() {
           </div>
 
           {/* Info migliorato */}
-          <div className="animate-fade-up" style={{ animationDelay: "0.1s" }}>
+          <div className="relative animate-fade-up lg:py-2" style={{ animationDelay: "0.1s" }}>
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold mb-2 font-poppins">{ad.title}</h1>
@@ -315,11 +317,6 @@ export default function AdDetail() {
             </div>
 
             <div className="flex items-center gap-4 mb-4 flex-wrap">
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-accent fill-accent" />
-                <span className="font-medium">{ad.rating}</span>
-                <span className="text-muted-foreground text-sm">({ad.review_count})</span>
-              </div>
               <div className="flex items-center gap-1 text-muted-foreground text-sm">
                 <Eye className="w-4 h-4" />
                 {ad.views} visualizzazioni
@@ -415,7 +412,7 @@ export default function AdDetail() {
               </div>
             )}
              {/* Pulsanti contatto migliorati */}
-            <div className="flex gap-3 mb-6">
+            <div className="sticky bottom-3 z-10 flex gap-3 rounded-2xl border border-border/70 bg-background/90 p-2 mb-6 shadow-xl backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
               {ad.whatsapp && (
                 <Button
                   variant={ad.calls_only ? "outline" : "default"}

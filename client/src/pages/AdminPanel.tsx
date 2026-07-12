@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
+import PageIntro from "@/components/PageIntro";
 import {
   ArrowLeft,
   Users,
@@ -89,6 +90,7 @@ interface AdRow {
   has_paid?: boolean;
   created_at: string;
   views: number;
+  boosted_until?: string | null;
   profiles?: { name: string; email: string } | null;
 }
 
@@ -504,21 +506,28 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-5">
           <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             Torna agli annunci
           </Button>
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            <span className="font-semibold">Pannello Admin</span>
-            <Button variant="outline" size="icon" className="ml-2" onClick={() => loadData()} title="Aggiorna">
+            <Button variant="outline" size="icon" onClick={() => loadData()} title="Aggiorna">
               <RefreshCw className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6 overflow-x-auto flex-wrap">
+        <PageIntro
+          eyebrow="Centro di controllo"
+          title="Pannello amministrazione"
+          description="Monitora crescita, annunci, utenti, pagamenti e sicurezza della piattaforma con dati aggiornati."
+          icon={Shield}
+        >
+          <Badge className="border-white/20 bg-white/10 px-3 py-2 text-white"><CheckCircle className="mr-1 h-4 w-4" /> Sistema operativo</Badge>
+        </PageIntro>
+
+        <div className="sticky top-2 z-20 mb-6 flex gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-background/90 p-2 shadow-sm backdrop-blur-xl">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -556,7 +565,7 @@ export default function AdminPanel() {
           <>
             {activeTab === "overview" && stats && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="p-6">
+                <Card className="rounded-2xl border-blue-200/60 bg-gradient-to-br from-blue-50 to-background p-6 shadow-sm dark:border-blue-900/50 dark:from-blue-950/30">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><Users className="w-6 h-6 text-blue-600" /></div>
                     <div>
@@ -565,7 +574,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 </Card>
-                <Card className="p-6">
+                <Card className="rounded-2xl border-green-200/60 bg-gradient-to-br from-green-50 to-background p-6 shadow-sm dark:border-green-900/50 dark:from-green-950/30">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg"><Store className="w-6 h-6 text-green-600" /></div>
                     <div>
@@ -574,7 +583,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 </Card>
-                <Card className="p-6">
+                <Card className="rounded-2xl border-purple-200/60 bg-gradient-to-br from-purple-50 to-background p-6 shadow-sm dark:border-purple-900/50 dark:from-purple-950/30">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg"><Eye className="w-6 h-6 text-purple-600" /></div>
                     <div>
@@ -790,7 +799,7 @@ export default function AdminPanel() {
                             <div className="flex items-center gap-2">
                               <p className="font-medium truncate">{ad.title}</p>
                               {ad.is_sponsored && <Badge variant="default" className="shrink-0 bg-amber-500 hover:bg-amber-600">Sponsor</Badge>}
-                              {(ad.is_premium || ad.has_paid) && <Badge variant="secondary" className="shrink-0">Premium</Badge>}
+                              {!!ad.boosted_until && Date.now() < new Date(ad.boosted_until).getTime() && ad.is_premium && <Badge variant="secondary" className="shrink-0">Premium</Badge>}
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
                               {ad.city} · {ad.category} · {ad.views} views

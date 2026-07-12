@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
 import { purchaseBoost } from "@/lib/boost";
+import PageIntro from "@/components/PageIntro";
 import {
   ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, CheckCircle2, ImagePlus
 } from "lucide-react";
@@ -104,13 +105,9 @@ export default function MyAds() {
         toast.error("Crediti insufficienti");
         return;
       }
-      setBoostStep("Preparazione...");
-      await new Promise(r => setTimeout(r, 400));
       setBoostStep("Aggiornamento annuncio...");
-      await new Promise(r => setTimeout(r, 500));
       const result = await purchaseBoost({ adId, days, type });
       setBoostStep("Aggiornamento crediti...");
-      await new Promise(r => setTimeout(r, 400));
       updateUser({ credits: result.remaining_credits });
       setBoostStep("Completato! 🎉");
       setShowConfetti(true);
@@ -223,7 +220,7 @@ export default function MyAds() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-5">
           <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
             <ArrowLeft className="w-4 h-4" /> Torna agli annunci
           </Button>
@@ -233,15 +230,17 @@ export default function MyAds() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <h1 className="text-3xl font-bold">I miei annunci</h1>
-          <Badge variant="outline" className="text-sm">{ads.length} totali</Badge>
-          {user.has_paid && (
-            <Badge className="bg-green-500/10 text-green-600 border-green-200 dark:border-green-800 gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Pagante
-            </Badge>
-          )}
-        </div>
+        <PageIntro
+          eyebrow="Il tuo spazio"
+          title="I miei annunci"
+          description="Controlla risultati, aggiorna i contenuti e aumenta la visibilità dei tuoi annunci da un'unica schermata."
+          icon={Rocket}
+        >
+          <div className="flex flex-wrap gap-2">
+            <Badge className="border-white/20 bg-white/10 px-3 py-2 text-white">{ads.length} annunci</Badge>
+            {user.has_paid && <Badge className="border-0 bg-emerald-400 px-3 py-2 text-emerald-950"><CheckCircle2 className="mr-1 h-3 w-3" /> Premium</Badge>}
+          </div>
+        </PageIntro>
 
         {loadingAds ? (
           <div className="flex justify-center py-12">
@@ -259,19 +258,19 @@ export default function MyAds() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {ads.map((ad) => {
               const boostActive = ad.boosted_until && new Date(ad.boosted_until).getTime() > Date.now();
-              const isBoosted = boostActive || ad.is_premium || ad.is_sponsored || ad.has_paid;
+              const isBoosted = !!boostActive;
               return (
-                <Card key={ad.id} className="overflow-hidden">
+                <Card key={ad.id} className="group overflow-hidden rounded-2xl border-border/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-950/10">
                   <div className="relative aspect-video bg-muted">
                     {ad.image ? (
-                      <img src={ad.image} alt={ad.title} className="w-full h-full object-cover" />
+                      <img src={ad.image} alt={ad.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
                         Nessuna immagine
                       </div>
                     )}
-                    {(ad.is_premium || ad.has_paid) && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
-                    {ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />In Vetrina</Badge>}
+                    {boostActive && ad.is_premium && <Badge className="absolute top-2 left-2 bg-yellow-500"><Crown className="w-3 h-3 mr-1" />Premium</Badge>}
+                    {boostActive && ad.is_sponsored && <Badge className="absolute top-2 right-2 bg-purple-500"><Zap className="w-3 h-3 mr-1" />In Vetrina</Badge>}
                     {!isBoosted && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <Badge className="bg-gray-800/80 text-white text-xs px-3 py-1.5">
@@ -321,13 +320,14 @@ export default function MyAds() {
                       <div className="grid grid-cols-2 gap-2">
                         {BOOST_OPTIONS.map((opt) => {
                           const Icon = opt.icon;
-                          const isBusy = busyBoost === ad.id + opt.label;
+                          const type = opt.label.includes("Premium") ? "premium" : "vetrina";
+                          const isBusy = busyBoost === ad.id + type + opt.days;
                           const canAfford = (user.credits || 0) >= opt.credits;
                           return (
                             <button
                               key={opt.label}
-                              onClick={() => handleBoost(ad.id, opt.credits, opt.days, opt.label.includes("Premium") ? "premium" : "vetrina")}
-                              disabled={!!isBusy}
+                              onClick={() => handleBoost(ad.id, opt.credits, opt.days, type)}
+                              disabled={!!busyBoost || !canAfford}
                               className={`relative group rounded-xl p-2.5 text-left transition-all duration-300 border ${
                                 canAfford
                                   ? "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40 border-purple-200 dark:border-purple-800 hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-0.5"
