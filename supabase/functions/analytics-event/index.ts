@@ -7,7 +7,7 @@ const SITE_URL = (Deno.env.get("SITE_URL") ?? "https://incontridibakeka.com").re
 
 const allowedEvents = new Set([
   "page_view", "sign_up", "login", "ad_publish", "contact_open",
-  "checkout_start", "checkout_created", "payment_completed",
+  "checkout_start", "checkout_created", "payment_completed", "share",
 ]);
 
 function headers(origin: string | null) {
@@ -73,4 +73,3 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Evento non registrato" }), { status: 500, headers: headers(origin) });
   }
 });
-
