@@ -10,19 +10,6 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || "";
 const SITE_URL = process.env.SITE_URL || "https://incontridibakeka.com";
 const OUTPUT_DIR = resolve(__dirname, "..", "dist", "public");
 
-const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna cerca uomo", priority: "0.9" },
-  { id: "uomo-cerca-donna", name: "Uomo cerca donna", priority: "0.9" },
-  { id: "donna-cerca-donna", name: "Donna cerca donna", priority: "0.8" },
-  { id: "uomo-cerca-uomo", name: "Uomo cerca uomo", priority: "0.8" },
-  { id: "trans", name: "Trans", priority: "0.8" },
-  { id: "coppie", name: "Coppie", priority: "0.8" },
-  { id: "massaggi", name: "Massaggi", priority: "0.7" },
-  { id: "accompagnatrici", name: "Accompagnatrici", priority: "0.8" },
-  { id: "evento-festa", name: "Eventi & Feste", priority: "0.7" },
-  { id: "amicizia", name: "Amicizia", priority: "0.7" },
-];
-
 const CITIES = [
   "Roma", "Milano", "Napoli", "Torino", "Firenze", "Bologna", "Genova",
   "Palermo", "Bari", "Catania", "Venezia", "Verona", "Brescia", "Padova",
@@ -64,7 +51,6 @@ async function main() {
 
   // Static pages
   urls.push({ loc: `${SITE_URL}/shop`, changefreq: "weekly", priority: "0.6" });
-  urls.push({ loc: `${SITE_URL}/my-ads`, changefreq: "weekly", priority: "0.5" });
   urls.push({ loc: `${SITE_URL}/blog`, changefreq: "daily", priority: "0.8" });
 
   // Blog articles - all from blog-data.ts (static HTML, return HTTP 200)
@@ -112,32 +98,6 @@ async function main() {
       changefreq: "daily",
       priority: "0.9",
     });
-    // Also add category+city combinations for top categories
-    for (const cat of CATEGORIES.slice(0, 5)) {
-      urls.push({
-        loc: `${SITE_URL}/incontri/${slug}?cat=${cat.id}`,
-        changefreq: "daily",
-        priority: "0.8",
-      });
-    }
-  }
-
-  // Category pages
-  for (const cat of CATEGORIES) {
-    urls.push({
-      loc: `${SITE_URL}?cat=${cat.id}`,
-      changefreq: "daily",
-      priority: cat.priority,
-    });
-    // Also city+category
-    const topCities = CITIES.slice(0, 10);
-    for (const city of topCities) {
-      urls.push({
-        loc: `${SITE_URL}/incontri/${slugify(city)}?cat=${cat.id}`,
-        changefreq: "daily",
-        priority: "0.8",
-      });
-    }
   }
 
   // Try to fetch ads from Supabase for individual ad URLs
