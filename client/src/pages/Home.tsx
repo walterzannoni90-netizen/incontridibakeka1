@@ -1324,6 +1324,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
         </section>
 
+        <SitePromoBanner variant="boost" compact />
+
         {/* TRUST BADGES SECTION */}
         <section className="py-8 md:py-12 bg-muted/30 border-t border-border">
           <div className="container">
