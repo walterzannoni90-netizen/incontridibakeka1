@@ -12,6 +12,7 @@ import { purchaseBoost } from "@/lib/boost";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Zap, Coins } from "lucide-react";
+import SitePromoBanner from "@/components/SitePromoBanner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -1067,6 +1068,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
         </section>
 
+        <SitePromoBanner variant="discover" />
+
         {/* CATEGORIES */}
         <section className="py-8 md:py-16 bg-muted/30">
           <div className="container">
@@ -1107,6 +1110,8 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
           </div>
         </section>
+
+        <SitePromoBanner variant="publish" />
 
         {/* ADS SECTION */}
         <section className="py-8 md:py-16" id="ads-section">
