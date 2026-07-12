@@ -78,7 +78,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          <SitePromoBanner />
+          <SitePromoBanner variant="safe" compact />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
