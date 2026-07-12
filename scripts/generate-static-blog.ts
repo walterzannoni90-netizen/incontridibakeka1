@@ -48,11 +48,15 @@ function generateArticleHtml(article: typeof blogArticles[0]): string {
     <div class="nav"><a href="/">Visita Incontri di Bakeka →</a></div>
   </main>
   <footer>
-    <p>&copy; 2026 Incontri di Bakeka - La migliore alternativa italiana per incontri</p>
+    <p>&copy; 2026 Incontri di Bakeka - Guide, annunci e nuove connessioni</p>
   </footer>
 </body>
 </html>`;
 }
+
+const blogDir = path.join(PUBLIC_DIR, 'blog');
+fs.rmSync(blogDir, { recursive: true, force: true });
+fs.mkdirSync(blogDir, { recursive: true });
 
 let count = 0;
 for (const article of blogArticles) {
@@ -63,9 +67,6 @@ for (const article of blogArticles) {
 }
 
 // Blog listing page
-const blogDir = path.join(PUBLIC_DIR, 'blog');
-fs.mkdirSync(blogDir, { recursive: true });
-
 const listItems = blogArticles.map(a => {
   const t = htmlEscape(a.title);
   const cat = htmlEscape(a.categoryTitle);
