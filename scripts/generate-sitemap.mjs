@@ -62,10 +62,6 @@ async function main() {
   // Homepage
   urls.push({ loc: `${SITE_URL}/`, changefreq: "daily", priority: "1.0" });
 
-  // Competitor redirect pages (static HTML, HTTP 200)
-  urls.push({ loc: `${SITE_URL}/bakecaincontrii-com.html`, changefreq: "daily", priority: "1.0" });
-  urls.push({ loc: `${SITE_URL}/bakecaincontrii-com/`, changefreq: "daily", priority: "1.0" });
-
   // Static pages
   urls.push({ loc: `${SITE_URL}/shop`, changefreq: "weekly", priority: "0.6" });
   urls.push({ loc: `${SITE_URL}/my-ads`, changefreq: "weekly", priority: "0.5" });
@@ -73,7 +69,7 @@ async function main() {
 
   // Blog articles - all from blog-data.ts (static HTML, return HTTP 200)
   const BLOG_SLUGS = [
-    "bakecaincontrii-com","incontri-sicuri-italia","profilo-perfetto-incontri","bakeca-incontri-alternativa","premium-vs-gratuito",
+    "incontri-sicuri-italia","profilo-perfetto-incontri","premium-vs-gratuito",
     "incontri-roma","escort-roma","trans-roma","uomo-cerca-uomo-roma",
     "incontri-milano","escort-milano","trans-milano","uomo-cerca-uomo-milano",
     "incontri-napoli","escort-napoli","trans-napoli","uomo-cerca-uomo-napoli",

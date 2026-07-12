@@ -12,7 +12,7 @@ export interface BlogArticle {
   date: string;
 }
 
-export const blogArticles: BlogArticle[] = [
+const rawBlogArticles: BlogArticle[] = [
   {
     title: `bakecaincontrii.com — Alternativa Moderna e Verificata`,
     slug: "bakecaincontrii-com",
@@ -3242,6 +3242,35 @@ I nostri vantaggi a Trento
 Registrati gratis su Incontri di Bakeka. La migliore alternativa a bakecaincontrii.com per uomo cerca uomo a Trento.`,
   },
 ];
+
+const externalReference = /bakecaincontrii|bakeca incontri|bacheca incontri|\balternativa\b/i;
+const unsupportedClaim = /verificat[ioe].*manual|tutti i profili.*verificat|niente fake|privacy garantita/i;
+
+function cleanBlogText(text: string): string {
+  const cleaned = text
+    .split("\n")
+    .filter(line => !externalReference.test(line) && !unsupportedClaim.test(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return cleaned;
+}
+
+export const blogArticles: BlogArticle[] = rawBlogArticles
+  .filter(article => !externalReference.test(article.title) && !externalReference.test(article.slug))
+  .map(article => {
+    const excerpt = cleanBlogText(article.excerpt);
+    const content = cleanBlogText(article.content);
+    const location = article.city ? ` a ${article.city}` : " in Italia";
+    return {
+      ...article,
+      title: article.title.replace(/\s*\|.*$/g, "").trim(),
+      excerpt: excerpt || `Scopri consigli, informazioni e strumenti di Incontri di Bakeka${location}.`,
+      content: content.length > 120
+        ? content
+        : `Incontri di Bakeka raccoglie annunci e strumenti per creare nuove connessioni${location}.\n\n## Come usare la piattaforma\n\nConsulta gli annunci disponibili, scegli la categoria e la città, poi utilizza i canali di contatto indicati dall'autore.\n\n## Sicurezza e rispetto\n\nProteggi i tuoi dati personali, usa le segnalazioni quando necessario e organizza ogni incontro con prudenza e consenso.`,
+    };
+  });
 
 export function getArticleBySlug(slug: string): BlogArticle | undefined {
   return blogArticles.find(a => a.slug === slug);
