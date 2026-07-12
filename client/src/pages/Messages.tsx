@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
+import PageIntro from "@/components/PageIntro";
 import { ArrowLeft, MessageCircle, Send, Loader2 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -167,13 +168,14 @@ export default function Messages() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" onClick={() => selectedConv || convId ? navigate("/messages") : navigate("/")} className="gap-2">
             <ArrowLeft className="w-4 h-4" /> {selectedConv || convId ? "Torna ai messaggi" : "Home"}
           </Button>
-          <h1 className="text-xl font-bold font-poppins">Messaggi</h1>
-          <div className="w-20" />
+          <div />
         </div>
+
+        <PageIntro eyebrow="Conversazioni private" title="I tuoi messaggi" description="Tieni le conversazioni organizzate e rispondi in modo semplice e riservato." icon={MessageCircle} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Conversations list */}
@@ -225,7 +227,7 @@ export default function Messages() {
                 <p className="text-muted-foreground">Seleziona una conversazione</p>
               </Card>
             ) : (
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden rounded-3xl border-border/70 shadow-lg shadow-slate-950/5">
                 <div className="p-3 border-b bg-muted/30 flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-sm font-bold text-primary">
                     {otherPartyName(activeConv).charAt(0).toUpperCase()}

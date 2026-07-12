@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
+import PageIntro from "@/components/PageIntro";
 import { purchaseBoost } from "@/lib/boost";
 import {
   ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, User, Phone, Save, X, LogOut, Sparkles, Package, Rocket, ImagePlus
@@ -287,8 +288,10 @@ export default function Profile() {
           </Button>
         </div>
 
+        <PageIntro eyebrow="Area personale" title="Gestisci il tuo profilo" description="Aggiorna i dati, controlla gli annunci e usa i crediti per aumentare la visibilità." icon={User} />
+
         {/* Profilo Card */}
-        <Card className="p-6 mb-8">
+        <Card className="p-6 mb-8 rounded-3xl border-border/70 shadow-lg shadow-slate-950/5">
           <div className="flex items-start gap-5">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold shrink-0">
               {user.name?.charAt(0).toUpperCase() || "?"}

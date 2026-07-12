@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStripe } from "@/hooks/useStripe";
 import { useRouter } from "@/hooks/useRouter";
 import { ArrowLeft, Zap, CheckCircle, Loader2, Coins } from "lucide-react";
+import PageIntro from "@/components/PageIntro";
 
 const CREDIT_PACKS = [
   { credits: 10, price: 4.99, popular: false, features: ["Rendi Premium per 1 giorno", "Risali nei risultati 2 volte"] },
@@ -94,18 +95,12 @@ export default function Shop() {
           Torna agli annunci
         </Button>
 
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-cyan-500 bg-clip-text text-transparent">
-            Acquista Crediti
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Potenzia i tuoi annunci con i crediti. Rendi premium, metti in vetrina e ottieni più visibilità.
-          </p>
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
+        <PageIntro eyebrow="Visibilità e risultati" title="Dai più forza ai tuoi annunci" description="Scegli un pacchetto, paga in sicurezza con Stripe e usa i crediti per vetrina e promozioni." icon={Coins}>
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
             <Coins className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Crediti disponibili: {user.credits || 0}</span>
+            <span className="text-sm font-semibold text-white">Saldo: {user.credits || 0} crediti</span>
           </div>
-        </div>
+        </PageIntro>
 
         {verifying && (
           <Card className="mb-6 p-4 text-center bg-yellow-50 border-yellow-200">
@@ -118,7 +113,7 @@ export default function Shop() {
           {CREDIT_PACKS.map((pack) => (
             <Card
               key={pack.credits}
-              className={`relative p-6 transition-all hover:shadow-lg ${
+              className={`relative rounded-3xl p-6 transition-all hover:-translate-y-1 hover:shadow-xl ${
                 pack.popular
                   ? "border-2 border-primary shadow-lg scale-105"
                   : "border border-border"
