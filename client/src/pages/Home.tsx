@@ -1074,27 +1074,27 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             Sfoglia per Categoria
           </h2>
           <p className="text-center text-muted-foreground mb-6 md:mb-12">Trova esattamente quello che cerchi</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-5">
             {CATEGORIES.map((cat) => (
               <Card
                 key={cat.id}
-                className="overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all duration-300 group border-0"
+                className="overflow-hidden cursor-pointer border border-border/60 bg-card shadow-sm transition-all duration-300 group hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-xl"
                 onClick={() => {
                   setCategoryFilter(categoryFilter === cat.id ? null : cat.id);
                   document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
-                <div className="relative h-40 overflow-hidden bg-muted">
+                <div className="relative aspect-[4/5] overflow-hidden bg-muted sm:aspect-[4/3] lg:aspect-[4/5]">
                   <img
                     src={cat.image}
                     alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="h-full w-full object-cover saturate-[.92] transition duration-700 group-hover:scale-105 group-hover:saturate-110"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:from-black/60 transition-all" />
-                  <div className="absolute inset-x-0 bottom-0 p-3 text-center">
-                    <p className="text-xs md:text-sm font-bold text-white drop-shadow">{cat.name}</p>
-                    <p className="text-[10px] text-white/70 mt-0.5">{cat.count}</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent transition-all group-hover:from-black/75" />
+                  <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                    <p className="text-xs font-bold text-white drop-shadow md:text-sm">{cat.name}</p>
+                    <p className="mt-0.5 text-[10px] font-medium text-white/75">{cat.count}</p>
                   </div>
                   {categoryFilter === cat.id && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
