@@ -1,8 +1,8 @@
-import { ArrowRight, BadgeCheck, MapPin, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, Crown, MapPin, MessageCircle, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 
-type Variant = "discover" | "safe" | "publish";
+type Variant = "discover" | "safe" | "publish" | "boost";
 
 const content = {
   discover: {
@@ -31,6 +31,15 @@ const content = {
     href: "/#publish",
     Icon: Sparkles,
     theme: "from-fuchsia-950 via-purple-900/95 to-rose-900/70",
+  },
+  boost: {
+    eyebrow: "Più visibilità, quando vuoi",
+    title: "Porta il tuo annuncio in primo piano",
+    description: "Usa i crediti per attivare Vetrina o Premium scegliendo una durata chiara e reale.",
+    action: "Scopri crediti e Vetrina",
+    href: "/shop",
+    Icon: Zap,
+    theme: "from-amber-950 via-violet-950/95 to-fuchsia-900/75",
   },
 } satisfies Record<Variant, Record<string, unknown>>;
 
@@ -62,6 +71,11 @@ export default function SitePromoBanner({ variant = "discover", compact = false 
           loading="lazy"
         />
         <div className={`absolute inset-0 bg-gradient-to-r ${item.theme}`} />
+        <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full border border-white/20 bg-white/5 backdrop-blur-sm" />
+        <div className="absolute bottom-5 right-8 hidden rotate-3 items-center gap-3 rounded-2xl border border-white/20 bg-black/20 px-4 py-3 shadow-2xl backdrop-blur-md md:flex">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400 text-violet-950"><Crown className="h-5 w-5" /></span>
+          <div><p className="text-xs font-bold">Metti in evidenza</p><p className="text-[10px] text-white/65">Durata sempre visibile</p></div>
+        </div>
         <div className={`relative flex items-center px-5 ${compact ? "min-h-40 py-6 md:px-8" : "min-h-52 py-8 md:min-h-64 md:px-10"}`}>
           <div className="max-w-2xl">
             <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-cyan-200">

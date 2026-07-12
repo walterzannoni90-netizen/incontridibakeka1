@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Calendar } from "lucide-react";
 import { useEffect } from "react";
 import { blogArticles } from "@/data/blog-data";
+import SitePromoBanner from "@/components/SitePromoBanner";
 
 const ARTICLES_MAP: Record<string, typeof blogArticles[0]> = {};
 blogArticles.forEach(a => { ARTICLES_MAP[a.slug] = a; });
@@ -30,6 +31,8 @@ export default function BlogPost() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Torna al blog
           </Button>
         </div>
+
+        <SitePromoBanner variant="safe" compact />
       </div>
     );
   }
@@ -90,7 +93,7 @@ export default function BlogPost() {
 
         <div className="mt-12 p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border border-purple-200/50 dark:border-purple-800/30 text-center">
           <h3 className="font-bold text-lg mb-2">Pronto a conoscere persone nuove?</h3>
-          <p className="text-muted-foreground mb-4">Registrati su Incontri di Bakeka e scopri annunci verificati nella tua città. Alternativa moderna e sicura a bakecaincontrii.com.</p>
+          <p className="text-muted-foreground mb-4">Registrati su Incontri di Bakeka e scopri gli annunci disponibili nella tua città.</p>
           <Button size="lg" onClick={() => navigate("/")}>
             Vedi gli annunci
           </Button>

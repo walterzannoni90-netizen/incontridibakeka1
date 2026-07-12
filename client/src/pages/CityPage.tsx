@@ -26,12 +26,12 @@ export default function CityPage() {
       if (metaDesc) {
         metaDesc.setAttribute(
           "content",
-          `Trova annunci di incontri a ${cityName}. Profili verificati, annunci reali. ${cityName} incontri, amicizie e molto altro su Incontri di Bakeka.`
+          `Trova annunci di incontri pubblicati a ${cityName}. Incontri, amicizie e nuove connessioni su Incontri di Bakeka.`
         );
       } else {
         const meta = document.createElement("meta");
         meta.name = "description";
-        meta.content = `Trova annunci di incontri a ${cityName}. Profili verificati, annunci reali. ${cityName} incontri, amicizie e molto altro su Incontri di Bakeka.`;
+        meta.content = `Trova annunci di incontri pubblicati a ${cityName}. Incontri, amicizie e nuove connessioni su Incontri di Bakeka.`;
         document.head.appendChild(meta);
       }
 

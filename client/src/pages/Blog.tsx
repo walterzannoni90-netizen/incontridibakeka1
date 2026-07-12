@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { blogArticles } from "@/data/blog-data";
+import SitePromoBanner from "@/components/SitePromoBanner";
 
 const CITIES = [
   "Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna",
@@ -40,10 +41,12 @@ export default function Blog() {
           </Button>
           <h1 className="text-4xl md:text-5xl font-bold font-poppins mb-4">Blog — Guide e Consigli</h1>
           <p className="text-lg text-white/70 max-w-2xl">
-            Oltre 100 guide per incontri in tutte le città italiane. La migliore alternativa a bakecaincontrii.com con profili verificati.
+            Oltre 100 guide per orientarsi tra annunci, privacy e incontri nelle città italiane.
           </p>
         </div>
       </section>
+
+      <SitePromoBanner variant="discover" compact />
 
       <div className="max-w-5xl mx-auto px-4 py-12">
         {CATEGORIES.map(cat => {
@@ -106,16 +109,16 @@ export default function Blog() {
           <h2 className="text-xl font-bold font-poppins mb-4">Perché scegliere Incontri di Bakeka</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-muted-foreground">
             <div>
-              <h3 className="font-semibold text-foreground mb-2">✅ Profili verificati</h3>
-              <p>Tutti i profili sono controllati manualmente. Alternativa affidabile a bakecaincontrii.com.</p>
+              <h3 className="font-semibold text-foreground mb-2">✅ Controlli e segnalazioni</h3>
+              <p>Ogni annuncio può essere segnalato e gestito dal pannello di moderazione.</p>
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-2">🛡️ Privacy garantita</h3>
-              <p>I tuoi dati sono al sicuro. Rispettiamo il GDPR e non condividiamo informazioni con terzi.</p>
+              <p>Messaggi riservati e strumenti pensati per limitare la diffusione dei dati personali.</p>
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-2">🇮🇹 Made in Italy</h3>
-              <p>Oltre 100 guide per incontri in tutte le città italiane. Da Nord a Sud, la community cresce ogni giorno.</p>
+              <p>Guide dedicate alle principali città italiane, da Nord a Sud.</p>
             </div>
           </div>
         </section>
