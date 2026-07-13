@@ -1518,18 +1518,18 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
             onClick={() => setPublishOpen(false)}
           >
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-6">
+            <Card className="w-full max-w-4xl max-h-[94vh] overflow-y-auto p-4 sm:p-7 relative border-violet-200 shadow-2xl dark:border-violet-900" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-6 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 p-4 text-white shadow-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/20">
                     <Sparkles className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold font-poppins">Pubblica Annuncio</h2>
-                    <p className="text-xs text-muted-foreground">Compila i campi e condividi il tuo profilo</p>
+                    <p className="text-xs text-white/80">Segui le sezioni, controlla l’anteprima e pubblica</p>
                   </div>
                 </div>
-                <button onClick={() => setPublishOpen(false)} className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">×</button>
+                <button onClick={() => setPublishOpen(false)} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors" aria-label="Chiudi">×</button>
               </div>
 
               {/* Messaggio limite giornaliero */}
@@ -1565,8 +1565,11 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   </div>
 
                   {/* UPLOAD FOTO */}
-                  <div className="mb-5">
-                    <Label className="mb-2 block">Foto {hasPaid ? `(max ${maxPhotos})` : `(max ${maxPhotos} - upgrade premium per 5)`}</Label>
+                  <div className="mb-6 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-4 dark:border-violet-900 dark:from-violet-950/30 dark:to-pink-950/20">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div><Label className="block text-base font-bold">1. Scegli le foto</Label><p className="text-xs text-muted-foreground">La prima foto sarà la copertina. Puoi rimuoverla con la X.</p></div>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-violet-700 shadow-sm dark:bg-background">{photoPreviewUrls.length}/{maxPhotos}</span>
+                    </div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -1583,10 +1586,10 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                             <button
                               type="button"
                               onClick={() => removePhoto(idx)}
-                              className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-1.5 right-1.5 flex h-8 w-8 items-center justify-center bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-transform hover:scale-110"
                               aria-label="Rimuovi foto"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <X className="w-4 h-4" />
                             </button>
                             {idx === 0 && (
                               <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[9px] px-1.5 py-0.5 rounded font-bold">Principale</span>
@@ -1615,7 +1618,9 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="mb-6 rounded-2xl border border-border bg-muted/20 p-4 sm:p-5">
+                    <div className="mb-4"><h3 className="text-base font-bold">2. Informazioni principali</h3><p className="text-xs text-muted-foreground">I campi con il punto colorato sono importanti per presentare bene l’annuncio.</p></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="md:col-span-2">
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -1735,6 +1740,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
                       />
                     </div>
+                  </div>
                   </div>
 
                   {/* CAMPI DETTAGLIO */}

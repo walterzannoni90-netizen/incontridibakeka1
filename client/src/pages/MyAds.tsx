@@ -20,6 +20,7 @@ import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
 import { purchaseBoost } from "@/lib/boost";
 import PageIntro from "@/components/PageIntro";
+import AdPhotoEditor from "@/components/AdPhotoEditor";
 import {
   ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, CheckCircle2, ImagePlus
 } from "lucide-react";
@@ -34,6 +35,7 @@ interface Ad {
   city: string;
   age: number | null;
   image: string | null;
+  images?: string[] | null;
   category: string;
   price?: string | null;
   is_active: boolean;
@@ -73,6 +75,7 @@ export default function MyAds() {
   const [deleting, setDeleting] = useState(false);
   const [editPhotos, setEditPhotos] = useState<File[]>([]);
   const [editPhotoPreviews, setEditPhotoPreviews] = useState<string[]>([]);
+  const [existingEditPhotos, setExistingEditPhotos] = useState<string[]>([]);
   const [editUploading, setEditUploading] = useState(false);
   const editFileRef = useRef<HTMLInputElement>(null);
 
@@ -131,6 +134,7 @@ export default function MyAds() {
     });
     setEditPhotos([]);
     setEditPhotoPreviews([]);
+    setExistingEditPhotos(ad.images?.length ? ad.images : ad.image ? [ad.image] : []);
   };
 
   const maxEditPhotos = (user?.has_paid || (user?.credits || 0) > 0) ? 5 : 1;
@@ -141,9 +145,9 @@ export default function MyAds() {
       setSavingEdit(true);
       const token = await getToken();
       const payload: Record<string, any> = { ...editForm };
+      const uploadedUrls: string[] = [];
       if (editPhotos.length > 0) {
         setEditUploading(true);
-        const urls: string[] = [];
         for (const file of editPhotos) {
           const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
           const path = `${user?.id}/edit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -153,12 +157,13 @@ export default function MyAds() {
             body: file,
           });
           if (!uploadRes.ok) throw new Error("Upload foto fallito");
-          urls.push(`${SUPABASE_URL}/storage/v1/object/public/ads/${path}`);
+          uploadedUrls.push(`${SUPABASE_URL}/storage/v1/object/public/ads/${path}`);
         }
-        payload.image = urls[0];
-        payload.images = urls;
         setEditUploading(false);
       }
+      const finalImages = [...existingEditPhotos, ...uploadedUrls];
+      payload.image = finalImages[0] || null;
+      payload.images = finalImages;
       const res = await fetch(`${SUPABASE_URL}/rest/v1/ads?id=eq.${editingAd.id}`, {
         method: "PATCH",
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
@@ -406,46 +411,27 @@ export default function MyAds() {
           <Card className="w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-1">Modifica annuncio</h2>
             <p className="text-xs text-muted-foreground mb-4">Puoi modificare testo e foto. Città ed età rimangono invariati.</p>
-            <input
-              ref={editFileRef}
-              type="file"
-              accept="image/*"
-              multiple={maxEditPhotos > 1}
-              className="hidden"
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
-                if (files.length === 0) return;
-                const allowed = files.slice(0, maxEditPhotos);
-                setEditPhotos(allowed);
-                setEditPhotoPreviews(allowed.map(f => URL.createObjectURL(f)));
-                if (editFileRef.current) editFileRef.current.value = "";
-              }}
-            />
             <div className="mb-4">
-              <label className="text-sm font-medium mb-1.5 block">
-                Foto annuncio {maxEditPhotos > 1 ? `(max ${maxEditPhotos})` : "(max 1)"}
-              </label>
-              {editingAd.image && editPhotos.length === 0 && (
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2 max-w-[200px] border border-border">
-                  <img src={editingAd.image} alt="corrente" className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded">Corrente</span>
-                </div>
-              )}
-              {editPhotoPreviews.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mb-2">
-                  {editPhotoPreviews.map((url, i) => (
-                    <div key={i} className="aspect-video rounded-lg overflow-hidden bg-muted border border-primary">
-                      <img src={url} alt="nuova" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <Button variant="outline" size="sm" onClick={() => editFileRef.current?.click()} className="gap-1.5" disabled={editPhotos.length >= maxEditPhotos}>
-                <ImagePlus className="w-4 h-4" /> {editPhotos.length > 0 ? `Cambia foto (${editPhotos.length}/${maxEditPhotos})` : `Scegli foto (max ${maxEditPhotos})`}
-              </Button>
-              {editPhotos.length > 0 && (
-                <p className="text-[10px] text-green-600 mt-1">{editPhotos.length} foto pronte per l'upload</p>
-              )}
+              <AdPhotoEditor
+                existingPhotos={existingEditPhotos}
+                newPhotos={editPhotos}
+                newPreviews={editPhotoPreviews}
+                maxPhotos={maxEditPhotos}
+                inputRef={editFileRef}
+                onFiles={(files) => {
+                  const room = maxEditPhotos - existingEditPhotos.length - editPhotos.length;
+                  const allowed = files.slice(0, Math.max(0, room));
+                  if (allowed.length < files.length) toast.info(`Puoi caricare massimo ${maxEditPhotos} foto`);
+                  setEditPhotos(prev => [...prev, ...allowed]);
+                  setEditPhotoPreviews(prev => [...prev, ...allowed.map(file => URL.createObjectURL(file))]);
+                }}
+                onRemoveExisting={(index) => setExistingEditPhotos(prev => prev.filter((_, i) => i !== index))}
+                onRemoveNew={(index) => {
+                  URL.revokeObjectURL(editPhotoPreviews[index]);
+                  setEditPhotos(prev => prev.filter((_, i) => i !== index));
+                  setEditPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+                }}
+              />
             </div>
             {/* Info città/età non modificabili */}
             <div className="flex items-center gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
@@ -460,7 +446,7 @@ export default function MyAds() {
                 </div>
               )}
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Titolo</label>
                 <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />

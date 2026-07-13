@@ -28,6 +28,8 @@ import {
   Ruler,
   Weight,
   Palette,
+  Maximize2,
+  X,
 } from "lucide-react";
 
 interface Ad {
@@ -93,6 +95,7 @@ export default function AdDetail() {
   const [reportReason, setReportReason] = useState("");
   const [liked, setLiked] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const adId = currentPath.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)?.[0] || "";
 
@@ -121,6 +124,21 @@ export default function AdDetail() {
   useEffect(() => {
     loadAd();
   }, [loadAd]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLightboxOpen(false);
+      if (event.key === "ArrowLeft") setCurrentImage(i => Math.max(0, i - 1));
+      if (event.key === "ArrowRight") setCurrentImage(i => Math.min((ad?.images?.length || (ad?.image ? 1 : 0)) - 1, i + 1));
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [lightboxOpen, ad]);
 
   useEffect(() => {
     if (!ad) return;
@@ -263,8 +281,12 @@ export default function AdDetail() {
                   <img
                     src={allImages[currentImage]}
                     alt={ad.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105"
+                    onClick={() => setLightboxOpen(true)}
                   />
+                  <button type="button" onClick={() => setLightboxOpen(true)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/80" aria-label="Ingrandisci foto">
+                    <Maximize2 className="h-5 w-5" />
+                  </button>
                   {allImages.length > 1 && (
                     <>
                       <button
@@ -554,6 +576,27 @@ export default function AdDetail() {
           </div>
         </div>
       </div>
+      {lightboxOpen && allImages.length > 0 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Visualizzatore foto" onClick={() => setLightboxOpen(false)}>
+          <button type="button" onClick={() => setLightboxOpen(false)} className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25" aria-label="Chiudi foto">
+            <X className="h-6 w-6" />
+          </button>
+          <img src={allImages[currentImage]} alt={`${ad.title} - foto ${currentImage + 1}`} className="max-h-[90vh] max-w-[96vw] select-none object-contain" onClick={(event) => event.stopPropagation()} />
+          {allImages.length > 1 && (
+            <>
+              <button type="button" onClick={(event) => { event.stopPropagation(); setCurrentImage(i => i === 0 ? allImages.length - 1 : i - 1); }} className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 md:left-8" aria-label="Foto precedente">
+                <ChevronLeft className="h-7 w-7" />
+              </button>
+              <button type="button" onClick={(event) => { event.stopPropagation(); setCurrentImage(i => i === allImages.length - 1 ? 0 : i + 1); }} className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 md:right-8" aria-label="Foto successiva">
+                <ChevronRight className="h-7 w-7" />
+              </button>
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-sm font-bold text-white">
+                {currentImage + 1} / {allImages.length}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
