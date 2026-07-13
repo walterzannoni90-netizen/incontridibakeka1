@@ -29,7 +29,23 @@ function generateArticleHtml(article: typeof blogArticles[0]): string {
   <title>${title} - Incontri di Bakeka</title>
   <meta name="description" content="${excerpt}">
   <meta name="robots" content="index, follow">
+  <meta name="rating" content="adult">
   <link rel="canonical" href="${BASE_URL}/blog/${article.slug}/">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${excerpt}">
+  <meta property="og:url" content="${BASE_URL}/blog/${article.slug}/">
+  <script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.excerpt.substring(0, 160),
+    datePublished: '2026-07-01',
+    dateModified: '2026-07-01',
+    mainEntityOfPage: `${BASE_URL}/blog/${article.slug}/`,
+    author: { '@type': 'Organization', name: 'Incontri di Bakeka' },
+    publisher: { '@type': 'Organization', name: 'Incontri di Bakeka', logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo.svg` } },
+  }).replace(/</g, '\\u003c')}</script>
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:800px;margin:0 auto;padding:20px}
     h1{color:#e91e63}a{color:#e91e63}
@@ -81,6 +97,7 @@ const blogListing = `<!DOCTYPE html>
   <title>Blog - Incontri di Bakeka</title>
   <meta name="description" content="Blog di Incontri di Bakeka - Articoli su incontri, escort, trans e uomo cerca uomo in tutte le città italiane">
   <meta name="robots" content="index, follow">
+  <meta name="rating" content="adult">
   <link rel="canonical" href="${BASE_URL}/blog/">
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:800px;margin:0 auto;padding:20px}
