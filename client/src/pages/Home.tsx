@@ -1982,6 +1982,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <li><button onClick={() => openInfoModal("chi-siamo")} className="hover:text-primary transition-colors text-left">Chi Siamo</button></li>
                     <li><button onClick={() => openInfoModal("contatti")} className="hover:text-primary transition-colors text-left">Contatti</button></li>
                      <li><button onClick={() => navigate("/blog")} className="hover:text-primary transition-colors text-left">Blog</button></li>
+                     <li><a href="/bacheca-incontri/" className="hover:text-primary transition-colors">Bacheca incontri</a></li>
                   </ul>
                 </div>
                 <div>
