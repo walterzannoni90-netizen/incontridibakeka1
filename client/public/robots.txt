@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /profile
+Disallow: /my-ads
+Disallow: /messages
 Disallow: /*?path=
+Disallow: /*?payment=
 
 Sitemap: https://incontridibakeka.com/sitemap.xml

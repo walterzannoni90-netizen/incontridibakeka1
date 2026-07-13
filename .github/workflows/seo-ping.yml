@@ -1,12 +1,16 @@
 name: SEO Ping
 
 on:
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types: [completed]
   schedule:
     - cron: '0 6 * * 1'  # ogni lunedì alle 6:00 UTC
   workflow_dispatch:  # eseguibile anche manualmente
 
 jobs:
   ping:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Ping IndexNow
