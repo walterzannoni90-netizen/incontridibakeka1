@@ -64,7 +64,7 @@ async function main() {
 
     const slug = `${slugify(ad.title || "annuncio")}-${ad.id}`;
     const route = `/ad/${slug}`;
-    const canonical = `${SITE_URL}${route}`;
+    const canonical = `${SITE_URL}${route}/`;
     const description = `${ad.title}. Annuncio personale per adulti a ${city}. ${String(ad.description || "").slice(0, 125)}`.slice(0, 160);
     const schema = {
       "@context": "https://schema.org", "@type": "WebPage", name: ad.title,
@@ -72,7 +72,7 @@ async function main() {
       isPartOf: { "@type": "WebSite", name: "Incontri di Bakeka", url: SITE_URL },
       breadcrumb: { "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
-        { "@type": "ListItem", position: 2, name: `Incontri a ${city}`, item: `${SITE_URL}/incontri/${slugify(city)}` },
+        { "@type": "ListItem", position: 2, name: `Incontri a ${city}`, item: `${SITE_URL}/incontri/${slugify(city)}/` },
         { "@type": "ListItem", position: 3, name: ad.title, item: canonical },
       ] },
     };
@@ -83,7 +83,7 @@ async function main() {
 
   for (const [city, count] of byCity) {
     const route = `/incontri/${slugify(city)}`;
-    const canonical = `${SITE_URL}${route}`;
+    const canonical = `${SITE_URL}${route}/`;
     const title = `Incontri a ${city} — Annunci personali per adulti`;
     const description = `Scopri ${count} annunci personali per adulti attivi a ${city}. Consulta i profili, usa i messaggi interni e segnala contenuti non conformi.`;
     const schema = {
