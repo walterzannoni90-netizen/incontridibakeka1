@@ -10,8 +10,8 @@ from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "client/public/downloads/guida-incontri-consapevoli.pdf"
-IMG_COVER = ROOT / "client/public/images/guida-sicurezza-cover.png"
-IMG_MEETING = ROOT / "client/public/images/guida-sicurezza-incontro.png"
+IMG_COVER = ROOT / "client/public/images/guida-incontri-home.jpg"
+IMG_MEETING = ROOT / "client/public/images/guida-sicurezza-incontro.jpg"
 
 NAVY = HexColor("#100B22")
 INK = HexColor("#211A33")

@@ -48,10 +48,12 @@ export default function SafetyGuidePromo() {
           <div className="absolute -inset-4 rotate-3 rounded-[2.5rem] bg-gradient-to-br from-violet-500/30 to-pink-500/20 blur-xl" />
           <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-white/10 p-3 shadow-2xl shadow-black/40 backdrop-blur">
             <img
-              src="/images/guida-sicurezza-cover.png"
-              alt="Smartphone protetto da un anello luminoso, simbolo di privacy e sicurezza"
-              className="aspect-[4/3] w-full rounded-[1.45rem] object-cover object-[67%_66%]"
+              src="/images/guida-incontri-home.jpg"
+              alt="Due persone adulte conversano durante un incontro serale"
+              className="aspect-[4/3] w-full rounded-[1.45rem] object-cover object-[72%_center]"
               loading="lazy"
+              width="1800"
+              height="1013"
             />
             <div className="absolute inset-x-7 bottom-7 rounded-2xl border border-white/15 bg-[#120b25]/85 p-5 backdrop-blur-md">
               <p className="text-xs font-bold uppercase tracking-[.2em] text-pink-300">Guida essenziale</p>
