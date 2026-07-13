@@ -15,6 +15,7 @@ import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown,
 import SitePromoBanner from "@/components/SitePromoBanner";
 import SafetyGuidePromo from "@/components/SafetyGuidePromo";
 import { trackEvent } from "@/lib/analytics";
+import BoostConfirmDialog, { type PendingBoost } from "@/components/BoostConfirmDialog";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -148,6 +149,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   // Scheduling vetrina
   const [scheduleVetrina, setScheduleVetrina] = useState(false);
+  const [publishBoostConfirm, setPublishBoostConfirm] = useState<PendingBoost | null>(null);
   const [vetrinaDuration, setVetrinaDuration] = useState(1);
   const [vetrinaStartAt, setVetrinaStartAt] = useState("");
   // Limite annunci giornaliero
@@ -443,7 +445,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     }
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (confirmedBoost = false) => {
     if (!supabase) return;
     const { data: session } = await supabase.auth.getSession();
     const token = session?.session?.access_token;
@@ -453,6 +455,16 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     }
     if (!publishForm.title || !publishForm.description) {
       alert("Titolo e descrizione sono obbligatori.");
+      return;
+    }
+
+    if (scheduleVetrina && !confirmedBoost) {
+      setPublishBoostConfirm({
+        adTitle: publishForm.title,
+        credits: VETRINA_COSTS[vetrinaDuration] ?? 0,
+        days: vetrinaDuration,
+        type: "vetrina",
+      });
       return;
     }
 
@@ -573,6 +585,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
       await loadAds(true);
       void trackEvent("ad_publish", { category: publishForm.category, city: publishForm.city });
       setSuccessModal({ title: publishForm.title, vetrina: vetrinaApplied });
+      setPublishBoostConfirm(null);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Errore pubblicazione.");
     } finally {
@@ -1014,6 +1027,14 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
             </div>
           </div>
         )}
+
+        <BoostConfirmDialog
+          boost={publishBoostConfirm}
+          balance={currentUser?.credits || 0}
+          loading={busy}
+          onCancel={() => setPublishBoostConfirm(null)}
+          onConfirm={() => handlePublish(true)}
+        />
       </nav>
 
       {/* HERO SECTION — DASHBOARD per loggati, MARKETING per visitatori */}
@@ -1886,7 +1907,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   )}
 
                   <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-border">
-                    <Button className="flex-1 h-12 text-base gap-2" onClick={handlePublish} disabled={busy}>
+                    <Button className="flex-1 h-12 text-base gap-2" onClick={() => handlePublish()} disabled={busy}>
                       {busy ? (
                         <><Loader2 className="w-5 h-5 animate-spin" /> {uploadingPhotos ? "Caricamento foto..." : "Pubblicazione..."}</>
                       ) : (
