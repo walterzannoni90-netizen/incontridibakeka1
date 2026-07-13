@@ -1982,6 +1982,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <li><button onClick={() => openInfoModal("chi-siamo")} className="hover:text-primary transition-colors text-left">Chi Siamo</button></li>
                     <li><button onClick={() => openInfoModal("contatti")} className="hover:text-primary transition-colors text-left">Contatti</button></li>
                      <li><button onClick={() => navigate("/blog")} className="hover:text-primary transition-colors text-left">Blog</button></li>
+                     <li><a href="/bacheca-incontri/" className="hover:text-primary transition-colors">Bacheca incontri</a></li>
                   </ul>
                 </div>
                 <div>
@@ -2005,23 +2006,20 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
 
               {/* Cities grid */}
               <div className="border-t border-border pt-6 mb-6">
-                <h4 className="font-bold mb-3 text-sm">Citta in Evidenza</h4>
-                <div className="flex flex-wrap gap-2">
-                  {ITALIAN_CITIES.slice(0, 40).map((city) => (
-                    <button
+                <h4 className="font-bold mb-3 text-sm">Incontri in tutte le città italiane</h4>
+                <div className="flex max-h-44 flex-wrap gap-2 overflow-y-auto pr-1">
+                  {ITALIAN_CITIES.map((city) => (
+                    <a
                       key={city}
+                      href={`/incontri/${slugify(city)}/`}
                       className={`text-xs px-2 py-1 rounded transition-colors ${
                         selectedCity === city
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:text-primary hover:bg-muted"
                       }`}
-                      onClick={() => {
-                        setSelectedCity(city);
-                        document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
-                      }}
                     >
                       {city}
-                    </button>
+                    </a>
                   ))}
                 </div>
               </div>

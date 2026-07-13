@@ -121,4 +121,48 @@ ${listItems}
 
 fs.writeFileSync(path.join(blogDir, 'index.html'), blogListing);
 
-console.log(`✅ Generati ${count} articoli blog statici + listing in client/public/blog/`);
+// Evergreen landing page for the generic search intent "bacheca incontri".
+// It is intentionally useful and original rather than a doorway/keyword page.
+const landingDir = path.join(PUBLIC_DIR, 'bacheca-incontri');
+fs.mkdirSync(landingDir, { recursive: true });
+const landingUrl = `${BASE_URL}/bacheca-incontri/`;
+const landingDescription = 'Bacheca incontri in Italia per adulti: scopri annunci personali per città, pubblica il tuo profilo e usa messaggi e strumenti di segnalazione.';
+const landingFaq = [
+  { q: 'Come funziona una bacheca incontri?', a: 'Puoi consultare gli annunci attivi per città e categoria. Per pubblicare, salvare profili o inviare messaggi devi creare un account.' },
+  { q: 'Gli annunci sono gratuiti?', a: 'La pubblicazione di base segue i limiti giornalieri indicati sul sito. Vetrina e Premium sono promozioni facoltative acquistabili con crediti.' },
+  { q: 'Come posso cercare nella mia città?', a: 'Dalla pagina principale seleziona la città oppure apri una delle pagine locali presenti nella sitemap del sito.' },
+  { q: 'Come vengono gestite sicurezza e segnalazioni?', a: 'Ogni annuncio può essere segnalato agli amministratori. Per gli incontri dal vivo consigliamo luoghi pubblici, prudenza e tutela dei dati personali.' },
+];
+const landingSchema = {
+  '@context': 'https://schema.org', '@graph': [
+    { '@type': 'WebPage', name: 'Bacheca incontri in Italia', url: landingUrl, description: landingDescription, isPartOf: { '@type': 'WebSite', name: 'Incontri di Bakeka', url: BASE_URL } },
+    { '@type': 'FAQPage', mainEntity: landingFaq.map(item => ({ '@type': 'Question', name: item.q, acceptedAnswer: { '@type': 'Answer', text: item.a } })) },
+  ],
+};
+const landingPage = `<!DOCTYPE html>
+<html lang="it"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bacheca incontri in Italia — Annunci personali per città</title>
+  <meta name="description" content="${landingDescription}">
+  <meta name="robots" content="index, follow, max-image-preview:large"><meta name="rating" content="adult">
+  <link rel="canonical" href="${landingUrl}">
+  <meta property="og:type" content="website"><meta property="og:title" content="Bacheca incontri in Italia">
+  <meta property="og:description" content="${landingDescription}"><meta property="og:url" content="${landingUrl}">
+  <meta property="og:image" content="${BASE_URL}/images/site-promo-banner.png">
+  <script type="application/ld+json">${JSON.stringify(landingSchema).replace(/</g, '\\u003c')}</script>
+  <style>body{font-family:Inter,system-ui,sans-serif;line-height:1.7;color:#241532;background:#faf7ff;margin:0}.wrap{max-width:900px;margin:auto;padding:28px 20px}h1,h2{color:#6d28d9}header{background:linear-gradient(135deg,#6d28d9,#db2777);color:#fff;padding:46px 0}header h1{color:#fff;margin:0 0 8px}.card{background:#fff;border:1px solid #eadcff;border-radius:18px;padding:22px;margin:20px 0;box-shadow:0 8px 28px #3b076410}a{color:#7c3aed;font-weight:700}.cta{display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px}nav a{margin-right:16px}footer{padding:30px 0;color:#6b7280}</style>
+</head><body>
+  <header><div class="wrap"><h1>Bacheca incontri in Italia</h1><p>Annunci personali per adulti, ricerca locale e strumenti per comunicare in modo più consapevole.</p><a class="cta" href="/">Guarda gli annunci attivi</a></div></header>
+  <main class="wrap">
+    <nav><a href="/">Home</a><a href="/blog/">Guide</a><a href="/blog/incontri-sicuri-italia/">Incontri sicuri</a></nav>
+    <section class="card"><h2>Una bacheca organizzata per città</h2><p>Incontri di Bakeka raccoglie annunci personali pubblicati da utenti adulti. Puoi partire dalla tua città, consultare le categorie e aprire soltanto i profili che ti interessano. Le pagine locali mostrano annunci realmente attivi: non creiamo elenchi vuoti soltanto per apparire nei motori di ricerca.</p></section>
+    <section class="card"><h2>Pubblicare e dare visibilità a un annuncio</h2><p>Dopo la registrazione puoi pubblicare un annuncio seguendo i limiti indicati nella piattaforma. La pubblicazione di base e le promozioni sono separate: Vetrina aumenta temporaneamente la visibilità, mentre Premium applica il badge e permette una galleria più ampia durante il periodo acquistato. Costi e saldo residuo sono mostrati prima della conferma.</p></section>
+    <section class="card"><h2>Ricerca, contatti e messaggi</h2><p>Gli annunci possono essere cercati per città e categoria. Gli utenti registrati possono usare i messaggi interni; quando presenti, rimangono disponibili anche i contatti scelti dall’autore dell’annuncio. Non inviare documenti, denaro o dati sensibili a persone che non conosci.</p></section>
+    <section class="card"><h2>Sicurezza prima dell’incontro</h2><p>Controlla attentamente il profilo, parla prima attraverso i canali disponibili e scegli un luogo pubblico per il primo incontro. Comunica a una persona fidata dove andrai. Se un contenuto appare falso, illegale o non consensuale, usa la funzione di segnalazione affinché gli amministratori possano verificarlo.</p></section>
+    <section class="card"><h2>Domande frequenti</h2>${landingFaq.map(item => `<h3>${htmlEscape(item.q)}</h3><p>${htmlEscape(item.a)}</p>`).join('')}</section>
+    <p><a class="cta" href="/">Entra nella bacheca incontri</a></p>
+  </main><footer><div class="wrap">Contenuti destinati esclusivamente a maggiorenni · © 2026 Incontri di Bakeka</div></footer>
+</body></html>`;
+fs.writeFileSync(path.join(landingDir, 'index.html'), landingPage);
+
+console.log(`✅ Generati ${count} articoli blog + pagina bacheca incontri`);
