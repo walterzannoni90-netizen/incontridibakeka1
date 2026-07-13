@@ -13,6 +13,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
 import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Coins } from "lucide-react";
 import SitePromoBanner from "@/components/SitePromoBanner";
+import SafetyGuidePromo from "@/components/SafetyGuidePromo";
 import { trackEvent } from "@/lib/analytics";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -1922,6 +1923,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </div>
         )}
 
+        <SafetyGuidePromo />
         <SitePromoBanner variant="safe" compact />
 
         {/* FOOTER */}
