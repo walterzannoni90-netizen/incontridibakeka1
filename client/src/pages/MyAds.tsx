@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { purchaseBoost } from "@/lib/boost";
 import PageIntro from "@/components/PageIntro";
 import AdPhotoEditor from "@/components/AdPhotoEditor";
+import BoostConfirmDialog, { type PendingBoost } from "@/components/BoostConfirmDialog";
 import {
   ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, CheckCircle2, ImagePlus
 } from "lucide-react";
@@ -65,6 +66,7 @@ export default function MyAds() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loadingAds, setLoadingAds] = useState(true);
   const [busyBoost, setBusyBoost] = useState<string | null>(null);
+  const [pendingBoost, setPendingBoost] = useState<PendingBoost | null>(null);
   const [boostStep, setBoostStep] = useState<string>("");
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiKey, setConfettiKey] = useState(0);
@@ -124,12 +126,17 @@ export default function MyAds() {
       setTimeout(() => setShowConfetti(false), 3000);
       toast.success(`Annuncio potenziato! ${days} giorni di visibilità`);
       loadAds();
+      setPendingBoost(null);
     } catch (e: any) {
       toast.error(e?.message || "Errore boost");
     } finally {
       setBusyBoost(null);
       setBoostStep("");
     }
+  };
+
+  const requestBoost = (ad: Ad, credits: number, days: number, type: "vetrina" | "premium") => {
+    setPendingBoost({ adId: ad.id, adTitle: ad.title, credits, days, type });
   };
 
   const startEdit = (ad: Ad) => {
@@ -343,7 +350,7 @@ export default function MyAds() {
                           return (
                             <button
                               key={opt.label}
-                              onClick={() => handleBoost(ad.id, opt.credits, opt.days, type)}
+                              onClick={() => requestBoost(ad, opt.credits, opt.days, type)}
                               disabled={!!busyBoost || !canAfford}
                               className={`relative group rounded-xl p-2.5 text-left transition-all duration-300 border ${
                                 canAfford
@@ -430,7 +437,7 @@ export default function MyAds() {
                     <Crown className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
                     <div><p className="font-bold text-amber-900 dark:text-amber-200">Vuoi aggiungere fino a 5 foto?</p><p className="text-xs text-amber-800/80 dark:text-amber-300/80">Sponsorizza questo annuncio: verranno scalati 10 crediti e potrai aggiungere subito altre immagini.</p></div>
                   </div>
-                  <Button type="button" onClick={() => handleBoost(editingAd.id, 10, 30, "premium")} disabled={!!busyBoost || (user.credits || 0) < 10} className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700">
+                  <Button type="button" onClick={() => requestBoost(editingAd, 10, 30, "premium")} disabled={!!busyBoost || (user.credits || 0) < 10} className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700">
                     <Crown className="h-4 w-4" /> Sponsorizza annuncio · 10 crediti
                   </Button>
                   {(user.credits || 0) < 10 && <p className="mt-2 text-center text-xs font-semibold text-red-600">Crediti insufficienti</p>}
@@ -520,6 +527,15 @@ export default function MyAds() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <BoostConfirmDialog
+        boost={pendingBoost}
+        balance={user?.credits || 0}
+        loading={!!busyBoost}
+        onCancel={() => setPendingBoost(null)}
+        onConfirm={() => {
+          if (pendingBoost?.adId) return handleBoost(pendingBoost.adId, pendingBoost.credits, pendingBoost.days, pendingBoost.type);
+        }}
+      />
     </div>
   );
 }
