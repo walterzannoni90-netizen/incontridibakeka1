@@ -64,12 +64,10 @@ export default function Messages() {
       const ids = new Set<string>();
       data.forEach(c => { ids.add(c.buyer_id); ids.add(c.seller_id); });
       if (ids.size > 0) {
-        const pid = Array.from(ids).map(id => `id.eq.${id}`).join(",");
-        const pRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/public_profiles?select=id,name&or=(${pid})`,
-          { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } }
-        );
-        const pData = await pRes.json();
+        const { data: pData, error: profilesError } = await supabase!.rpc("get_public_profiles", {
+          p_ids: Array.from(ids),
+        });
+        if (profilesError) throw profilesError;
         if (Array.isArray(pData)) {
           const map: Record<string, { name: string }> = {};
           pData.forEach((p: any) => { map[p.id] = { name: p.name }; });

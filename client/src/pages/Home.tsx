@@ -24,7 +24,7 @@ const SUPABASE_CONFIGURED = SUPABASE_URL && SUPABASE_KEY && !SUPABASE_URL.includ
 const PAGE_SIZE = 12;
 
 // Costo in crediti per la vetrina in base alla durata (giorni)
-const VETRINA_COSTS: Record<number, number> = { 1: 10, 3: 25, 7: 50 };
+const VETRINA_COSTS: Record<number, number> = { 1: 10, 3: 30, 7: 70 };
 
 const HAIR_COLORS = ["neri", "castani", "biondi", "rossi", "grigi", "altri"];
 const BODY_TYPES = ["snello", "normale", "formoso", "sportivo", "curvy"];
@@ -41,11 +41,19 @@ const SERVICE_OPTIONS = [
 
 // Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
 function isAdBoosted(ad: Ad): boolean {
-  if (!ad.boosted_until) return false;
-  const until = new Date(ad.boosted_until).getTime();
-  const start = ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0;
+  return isPremiumActive(ad) || isVetrinaActive(ad);
+}
+
+function isPremiumActive(ad: Ad): boolean {
   const now = Date.now();
-  return Number.isFinite(until) && now >= start && now < until;
+  return !!ad.premium_until && now < new Date(ad.premium_until).getTime();
+}
+
+function isVetrinaActive(ad: Ad): boolean {
+  const now = Date.now();
+  return !!ad.vetrina_until
+    && now >= (ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0)
+    && now < new Date(ad.vetrina_until).getTime();
 }
 
 interface Ad {
@@ -79,6 +87,8 @@ interface Ad {
   weight?: number;
   // Vetrina / boost
   boosted_until?: string;
+  premium_until?: string;
+  vetrina_until?: string;
   vetrina_scheduled_at?: string;
   vetrina_duration_days?: number;
   created_at?: string;
@@ -1258,12 +1268,12 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         </div>
                       )}
                       {/* Badge sponsorizzati/premium migliorati */}
-                      {ad.is_sponsored && (
+                      {isVetrinaActive(ad) && (
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-accent to-amber-600 text-white px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center gap-1">
                           <Star className="w-3 h-3 fill-white" /> SuperTop
                         </div>
                       )}
-                      {isAdBoosted(ad) && ad.is_premium && !ad.is_sponsored && (
+                      {isPremiumActive(ad) && (
                         <div className="absolute top-2 right-2 bg-gradient-to-r from-primary to-purple-600 text-white px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg flex items-center gap-1">
                           <Crown className="w-3 h-3" /> Premium
                         </div>
@@ -1293,7 +1303,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         <h3 className="font-bold text-sm md:text-base line-clamp-1 group-hover:text-primary transition-colors duration-300">
                           {ad.title}
                         </h3>
-                        {isAdBoosted(ad) && ad.is_premium && (
+                        {isPremiumActive(ad) && (
                           <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                         )}
                       </div>

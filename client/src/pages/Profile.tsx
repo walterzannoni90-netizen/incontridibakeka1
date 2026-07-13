@@ -43,6 +43,9 @@ interface Ad {
   views: number;
   created_at: string;
   boosted_until?: string | null;
+  premium_until?: string | null;
+  vetrina_until?: string | null;
+  vetrina_scheduled_at?: string | null;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -56,9 +59,9 @@ async function getToken() {
 
 const BOOST_OPTIONS = [
   { days: 1, credits: 10, label: "Vetrina 1g", icon: Store, type: "vetrina" as const, desc: "1 giorno in evidenza", color: "from-violet-500 to-purple-600" },
-  { days: 3, credits: 25, label: "Vetrina 3g", icon: Store, type: "vetrina" as const, desc: "3 giorni in evidenza", color: "from-purple-500 to-pink-600" },
-  { days: 7, credits: 50, label: "Vetrina 7g", icon: Store, type: "vetrina" as const, desc: "1 settimana in evidenza", color: "from-pink-500 to-rose-600" },
-  { days: 30, credits: 10, label: "Premium", icon: Crown, type: "premium" as const, desc: "Sblocca foto + badge", color: "from-amber-500 to-orange-600" },
+  { days: 3, credits: 30, label: "Vetrina 3g", icon: Store, type: "vetrina" as const, desc: "3 giorni in evidenza", color: "from-purple-500 to-pink-600" },
+  { days: 7, credits: 70, label: "Vetrina 7g", icon: Store, type: "vetrina" as const, desc: "1 settimana in evidenza", color: "from-pink-500 to-rose-600" },
+  { days: 30, credits: 150, label: "Premium 30g", icon: Crown, type: "premium" as const, desc: "5 foto + badge per 30 giorni", color: "from-amber-500 to-orange-600" },
 ];
 
 export default function Profile() {
@@ -161,6 +164,8 @@ export default function Profile() {
         is_premium: type === "premium" ? true : prev.is_premium,
         is_sponsored: type === "vetrina" ? true : prev.is_sponsored,
         boosted_until: result.ends_at,
+        premium_until: type === "premium" ? result.ends_at : prev.premium_until,
+        vetrina_until: type === "vetrina" ? result.ends_at : prev.vetrina_until,
       } : prev);
       setBoostStep("Aggiornamento crediti...");
       updateUser({ credits: result.remaining_credits });
@@ -194,9 +199,10 @@ export default function Profile() {
     setExistingEditPhotos(ad.images?.length ? ad.images : ad.image ? [ad.image] : []);
   };
 
-  const editHasActiveSponsorship = !!editingAd?.boosted_until
-    && new Date(editingAd.boosted_until).getTime() > Date.now()
-    && (editingAd.is_premium || editingAd.is_sponsored);
+  const editHasActiveSponsorship = (!!editingAd?.premium_until && new Date(editingAd.premium_until).getTime() > Date.now())
+    || (!!editingAd?.vetrina_until
+      && new Date(editingAd.vetrina_until).getTime() > Date.now()
+      && (!editingAd.vetrina_scheduled_at || new Date(editingAd.vetrina_scheduled_at).getTime() <= Date.now()));
   const maxEditPhotos = editHasActiveSponsorship ? 5 : Math.max(1, existingEditPhotos.length);
 
   const saveEdit = async () => {
@@ -568,12 +574,12 @@ export default function Profile() {
                 <div className="mb-4 rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20">
                   <div className="mb-3 flex items-start gap-3">
                     <Crown className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                    <div><p className="font-bold text-amber-900 dark:text-amber-200">Vuoi aggiungere fino a 5 foto?</p><p className="text-xs text-amber-800/80 dark:text-amber-300/80">Sponsorizza questo annuncio: verranno scalati 10 crediti e potrai aggiungere subito altre immagini.</p></div>
+                    <div><p className="font-bold text-amber-900 dark:text-amber-200">Vuoi aggiungere fino a 5 foto?</p><p className="text-xs text-amber-800/80 dark:text-amber-300/80">Attiva Premium per 30 giorni: verranno scalati 150 crediti e potrai aggiungere subito altre immagini.</p></div>
                   </div>
-                  <Button type="button" onClick={() => requestBoost(editingAd, 10, 30, "premium")} disabled={!!busyBoost || (user.credits || 0) < 10} className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700">
-                    <Crown className="h-4 w-4" /> Sponsorizza annuncio · 10 crediti
+                  <Button type="button" onClick={() => requestBoost(editingAd, 150, 30, "premium")} disabled={!!busyBoost || (user.credits || 0) < 150} className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700">
+                    <Crown className="h-4 w-4" /> Premium 30 giorni · 150 crediti
                   </Button>
-                  {(user.credits || 0) < 10 && <p className="mt-2 text-center text-xs font-semibold text-red-600">Crediti insufficienti</p>}
+                  {(user.credits || 0) < 150 && <p className="mt-2 text-center text-xs font-semibold text-red-600">Crediti insufficienti</p>}
                 </div>
               )}
               <AdPhotoEditor

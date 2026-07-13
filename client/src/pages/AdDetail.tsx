@@ -55,6 +55,9 @@ interface Ad {
   review_count: number;
   views: number;
   boosted_until?: string | null;
+  premium_until?: string | null;
+  vetrina_until?: string | null;
+  vetrina_scheduled_at?: string | null;
   hair_color: string | null;
   body_type: string | null;
   ethnicity: string | null;
@@ -260,8 +263,14 @@ export default function AdDetail() {
     );
   }
 
-  const allImages = ad.images?.length ? ad.images : ad.image ? [ad.image] : [];
-  const boostActive = !!ad.boosted_until && Date.now() < new Date(ad.boosted_until).getTime();
+  const now = Date.now();
+  const premiumActive = !!ad.premium_until && now < new Date(ad.premium_until).getTime();
+  const vetrinaActive = !!ad.vetrina_until
+    && now >= (ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0)
+    && now < new Date(ad.vetrina_until).getTime();
+  const boostActive = premiumActive || vetrinaActive;
+  const storedImages = ad.images?.length ? ad.images : ad.image ? [ad.image] : [];
+  const allImages = boostActive ? storedImages : storedImages.slice(0, 1);
 
   return (
     <div className="min-h-screen bg-background">
@@ -281,12 +290,13 @@ export default function AdDetail() {
                   <img
                     src={allImages[currentImage]}
                     alt={ad.title}
-                    className="w-full h-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105"
-                    onClick={() => setLightboxOpen(true)}
+                    className={`w-full h-full object-cover transition-transform duration-500 ${boostActive ? "cursor-zoom-in group-hover:scale-105" : "blur-xl scale-110"}`}
+                    onClick={() => boostActive && setLightboxOpen(true)}
                   />
-                  <button type="button" onClick={() => setLightboxOpen(true)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/80" aria-label="Ingrandisci foto">
+                  {boostActive && <button type="button" onClick={() => setLightboxOpen(true)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/80" aria-label="Ingrandisci foto">
                     <Maximize2 className="h-5 w-5" />
-                  </button>
+                  </button>}
+                  {!boostActive && <div className="absolute inset-0 flex items-center justify-center bg-black/30"><span className="rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white">Foto oscurata · annuncio non promosso</span></div>}
                   {allImages.length > 1 && (
                     <>
                       <button
@@ -312,12 +322,12 @@ export default function AdDetail() {
                   📸 Nessuna immagine
                 </div>
               )}
-              {boostActive && ad.is_premium && !ad.is_sponsored && (
+              {premiumActive && (
                 <Badge className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0 shadow-lg">
                   <Crown className="w-3 h-3 mr-1" /> Premium
                 </Badge>
               )}
-              {boostActive && ad.is_sponsored && (
+              {vetrinaActive && (
                 <Badge className="absolute top-3 right-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 shadow-lg">
                   <Zap className="w-3 h-3 mr-1" /> In Vetrina
                 </Badge>
@@ -576,7 +586,7 @@ export default function AdDetail() {
           </div>
         </div>
       </div>
-      {lightboxOpen && allImages.length > 0 && (
+      {lightboxOpen && boostActive && allImages.length > 0 && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Visualizzatore foto" onClick={() => setLightboxOpen(false)}>
           <button type="button" onClick={() => setLightboxOpen(false)} className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25" aria-label="Chiudi foto">
             <X className="h-6 w-6" />
