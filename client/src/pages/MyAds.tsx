@@ -447,16 +447,23 @@ export default function MyAds() {
               )}
             </div>
             <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                <div>
+                  <h3 className="font-bold">Informazioni dell’annuncio</h3>
+                  <p className="text-xs text-muted-foreground">Controlla e aggiorna i dati prima di salvare.</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-semibold text-muted-foreground"><span className="h-2 w-2 rounded-full bg-rose-500" /> obbligatorio</span>
+              </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Titolo</label>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-rose-500" /> Titolo</label>
                 <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Descrizione</label>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-rose-500" /> Descrizione</label>
                 <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={4} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Prezzo</label>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-rose-500" /> Prezzo / informazioni</label>
                 <Input value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} />
               </div>
             </div>
