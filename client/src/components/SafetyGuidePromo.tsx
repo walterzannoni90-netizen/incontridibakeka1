@@ -1,6 +1,8 @@
 import { ArrowRight, BookOpen, Download, ShieldCheck } from "lucide-react";
 
-const GUIDE_PATH = "/downloads/guida-incontri-consapevoli.pdf";
+// Versioned URL prevents browsers/CDNs from mixing the previous 6.6 MB PDF
+// with the optimized file when a cached byte-range request is resumed.
+const GUIDE_PATH = "/downloads/guida-incontri-consapevoli.pdf?v=20260713-2";
 
 export default function SafetyGuidePromo() {
   return (
