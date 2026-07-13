@@ -9,10 +9,10 @@ import { ArrowLeft, Zap, CheckCircle, Loader2, Coins } from "lucide-react";
 import PageIntro from "@/components/PageIntro";
 
 const CREDIT_PACKS = [
-  { credits: 10, price: 4.99, popular: false, features: ["Rendi Premium per 1 giorno", "Risali nei risultati 2 volte"] },
-  { credits: 30, price: 9.99, popular: true, features: ["Rendi Premium per 7 giorni", "Evidenzia con SuperHot", "Risali nei risultati 5 volte"] },
-  { credits: 70, price: 19.99, popular: false, features: ["Rendi Premium per 30 giorni", "Sponsorizza SuperTop 7 giorni", "Risali illimitato"] },
-  { credits: 150, price: 34.99, popular: false, features: ["Rendi Premium illimitato", "Sponsorizza SuperTop 30 giorni", "Tutte le funzioni premium", "Priorita nel supporto"] },
+  { credits: 10, price: 4.99, popular: false, features: ["Vetrina per 1 giorno", "Foto nitida durante la promozione"] },
+  { credits: 30, price: 9.99, popular: true, features: ["Vetrina per 3 giorni", "Maggiore visibilità nell’elenco"] },
+  { credits: 70, price: 19.99, popular: false, features: ["Vetrina per 7 giorni", "Foto nitida durante la promozione"] },
+  { credits: 150, price: 34.99, popular: false, features: ["Premium per 30 giorni", "Badge Premium e fino a 5 foto"] },
 ];
 
 export default function Shop() {
