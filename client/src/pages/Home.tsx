@@ -166,8 +166,9 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   // Statistiche personali per la dashboard
   const [myStats, setMyStats] = useState({ adsCount: 0, boostedCount: 0 });
 
-  // Numero massimo di foto in base allo stato premium dell'utente
-  const maxPhotos = currentUser?.has_paid ? 5 : 1;
+  // Ogni nuovo annuncio nasce con una sola foto. Le altre si aggiungono
+  // dopo la pubblicazione, sponsorizzando quello specifico annuncio.
+  const maxPhotos = 1;
   const hasPaid = !!currentUser?.has_paid;
   const dailyLimit = hasPaid ? 2 : 1;
   const currentUserId = currentUser?.id;
@@ -1567,14 +1568,14 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                   {/* UPLOAD FOTO */}
                   <div className="mb-6 rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-4 dark:border-violet-900 dark:from-violet-950/30 dark:to-pink-950/20">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <div><Label className="block text-base font-bold">1. Scegli le foto</Label><p className="text-xs text-muted-foreground">La prima foto sarà la copertina. Puoi rimuoverla con la X.</p></div>
+                      <div><Label className="block text-base font-bold">1. Scegli la foto principale</Label><p className="text-xs text-muted-foreground">Ogni nuovo annuncio parte con una foto. Dopo la pubblicazione puoi sponsorizzarlo e aggiungerne fino a 5.</p></div>
                       <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-violet-700 shadow-sm dark:bg-background">{photoPreviewUrls.length}/{maxPhotos}</span>
                     </div>
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      multiple={hasPaid}
+                      multiple={false}
                       className="hidden"
                       onChange={handlePhotoSelect}
                     />
@@ -1611,7 +1612,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                           <>
                             <ImagePlus className="w-6 h-6" />
                             <span className="text-sm font-medium">Carica foto</span>
-                            <span className="text-xs">PNG, JPG fino a {maxPhotos - photoPreviewUrls.length} rimanenti</span>
+                            <span className="text-xs">PNG, JPG o WEBP · una foto principale</span>
                           </>
                         )}
                       </button>

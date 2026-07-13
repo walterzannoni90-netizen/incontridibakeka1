@@ -281,6 +281,12 @@ router.post("/", authMiddleware, async (req: AuthenticatedRequest, res) => {
       return res.status(400).json({ error: "La descrizione deve essere tra 20 e 2000 caratteri" });
     }
 
+    if (Array.isArray(images) && images.filter(Boolean).length > 1) {
+      return res.status(400).json({
+        error: "Un nuovo annuncio può avere una sola foto. Sponsorizzalo dopo la pubblicazione per aggiungerne fino a 5.",
+      });
+    }
+
     // Recupera profilo utente per controllare limiti
     const { data: profile } = await supabase
       .from("profiles")
@@ -344,7 +350,7 @@ router.post("/", authMiddleware, async (req: AuthenticatedRequest, res) => {
 
     if (error) {
       console.error("Create ad error:", error);
-      return res.status(500).json({ error: "Errore creazione annuncio" });
+      return res.status(400).json({ error: error.message || "Errore creazione annuncio" });
     }
 
     res.status(201).json({ ad });
@@ -399,7 +405,7 @@ router.patch("/:id", authMiddleware, async (req: AuthenticatedRequest, res) => {
       .single();
 
     if (error) {
-      return res.status(500).json({ error: "Errore aggiornamento annuncio" });
+      return res.status(400).json({ error: error.message || "Errore aggiornamento annuncio" });
     }
 
     res.json({ ad });

@@ -154,6 +154,12 @@ export default function Profile() {
       }
       setBoostStep("Aggiornamento annuncio...");
       const result = await purchaseBoost({ adId, days, type });
+      setEditingAd(prev => prev?.id === adId ? {
+        ...prev,
+        is_premium: type === "premium" ? true : prev.is_premium,
+        is_sponsored: type === "vetrina" ? true : prev.is_sponsored,
+        boosted_until: result.ends_at,
+      } : prev);
       setBoostStep("Aggiornamento crediti...");
       updateUser({ credits: result.remaining_credits });
       setBoostStep("Completato! 🎉");
@@ -181,7 +187,10 @@ export default function Profile() {
     setExistingEditPhotos(ad.images?.length ? ad.images : ad.image ? [ad.image] : []);
   };
 
-  const maxEditPhotos = (user?.has_paid || (user?.credits || 0) > 0) ? 5 : 1;
+  const editHasActiveSponsorship = !!editingAd?.boosted_until
+    && new Date(editingAd.boosted_until).getTime() > Date.now()
+    && (editingAd.is_premium || editingAd.is_sponsored);
+  const maxEditPhotos = editHasActiveSponsorship ? 5 : Math.max(1, existingEditPhotos.length);
 
   const saveEdit = async () => {
     if (!editingAd) return;
@@ -213,7 +222,10 @@ export default function Profile() {
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Errore salvataggio");
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        throw new Error(errorBody?.message || errorBody?.error || "Errore salvataggio");
+      }
       toast.success("Annuncio aggiornato!");
       setEditingAd(null);
       setEditPhotos([]);
@@ -545,6 +557,18 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground mb-4">Puoi modificare testo e foto. Città ed età rimangono invariati.</p>
             {/* Foto section */}
             <div className="mb-4">
+              {!editHasActiveSponsorship && (
+                <div className="mb-4 rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20">
+                  <div className="mb-3 flex items-start gap-3">
+                    <Crown className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                    <div><p className="font-bold text-amber-900 dark:text-amber-200">Vuoi aggiungere fino a 5 foto?</p><p className="text-xs text-amber-800/80 dark:text-amber-300/80">Sponsorizza questo annuncio: verranno scalati 10 crediti e potrai aggiungere subito altre immagini.</p></div>
+                  </div>
+                  <Button type="button" onClick={() => handleBoost(editingAd.id, 10, 30, "premium")} disabled={!!busyBoost || (user.credits || 0) < 10} className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700">
+                    <Crown className="h-4 w-4" /> Sponsorizza annuncio · 10 crediti
+                  </Button>
+                  {(user.credits || 0) < 10 && <p className="mt-2 text-center text-xs font-semibold text-red-600">Crediti insufficienti</p>}
+                </div>
+              )}
               <AdPhotoEditor
                 existingPhotos={existingEditPhotos}
                 newPhotos={editPhotos}
