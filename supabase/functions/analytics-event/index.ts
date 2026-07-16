@@ -67,6 +67,20 @@ Deno.serve(async (req) => {
       metadata,
     });
     if (error) throw error;
+
+    if (eventName === "page_view") {
+      const adId = path.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i)?.[1];
+      if (adId) {
+        const { error: viewError } = await admin.from("ad_views").insert({
+          ad_id: adId,
+          user_id: userId,
+          visitor_id: visitorId,
+        });
+        // One view per browser, ad and UTC day. A duplicate is expected and harmless.
+        if (viewError && viewError.code !== "23505") throw viewError;
+      }
+    }
+
     return new Response(JSON.stringify({ accepted: true }), { status: 202, headers: headers(origin) });
   } catch (error) {
     console.error("analytics-event:", error instanceof Error ? error.message : error);
