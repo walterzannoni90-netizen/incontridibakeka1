@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAdminVetrinaActivation,
+  buildAdminVetrinaRemoval,
   getPublicAdImages,
   isAdPromoted,
   isPremiumActive,
@@ -54,5 +56,24 @@ describe("visibilità pubblica delle foto", () => {
 
     expect(isVetrinaActive(scheduled, NOW)).toBe(false);
     expect(isVetrinaActive(active, NOW)).toBe(true);
+  });
+
+  it("crea una Vetrina admin con scadenza reale", () => {
+    const payload = buildAdminVetrinaActivation({}, 7, new Date(NOW));
+
+    expect(payload.is_sponsored).toBe(true);
+    expect(payload.vetrina_scheduled_at).toBe("2026-07-16T12:00:00.000Z");
+    expect(payload.vetrina_until).toBe("2026-07-23T12:00:00.000Z");
+    expect(payload.boost_end_at).toBe(payload.vetrina_until);
+  });
+
+  it("rimuove la Vetrina senza cancellare un Premium ancora attivo", () => {
+    const premiumUntil = "2026-07-20T12:00:00.000Z";
+    const payload = buildAdminVetrinaRemoval({ premium_until: premiumUntil }, NOW);
+
+    expect(payload.is_sponsored).toBe(false);
+    expect(payload.vetrina_until).toBeNull();
+    expect(payload.is_premium).toBe(true);
+    expect(payload.boosted_until).toBe(premiumUntil);
   });
 });
