@@ -74,6 +74,12 @@ interface ConversionStats {
   payments: number;
 }
 
+interface AcquisitionSource {
+  source: string;
+  visitors: number;
+  pageViews: number;
+}
+
 const EMPTY_CONVERSIONS: ConversionStats = {
   pageViews: 0,
   uniqueVisitors: 0,
@@ -197,6 +203,7 @@ export default function AdminPanel() {
   const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
   const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
   const [conversionStats, setConversionStats] = useState<ConversionStats>(EMPTY_CONVERSIONS);
+  const [acquisitionSources, setAcquisitionSources] = useState<AcquisitionSource[]>([]);
 
   useEffect(() => {
     if (!supabase || !isAdmin) return;
@@ -216,7 +223,7 @@ export default function AdminPanel() {
       const [{ data: events }, { data: admins }] = await Promise.all([
         supabase
         .from("analytics_events")
-        .select("event_name,visitor_id,user_id,path")
+        .select("event_name,visitor_id,user_id,path,metadata")
         .gte("created_at", since),
         supabase.from("profiles").select("id").eq("is_admin", true),
       ]);
@@ -227,6 +234,21 @@ export default function AdminPanel() {
         );
         const countEvent = (name: string) => externalEvents.filter((event) => event.event_name === name).length;
         const pageViews = externalEvents.filter((event) => event.event_name === "page_view");
+        const sourceMap = new Map<string, { visitors: Set<string>; pageViews: number }>();
+        pageViews.forEach((event) => {
+          const metadata = event.metadata && typeof event.metadata === "object"
+            ? event.metadata as Record<string, unknown>
+            : {};
+          const source = typeof metadata.source === "string" ? metadata.source : "non disponibile";
+          const entry = sourceMap.get(source) ?? { visitors: new Set<string>(), pageViews: 0 };
+          entry.visitors.add(event.visitor_id);
+          entry.pageViews += 1;
+          sourceMap.set(source, entry);
+        });
+        setAcquisitionSources([...sourceMap.entries()]
+          .map(([source, value]) => ({ source, visitors: value.visitors.size, pageViews: value.pageViews }))
+          .sort((a, b) => b.visitors - a.visitors || b.pageViews - a.pageViews)
+          .slice(0, 8));
         setConversionStats({
           pageViews: pageViews.length,
           uniqueVisitors: new Set(pageViews.map((event) => event.visitor_id)).size,
@@ -735,6 +757,24 @@ export default function AdminPanel() {
                     <div key={String(label)} className="flex items-center justify-between rounded-xl bg-primary/5 px-4 py-3">
                       <span className="text-sm text-muted-foreground">{label}</span>
                       <span className="font-bold text-primary">{(Number(rate) * 100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {activeTab === "overview" && acquisitionSources.length > 0 && (
+              <Card className="mt-6 p-6">
+                <div className="mb-4">
+                  <h3 className="font-semibold">Provenienza dei visitatori</h3>
+                  <p className="text-xs text-muted-foreground">Dati disponibili per i nuovi accessi tracciati da questo aggiornamento</p>
+                </div>
+                <div className="space-y-2">
+                  {acquisitionSources.map((item) => (
+                    <div key={item.source} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 rounded-xl border border-border/70 px-4 py-3">
+                      <span className="truncate text-sm font-medium">{item.source}</span>
+                      <span className="text-xs text-muted-foreground">{item.pageViews} pagine</span>
+                      <Badge variant="secondary">{item.visitors} visitatori</Badge>
                     </div>
                   ))}
                 </div>
