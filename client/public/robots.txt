@@ -4,6 +4,8 @@ Disallow: /admin
 Disallow: /profile
 Disallow: /my-ads
 Disallow: /messages
+Disallow: /api/
+Disallow: /404
 Disallow: /*?path=
 Disallow: /*?payment=
 

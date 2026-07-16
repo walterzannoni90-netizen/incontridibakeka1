@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@/hooks/useRouter";
 import { ITALIAN_CITIES, slugify } from "@shared/data";
+import { canonicalUrl, replaceJsonLd, setPageMetadata } from "@/lib/seo";
 import Home from "./Home";
 
 export default function CityPage() {
@@ -21,40 +22,28 @@ export default function CityPage() {
 
     if (cityName) {
       setInitialCity(cityName);
-      document.title = `Incontri a ${cityName} — Annunci di incontri | Incontri di Bakeka`;
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) {
-        metaDesc.setAttribute(
-          "content",
-          `Trova annunci di incontri pubblicati a ${cityName}. Incontri, amicizie e nuove connessioni su Incontri di Bakeka.`
-        );
-      } else {
-        const meta = document.createElement("meta");
-        meta.name = "description";
-        meta.content = `Trova annunci di incontri pubblicati a ${cityName}. Incontri, amicizie e nuove connessioni su Incontri di Bakeka.`;
-        document.head.appendChild(meta);
-      }
-
-      const oldBreadcrumb = document.getElementById("ld-breadcrumb");
-      if (oldBreadcrumb) oldBreadcrumb.remove();
-      const script = document.createElement("script");
-      script.id = "ld-breadcrumb";
-      script.type = "application/ld+json";
-      script.textContent = JSON.stringify({
+      const path = `/incontri/${slugify(cityName)}/`;
+      setPageMetadata({
+        title: `Incontri a ${cityName} — Annunci personali attivi`,
+        description: `Consulta gli annunci personali attivi pubblicati dagli utenti a ${cityName}.`,
+        path,
+      });
+      replaceJsonLd("ld-breadcrumb", {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://incontridibakeka.com/" },
-          { "@type": "ListItem", "position": 2, "name": `Incontri a ${cityName}`, "item": `https://incontridibakeka.com/incontri/${slugify(cityName)}` },
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": canonicalUrl("/") },
+          { "@type": "ListItem", "position": 2, "name": `Incontri a ${cityName}`, "item": canonicalUrl(path) },
         ],
       });
-      document.head.appendChild(script);
     } else {
       navigate("/", { replace: true });
       return;
     }
 
     setReady(true);
+
+    return () => document.getElementById("ld-breadcrumb")?.remove();
   }, [currentPath, navigate]);
 
   if (!ready) return null;

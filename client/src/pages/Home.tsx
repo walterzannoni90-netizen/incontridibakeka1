@@ -11,11 +11,13 @@ import { supabase } from "@/lib/supabaseClient";
 import { purchaseBoost } from "@/lib/boost";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ITALIAN_CITIES, COUNTRIES, slugify } from "@shared/data";
-import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Trash2, Crown, Package, TrendingUp, CheckCircle2, Coins } from "lucide-react";
+import { Heart, MapPin, Star, Search, LogOut, LogIn, Menu, X, Plus, ChevronDown, MessageCircle, Moon, Sun, Bookmark, Shield, Eye, Sparkles, ImagePlus, Lock, Loader2, Clock, Calendar, Crown, Package, TrendingUp, CheckCircle2, Coins } from "lucide-react";
 import SitePromoBanner from "@/components/SitePromoBanner";
 import SafetyGuidePromo from "@/components/SafetyGuidePromo";
 import { trackEvent } from "@/lib/analytics";
 import BoostConfirmDialog, { type PendingBoost } from "@/components/BoostConfirmDialog";
+import { CATEGORIES } from "@/data/categories";
+import { setPageMetadata } from "@/lib/seo";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -101,36 +103,30 @@ function formatPhone(val: string): string {
   return "+39" + digits;
 }
 
-const CATEGORIES = [
-  { id: "donna-cerca-uomo", name: "Donna Cerca Uomo", image: "https://unsplash.com/photos/MuY9_BzPX98/download?force=true&w=900" },
-  { id: "uomo-cerca-donna", name: "Uomo Cerca Donna", image: "https://unsplash.com/photos/NH7zbSHsbP8/download?force=true&w=900" },
-  { id: "trans", name: "Trans", image: "https://unsplash.com/photos/f626lgQvTQo/download?force=true&w=900" },
-  { id: "donna-cerca-donna", name: "Donna Cerca Donna", image: "https://unsplash.com/photos/XPkd47xw4jc/download?force=true&w=900" },
-  { id: "uomo-cerca-uomo", name: "Uomo Cerca Uomo", image: "https://unsplash.com/photos/rxawtWogcjQ/download?force=true&w=900" },
-  { id: "coppie", name: "Coppie", image: "https://unsplash.com/photos/xgK6o8h1L6M/download?force=true&w=900" },
-  { id: "massaggi", name: "Massaggi", image: "https://unsplash.com/photos/-AakIaAPV0w/download?force=true&w=900" },
-  { id: "accompagnatrici", name: "Accompagnatrici", image: "https://unsplash.com/photos/t29xtYbNvLQ/download?force=true&w=900" },
-  { id: "evento-festa", name: "Eventi e Feste", image: "https://unsplash.com/photos/cn1WbzOMO2I/download?force=true&w=900" },
-  { id: "amicizia", name: "Amicizia", image: "https://unsplash.com/photos/ijn7NJsjoMM/download?force=true&w=900" },
-];
-
 // No demo data - real data only from Supabase
 const DEMO_ADS: Ad[] = [];
 
-export default function Home({ initialCity }: { initialCity?: string | null }) {
+export default function Home({
+  initialCity,
+  initialCategory,
+}: {
+  initialCity?: string | null;
+  initialCategory?: string | null;
+}) {
   const { navigate } = useRouter();
   const { user: currentUser, login, register, logout, updateUser } = useAuth();
   const { handlePaymentCallback: stripePaymentCallback } = useStripe();
   const { theme, toggleTheme } = useTheme();
   const [ads, setAds] = useState<Ad[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [cityCounts, setCityCounts] = useState<Record<string, number>>({});
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(initialCategory || null);
   const [authModal, setAuthModal] = useState<"login" | "register" | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
@@ -203,14 +199,19 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     (async () => {
       const { data } = await supabase
         .from("ads")
-        .select("category")
+        .select("category, city")
         .eq("is_active", true);
       if (!data) return;
       const counts = data.reduce<Record<string, number>>((result, row) => {
         if (row.category) result[row.category] = (result[row.category] ?? 0) + 1;
         return result;
       }, {});
+      const cities = data.reduce<Record<string, number>>((result, row) => {
+        if (row.city) result[row.city] = (result[row.city] ?? 0) + 1;
+        return result;
+      }, {});
       setCategoryCounts(counts);
+      setCityCounts(cities);
     })();
   }, []);
 
@@ -242,24 +243,30 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   }, [currentUserId]);
 
   useEffect(() => {
-    let title = "Incontri di Bakeka — Annunci Verificati";
-    let desc = "Il sito più affidabile per incontri e amicizie in Italia. Profili verificati, connessioni reali.";
+    let title = "Incontri di Bakeka — Annunci personali in Italia";
+    let desc = "Scopri e pubblica annunci personali per adulti nelle città italiane, con messaggi e strumenti di segnalazione.";
+    let path = "/";
+    let robots = "index,follow,max-image-preview:large";
     if (selectedCity && categoryFilter) {
       const cat = CATEGORIES.find(c => c.id === categoryFilter);
       title = `${cat?.name || "Annunci"} a ${selectedCity} — Incontri di Bakeka`;
-      desc = `Trova annunci di ${cat?.name?.toLowerCase() || "incontri"} a ${selectedCity}. Profili verificati, annunci reali.`;
+      desc = `Consulta gli annunci attivi di ${cat?.name?.toLowerCase() || "incontri"} dichiarati dagli utenti a ${selectedCity}.`;
+      path = `/incontri/${slugify(selectedCity)}/`;
+      robots = cityCounts[selectedCity] ? "index,follow,max-image-preview:large" : "noindex,follow";
     } else if (selectedCity) {
       title = `Incontri a ${selectedCity} — Annunci di incontri | Incontri di Bakeka`;
-      desc = `Trova annunci di incontri a ${selectedCity}. Profili verificati, annunci reali. ${selectedCity} incontri, amicizie e molto altro.`;
+      desc = `Consulta gli annunci personali attivi pubblicati dagli utenti a ${selectedCity}.`;
+      path = `/incontri/${slugify(selectedCity)}/`;
+      robots = cityCounts[selectedCity] ? "index,follow,max-image-preview:large" : "noindex,follow";
     } else if (categoryFilter) {
       const cat = CATEGORIES.find(c => c.id === categoryFilter);
       title = `${cat?.name || "Annunci"} — Incontri di Bakeka`;
-      desc = `Trova annunci di ${cat?.name?.toLowerCase() || "incontri"}. Profili verificati, annunci reali su Incontri di Bakeka.`;
+      desc = cat?.description || "Consulta gli annunci personali attivi su Incontri di Bakeka.";
+      path = `/categoria/${categoryFilter}/`;
+      robots = categoryCounts[categoryFilter] ? "index,follow,max-image-preview:large" : "noindex,follow";
     }
-    document.title = title;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute("content", desc);
-  }, [selectedCity, categoryFilter]);
+    setPageMetadata({ title, description: desc, path, robots });
+  }, [selectedCity, categoryFilter, categoryCounts, cityCounts]);
 
   // Processa il risultato del callback Stripe (usando useStripe) e aggiorna i crediti
   const handlePaymentResult = async () => {
@@ -640,6 +647,19 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     const matchesCity = !selectedCity || ad.city?.toLowerCase() === selectedCity.toLowerCase();
     return matchesSearch && matchesCategory && matchesCity;
   });
+  const activeFooterCities = ITALIAN_CITIES.filter((city) => (cityCounts[city] ?? 0) > 0);
+  const footerCities = activeFooterCities.length > 0 ? activeFooterCities : ITALIAN_CITIES.slice(0, 12);
+  const currentCategory = CATEGORIES.find((category) => category.id === categoryFilter);
+  const marketingHeading = selectedCity
+    ? `Annunci personali a ${selectedCity}`
+    : currentCategory
+      ? currentCategory.name
+      : "Connessioni Autentiche";
+  const marketingSubheading = selectedCity
+    ? `Consulta i profili attivi pubblicati dagli utenti a ${selectedCity}`
+    : currentCategory
+      ? currentCategory.description
+      : "Annunci personali e nuove connessioni nelle città italiane";
 
   const INFO_CONTENT: Record<string, { title: string; body: string }> = {
     "chi-siamo": { title: "Chi Siamo", body: "Incontri di Bakeka è una piattaforma italiana per annunci personali tra adulti. Offriamo strumenti per pubblicare, cercare, contattare e segnalare contenuti, con attenzione a privacy e sicurezza." },
@@ -719,7 +739,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 <div className="absolute top-full right-0 mt-1 w-56 max-h-72 overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1">
                   <button
                     className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
+                    onClick={() => { setCityDropdownOpen(false); navigate("/"); }}
                   >
                     Tutte le citta
                   </button>
@@ -727,7 +747,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <button
                       key={city}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => { setSelectedCity(city); setCityDropdownOpen(false); }}
+                      onClick={() => { setCityDropdownOpen(false); navigate(`/incontri/${slugify(city)}/`); }}
                     >
                       {city}
                     </button>
@@ -899,7 +919,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <div className="mt-1 w-full max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg py-1 bg-white dark:bg-gray-900">
                       <button
                         className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                        onClick={() => { setSelectedCity(null); setCityDropdownOpen(false); }}
+                        onClick={() => { setCityDropdownOpen(false); setMobileMenuOpen(false); navigate("/"); }}
                       >
                         Tutte le citta
                       </button>
@@ -907,7 +927,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                         <button
                           key={city}
                           className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                          onClick={() => { setSelectedCity(city); setCityDropdownOpen(false); }}
+                          onClick={() => { setCityDropdownOpen(false); setMobileMenuOpen(false); navigate(`/incontri/${slugify(city)}/`); }}
                         >
                           {city}
                         </button>
@@ -1112,13 +1132,13 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               <div className="flex flex-col items-center justify-center text-center">
                 <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-4 text-sm">
                   <Shield className="w-4 h-4" />
-                  <span>Profili verificati. Connessioni reali.</span>
+                  <span>Controlli, segnalazioni e annunci gestiti dagli utenti.</span>
                 </div>
                 <h1 className="text-4xl md:text-6xl font-bold mb-3 md:mb-4 font-poppins drop-shadow-lg">
-                  Connessioni Autentiche
+                  {marketingHeading}
                 </h1>
                 <p className="text-lg md:text-2xl mb-6 md:mb-8 opacity-90 max-w-2xl px-2">
-                  Il sito piu affidabile per incontri e amicizie in Italia
+                  {marketingSubheading}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto px-4 sm:px-0">
                   <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto shadow-lg" onClick={runSearch}>
@@ -1143,15 +1163,21 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
           </h2>
           <p className="text-center text-muted-foreground mb-6 md:mb-12">Trova esattamente quello che cerchi</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-5">
-            {CATEGORIES.map((cat) => (
-              <Card
+            {CATEGORIES.map((cat) => {
+              const selected = categoryFilter === cat.id;
+              const destination = selected ? "/" : `/categoria/${cat.id}/`;
+              return (
+              <a
                 key={cat.id}
-                className="overflow-hidden cursor-pointer border border-border/60 bg-card shadow-sm transition-all duration-300 group hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-xl"
-                onClick={() => {
-                  setCategoryFilter(categoryFilter === cat.id ? null : cat.id);
-                  document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" });
+                href={destination}
+                aria-current={selected ? "page" : undefined}
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(destination);
+                  window.setTimeout(() => document.getElementById("ads-section")?.scrollIntoView({ behavior: "smooth" }), 0);
                 }}
               >
+              <Card className="overflow-hidden cursor-pointer border border-border/60 bg-card shadow-sm transition-all duration-300 group hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-xl">
                 <div className="relative aspect-[4/5] overflow-hidden bg-muted sm:aspect-[4/3] lg:aspect-[4/5]">
                   <img
                     src={cat.image}
@@ -1166,14 +1192,15 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                       {categoryCounts[cat.id] ?? 0} annunci attivi
                     </p>
                   </div>
-                  {categoryFilter === cat.id && (
+                  {selected && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                       <span className="text-white text-xs">✓</span>
                     </div>
                   )}
                 </div>
               </Card>
-            ))}
+              </a>
+            );})}
           </div>
           </div>
         </section>
@@ -1208,6 +1235,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                       setSearchTerm("");
                       setCategoryFilter(null);
                       setSelectedCity(null);
+                      navigate("/");
                     }}
                   >
                     Cancella filtri
@@ -1988,7 +2016,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                     <img src="/logo.svg" alt="Incontri di Bakeka" className="h-8 w-auto" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Il sito piu affidabile per connessioni autentiche in Italia.
+                    Annunci personali per adulti, ricerca locale e strumenti di segnalazione.
                   </p>
                 </div>
                 <div>
@@ -2023,7 +2051,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
               <div className="border-t border-border pt-6 mb-6">
                 <h4 className="font-bold mb-3 text-sm">Incontri in tutte le città italiane</h4>
                 <div className="flex max-h-44 flex-wrap gap-2 overflow-y-auto pr-1">
-                  {ITALIAN_CITIES.map((city) => (
+                  {footerCities.map((city) => (
                     <a
                       key={city}
                       href={`/incontri/${slugify(city)}/`}

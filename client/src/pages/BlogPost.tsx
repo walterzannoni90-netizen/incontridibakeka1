@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, BookOpen, MapPin, Calendar, Clock3, ShieldCheck 
 import { useEffect } from "react";
 import { blogArticles } from "@/data/blog-data";
 import SitePromoBanner from "@/components/SitePromoBanner";
+import { setPageMetadata } from "@/lib/seo";
 
 const ARTICLES_MAP: Record<string, typeof blogArticles[0]> = {};
 blogArticles.forEach(a => { ARTICLES_MAP[a.slug] = a; });
@@ -18,9 +19,20 @@ export default function BlogPost() {
 
   useEffect(() => {
     if (article) {
-      document.title = `${article.title} — Incontri di Bakeka`;
+      setPageMetadata({
+        title: `${article.title} | Incontri di Bakeka`,
+        description: article.excerpt,
+        path: `/blog/${article.slug}/`,
+      });
+    } else {
+      setPageMetadata({
+        title: "Articolo non disponibile | Incontri di Bakeka",
+        description: "Questa guida non è disponibile.",
+        path: `/blog/${slug}/`,
+        robots: "noindex,nofollow",
+      });
     }
-  }, [article]);
+  }, [article, slug]);
 
   if (!article) {
     return (

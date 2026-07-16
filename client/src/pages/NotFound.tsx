@@ -2,9 +2,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Home } from "lucide-react";
 import { useRouter } from "@/hooks/useRouter";
+import { useEffect } from "react";
+import { setPageMetadata } from "@/lib/seo";
 
 export default function NotFound() {
-  const { navigate } = useRouter();
+  const { navigate, currentPath } = useRouter();
+
+  useEffect(() => {
+    setPageMetadata({
+      title: "Pagina non trovata | Incontri di Bakeka",
+      description: "La pagina richiesta non esiste o non è più disponibile.",
+      path: currentPath,
+      robots: "noindex,nofollow",
+    });
+  }, [currentPath]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-purple-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">

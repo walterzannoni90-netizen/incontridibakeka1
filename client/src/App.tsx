@@ -8,6 +8,7 @@ import { trackEvent } from "@/lib/analytics";
 
 const Home = lazy(() => import("./pages/Home"));
 const CityPage = lazy(() => import("./pages/CityPage"));
+const CategoryPage = lazy(() => import("./pages/CategoryPage"));
 const AdDetail = lazy(() => import("./pages/AdDetail"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const Shop = lazy(() => import("./pages/Shop"));
@@ -63,6 +64,7 @@ function Router() {
       <Switch>
         <Route path={"/"} component={HomePage} />
         <Route path={"/incontri/:city"} component={CityPage} />
+        <Route path={"/categoria/:category"} component={CategoryPage} />
         <Route path={"/ad"} component={AdDetail} />
         <Route path={"/ad/:slug"} component={AdDetail} />
         <Route path={"/shop"} component={Shop} />
