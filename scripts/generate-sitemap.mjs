@@ -17,6 +17,7 @@ async function main() {
 
   // Static pages
   urls.push({ loc: `${SITE_URL}/shop`, changefreq: "weekly", priority: "0.6" });
+  urls.push({ loc: `${SITE_URL}/pubblica-annuncio/`, changefreq: "weekly", priority: "0.9" });
   urls.push({ loc: `${SITE_URL}/bacheca-incontri/`, changefreq: "weekly", priority: "0.9" });
 
   // Blog articles - all from blog-data.ts (static HTML, return HTTP 200)
