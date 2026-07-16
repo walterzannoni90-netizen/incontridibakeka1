@@ -3,6 +3,7 @@ import {
   getPublicAdImages,
   isAdPromoted,
   isPremiumActive,
+  isPublicPhotoBlurred,
   isVetrinaActive,
 } from "./ad-visibility";
 
@@ -14,6 +15,8 @@ describe("visibilità pubblica delle foto", () => {
 
     expect(isAdPromoted(ad, NOW)).toBe(false);
     expect(getPublicAdImages(ad, NOW)).toEqual(["prima.jpg"]);
+    expect(isPublicPhotoBlurred(ad, false, NOW)).toBe(true);
+    expect(isPublicPhotoBlurred(ad, true, NOW)).toBe(false);
   });
 
   it("mantiene oscurata una promozione scaduta", () => {
@@ -36,6 +39,7 @@ describe("visibilità pubblica delle foto", () => {
 
     expect(isPremiumActive(ad, NOW)).toBe(true);
     expect(getPublicAdImages(ad, NOW)).toEqual(ad.images);
+    expect(isPublicPhotoBlurred(ad, false, NOW)).toBe(false);
   });
 
   it("rispetta inizio e fine reali della Vetrina", () => {

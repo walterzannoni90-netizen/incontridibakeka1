@@ -11,8 +11,8 @@ import { trackEvent } from "@/lib/analytics";
 import { canonicalUrl, replaceJsonLd, setPageMetadata } from "@/lib/seo";
 import {
   getPublicAdImages,
-  isAdPromoted,
   isPremiumActive,
+  isPublicPhotoBlurred,
   isVetrinaActive,
 } from "@/lib/ad-visibility";
 import {
@@ -86,6 +86,7 @@ export default function AdDetail() {
   const [liked, setLiked] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [photoRevealed, setPhotoRevealed] = useState(false);
 
   const adId = currentPath.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)?.[0] || "";
 
@@ -115,6 +116,12 @@ export default function AdDetail() {
   useEffect(() => {
     loadAd();
   }, [loadAd]);
+
+  useEffect(() => {
+    setPhotoRevealed(false);
+    setCurrentImage(0);
+    setLightboxOpen(false);
+  }, [adId]);
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -256,8 +263,8 @@ export default function AdDetail() {
   const now = Date.now();
   const premiumActive = isPremiumActive(ad, now);
   const vetrinaActive = isVetrinaActive(ad, now);
-  const boostActive = isAdPromoted(ad, now);
   const allImages = getPublicAdImages(ad, now);
+  const photoBlurred = isPublicPhotoBlurred(ad, photoRevealed, now);
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,13 +284,19 @@ export default function AdDetail() {
                   <img
                     src={allImages[currentImage]}
                     alt={ad.title}
-                    className={`w-full h-full object-cover transition-transform duration-500 ${boostActive ? "cursor-zoom-in group-hover:scale-105" : "blur-xl scale-110"}`}
-                    onClick={() => boostActive && setLightboxOpen(true)}
+                    className={`w-full h-full object-cover transition-all duration-500 cursor-pointer ${photoBlurred ? "blur-xl scale-110" : "cursor-zoom-in group-hover:scale-105"}`}
+                    onClick={() => {
+                      if (photoBlurred) {
+                        setPhotoRevealed(true);
+                        return;
+                      }
+                      setLightboxOpen(true);
+                    }}
                   />
-                  {boostActive && <button type="button" onClick={() => setLightboxOpen(true)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/80" aria-label="Ingrandisci foto">
+                  {!photoBlurred && <button type="button" onClick={() => setLightboxOpen(true)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/80" aria-label="Ingrandisci foto">
                     <Maximize2 className="h-5 w-5" />
                   </button>}
-                  {!boostActive && <div className="absolute inset-0 flex items-center justify-center bg-black/30"><span className="rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white">Foto oscurata · visibile con una promozione attiva</span></div>}
+                  {photoBlurred && <button type="button" className="absolute inset-0 flex items-center justify-center bg-black/30" onClick={() => setPhotoRevealed(true)} aria-label="Mostra la foto"><span className="rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white">Tocca per vedere la foto</span></button>}
                   {allImages.length > 1 && (
                     <>
                       <button
@@ -576,7 +589,7 @@ export default function AdDetail() {
           </div>
         </div>
       </div>
-      {lightboxOpen && boostActive && allImages.length > 0 && (
+      {lightboxOpen && !photoBlurred && allImages.length > 0 && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Visualizzatore foto" onClick={() => setLightboxOpen(false)}>
           <button type="button" onClick={() => setLightboxOpen(false)} className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25" aria-label="Chiudi foto">
             <X className="h-6 w-6" />

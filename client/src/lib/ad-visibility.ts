@@ -39,6 +39,14 @@ export function isAdPromoted(
   return isPremiumActive(ad, now) || isVetrinaActive(ad, now);
 }
 
+export function isPublicPhotoBlurred(
+  ad: AdPromotionState,
+  revealed: boolean,
+  now = Date.now(),
+): boolean {
+  return !isAdPromoted(ad, now) && !revealed;
+}
+
 export function getPublicAdImages(
   ad: AdPhotoState,
   now = Date.now(),
