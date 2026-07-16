@@ -165,4 +165,41 @@ const landingPage = `<!DOCTYPE html>
 </body></html>`;
 fs.writeFileSync(path.join(landingDir, 'index.html'), landingPage);
 
-console.log(`✅ Generati ${count} articoli blog + pagina bacheca incontri`);
+// Acquisition landing for people who want to publish a real ad. The CTA
+// carries organic attribution into the SPA without needing paid advertising.
+const publishDir = path.join(PUBLIC_DIR, 'pubblica-annuncio');
+fs.mkdirSync(publishDir, { recursive: true });
+const publishUrl = `${BASE_URL}/pubblica-annuncio/`;
+const publishDescription = 'Pubblica gratuitamente il tuo annuncio personale: crea un account, scegli città e categoria, aggiungi foto e gestisci il profilo dalla tua area riservata.';
+const publishSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Pubblica gratuitamente il tuo annuncio personale',
+  url: publishUrl,
+  description: publishDescription,
+  isPartOf: { '@type': 'WebSite', name: 'Incontri di Bakeka', url: BASE_URL },
+};
+const publishPage = `<!DOCTYPE html>
+<html lang="it"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pubblica gratuitamente il tuo annuncio | Incontri di Bakeka</title>
+  <meta name="description" content="${publishDescription}">
+  <meta name="robots" content="index, follow, max-image-preview:large"><meta name="rating" content="adult">
+  <link rel="canonical" href="${publishUrl}">
+  <meta property="og:type" content="website"><meta property="og:title" content="Pubblica il tuo annuncio personale">
+  <meta property="og:description" content="${publishDescription}"><meta property="og:url" content="${publishUrl}">
+  <meta property="og:image" content="${BASE_URL}/images/site-promo-banner.png">
+  <script type="application/ld+json">${JSON.stringify(publishSchema).replace(/</g, '\\u003c')}</script>
+  <style>body{font-family:Inter,system-ui,sans-serif;color:#241532;background:#faf7ff;margin:0;line-height:1.65}.wrap{max-width:920px;margin:auto;padding:30px 20px}.hero{background:linear-gradient(135deg,#5b21b6,#db2777);color:#fff;padding:62px 0}.hero h1{font-size:clamp(2rem,6vw,3.6rem);line-height:1.08;margin:0 0 16px}.hero p{font-size:1.15rem;max-width:680px}.cta{display:inline-block;margin-top:16px;padding:14px 24px;border-radius:14px;background:#fff;color:#6d28d9;text-decoration:none;font-weight:800}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0}.card{background:#fff;border:1px solid #eadcff;border-radius:18px;padding:22px;box-shadow:0 8px 28px #3b076410}.num{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#ede9fe;color:#6d28d9;font-weight:900}@media(max-width:700px){.steps{grid-template-columns:1fr}}footer{color:#6b7280}</style>
+</head><body>
+  <header class="hero"><div class="wrap"><p>Solo per maggiorenni</p><h1>Il tuo annuncio, nella tua città</h1><p>Crea gratuitamente il profilo di base, scegli come essere contattato e gestisci tutto dalla tua area personale.</p><a class="cta" href="/?action=publish&amp;utm_source=organic-landing&amp;utm_medium=website&amp;utm_campaign=publish-free">Inizia a pubblicare</a></div></header>
+  <main class="wrap"><h2>Come funziona</h2><div class="steps">
+    <section class="card"><span class="num">1</span><h3>Crea l’account</h3><p>Registrati con i tuoi dati reali. Non inseriamo profili o recensioni artificiali.</p></section>
+    <section class="card"><span class="num">2</span><h3>Completa l’annuncio</h3><p>Scegli città e categoria, scrivi una descrizione originale e aggiungi una tua foto.</p></section>
+    <section class="card"><span class="num">3</span><h3>Gestisci i contatti</h3><p>Controlla visualizzazioni e messaggi e modifica o disattiva l’annuncio quando vuoi.</p></section>
+  </div><section class="card"><h2>Trasparente fin dall’inizio</h2><p>La pubblicazione di base segue i limiti giornalieri mostrati sulla piattaforma. Premium e Vetrina sono facoltativi: durata e costo vengono indicati prima di ogni conferma.</p><a class="cta" style="background:#7c3aed;color:#fff" href="/?action=publish&amp;utm_source=organic-landing&amp;utm_medium=website&amp;utm_campaign=publish-free">Pubblica il tuo annuncio</a></section></main>
+  <footer><div class="wrap">Contenuti destinati esclusivamente a maggiorenni · © 2026 Incontri di Bakeka</div></footer>
+</body></html>`;
+fs.writeFileSync(path.join(publishDir, 'index.html'), publishPage);
+
+console.log(`✅ Generati ${count} articoli blog + 2 landing page`);

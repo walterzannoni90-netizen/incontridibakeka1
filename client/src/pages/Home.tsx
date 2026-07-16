@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -168,6 +168,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [successModal, setSuccessModal] = useState<{ title: string; vetrina: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialPublishHandled = useRef(false);
   const [selectedCity, setSelectedCity] = useState<string | null>(initialCity || null);
   const [selectedCountry, setSelectedCountry] = useState("IT");
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -376,7 +377,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
   };
 
   // Conta quanti annunci l'utente ha pubblicato nelle ultime 24 ore
-  const checkDailyLimit = async (): Promise<number> => {
+  const checkDailyLimit = useCallback(async (): Promise<number> => {
     if (!currentUser || !SUPABASE_CONFIGURED || !supabase) return 0;
     const { data: session } = await supabase.auth.getSession();
     const token = session?.session?.access_token;
@@ -392,7 +393,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     } catch {
       return 0;
     }
-  };
+  }, [currentUser]);
 
   const runSearch = () => {
     const section = document.getElementById("ads-section");
@@ -400,7 +401,7 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const openPublish = async () => {
+  const openPublish = useCallback(async () => {
     if (!currentUser) {
       setAuthModal("login");
       return;
@@ -419,7 +420,18 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
     }
     setLimitMessage(null);
     setPublishOpen(true);
-  };
+  }, [currentUser, checkDailyLimit, dailyLimit, hasPaid]);
+
+  useEffect(() => {
+    const publishIntent = new URLSearchParams(window.location.search).get("action") === "publish";
+    if (!publishIntent || initialPublishHandled.current) return;
+    if (!currentUser) {
+      setAuthModal("register");
+      return;
+    }
+    initialPublishHandled.current = true;
+    void openPublish();
+  }, [currentUser, openPublish]);
 
   const toggleSaveAd = (adId: string) => {
     const current = JSON.parse(localStorage.getItem("savedAds") || "[]");

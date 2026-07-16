@@ -215,11 +215,15 @@ export default function AdDetail() {
   const handleShare = async () => {
     try {
       void trackEvent("share", { ad_id: ad?.id, city: ad?.city });
+      const shareUrl = new URL(window.location.href);
+      shareUrl.searchParams.set("utm_source", "shared-link");
+      shareUrl.searchParams.set("utm_medium", "organic");
+      shareUrl.searchParams.set("utm_campaign", "ad-share");
       if (navigator.share && ad) {
-        await navigator.share({ title: ad.title, text: `Guarda questo annuncio a ${ad.city}`, url: window.location.href });
+        await navigator.share({ title: ad.title, text: `Guarda questo annuncio a ${ad.city}`, url: shareUrl.toString() });
         return;
       }
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(shareUrl.toString());
       toast.success("Link copiato: condividilo dove preferisci!");
     } catch {
       toast.error("Errore copia link");
