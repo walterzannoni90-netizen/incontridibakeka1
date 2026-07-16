@@ -18,6 +18,11 @@ import { trackEvent } from "@/lib/analytics";
 import BoostConfirmDialog, { type PendingBoost } from "@/components/BoostConfirmDialog";
 import { CATEGORIES } from "@/data/categories";
 import { setPageMetadata } from "@/lib/seo";
+import {
+  isAdPromoted,
+  isPremiumActive,
+  isVetrinaActive,
+} from "@/lib/ad-visibility";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -40,23 +45,6 @@ const SERVICE_OPTIONS = [
   "Uomo con donna",
   "Videochiamata",
 ];
-
-// Un annuncio mostra la foto nitida nel grid solo se e premium o ha una vetrina attiva
-function isAdBoosted(ad: Ad): boolean {
-  return isPremiumActive(ad) || isVetrinaActive(ad);
-}
-
-function isPremiumActive(ad: Ad): boolean {
-  const now = Date.now();
-  return !!ad.premium_until && now < new Date(ad.premium_until).getTime();
-}
-
-function isVetrinaActive(ad: Ad): boolean {
-  const now = Date.now();
-  return !!ad.vetrina_until
-    && now >= (ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0)
-    && now < new Date(ad.vetrina_until).getTime();
-}
 
 interface Ad {
   id: string;
@@ -1270,14 +1258,14 @@ export default function Home({
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                 {filteredAds.map((ad) => {
-                const boosted = isAdBoosted(ad);
+                const boosted = isAdPromoted(ad);
                 const isSaved = savedAds.includes(ad.id);
                 return (
                 <Card
                   key={ad.id}
                   className={`group overflow-hidden cursor-pointer transition-all duration-500 ${
                     ad.is_sponsored ? "ring-1 ring-accent/40" : ""
-                  } ${isAdBoosted(ad) ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
+                  } ${isAdPromoted(ad) ? "ring-1 ring-primary/30" : ""} hover:shadow-2xl hover:-translate-y-1.5`}
                   onClick={() => navigate(`/ad/${slugify(ad.title)}-${ad.id}`)}
                 >
                     <div className="relative h-36 md:h-52 bg-gradient-to-br from-primary/20 to-purple-300/20 overflow-hidden">
