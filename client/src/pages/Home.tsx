@@ -1462,22 +1462,25 @@ export default function Home({ initialCity }: { initialCity?: string | null }) {
                 )}
 
                 <div className="flex gap-2">
-                  <Button
-                    className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      if (!currentUser) {
-                        setSelectedAd(null);
-                        setAuthModal("login");
-                        return;
-                      }
-                      const phone = (selectedAd as any).phone || (selectedAd as any).whatsapp || "+393331234567";
-                      const msg = `Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`;
-                      window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
-                    }}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    WhatsApp
-                  </Button>
+                  {((selectedAd as any).phone || (selectedAd as any).whatsapp) && (
+                    <Button
+                      className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        if (!currentUser) {
+                          setSelectedAd(null);
+                          setAuthModal("login");
+                          return;
+                        }
+                        const phone = (selectedAd as any).whatsapp || (selectedAd as any).phone;
+                        const msg = `Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`;
+                        void trackEvent("contact_open", { ad_id: selectedAd.id, city: selectedAd.city, contact_type: "whatsapp" });
+                        window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      WhatsApp
+                    </Button>
+                  )}
                   <Button
                     variant={savedAds.includes(selectedAd.id) ? "default" : "outline"}
                     className="flex-1 gap-2"
