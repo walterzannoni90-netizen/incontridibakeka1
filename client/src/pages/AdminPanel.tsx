@@ -32,6 +32,12 @@ import { useRouter } from "@/hooks/useRouter";
 import { supabase } from "@/lib/supabaseClient";
 import PageIntro from "@/components/PageIntro";
 import {
+  buildAdminVetrinaActivation,
+  buildAdminVetrinaRemoval,
+  isPremiumActive,
+  isVetrinaActive,
+} from "@/lib/ad-visibility";
+import {
   ArrowLeft,
   Users,
   Store,
@@ -117,6 +123,12 @@ interface AdRow {
   created_at: string;
   views: number;
   boosted_until?: string | null;
+  boost_start_at?: string | null;
+  boost_end_at?: string | null;
+  premium_until?: string | null;
+  vetrina_until?: string | null;
+  vetrina_scheduled_at?: string | null;
+  vetrina_duration_days?: number | null;
   profiles?: { name: string; email: string } | null;
 }
 
@@ -200,6 +212,12 @@ export default function AdminPanel() {
   }>({ open: false, title: "", message: "", action: async () => {} });
   const [creditsDialog, setCreditsDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: "", userName: "" });
   const [manualCredits, setManualCredits] = useState(10);
+  const [promotionDialog, setPromotionDialog] = useState<{
+    open: boolean;
+    ad: AdRow | null;
+    durationDays: number;
+    saving: boolean;
+  }>({ open: false, ad: null, durationDays: 7, saving: false });
   const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
   const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
   const [conversionStats, setConversionStats] = useState<ConversionStats>(EMPTY_CONVERSIONS);
@@ -459,16 +477,68 @@ export default function AdminPanel() {
     }
   };
 
-  const toggleFeatured = async (adId: string, isSponsored: boolean) => {
-    if (!supabase) return;
+  const startAdminPromotion = async () => {
+    const client = supabase;
+    const ad = promotionDialog.ad;
+    if (!client || !ad) return;
+
     try {
-      const { error } = await supabase.from("ads").update({ is_sponsored: !isSponsored }).eq("id", adId);
+      setPromotionDialog(dialog => ({ ...dialog, saving: true }));
+      const startedAt = new Date();
+      const promotion = buildAdminVetrinaActivation(
+        ad,
+        promotionDialog.durationDays,
+        startedAt,
+      );
+
+      const { data, error } = await client
+        .from("ads")
+        .update(promotion)
+        .eq("id", ad.id)
+        .select("id,is_sponsored,vetrina_scheduled_at,vetrina_until")
+        .single();
       if (error) throw error;
-      toast.success(isSponsored ? "Sponsorizzazione rimossa" : "Annuncio sponsorizzato");
-      loadData();
+      if (!data || !isVetrinaActive(data, startedAt.getTime())) {
+        throw new Error("La Vetrina non risulta attiva dopo il salvataggio");
+      }
+
+      toast.success(
+        `Annuncio in Vetrina per ${promotionDialog.durationDays} ${promotionDialog.durationDays === 1 ? "giorno" : "giorni"}`,
+      );
+      setPromotionDialog({ open: false, ad: null, durationDays: 7, saving: false });
+      await loadData();
     } catch (e: any) {
       toast.error(e.message || "Errore aggiornamento annuncio");
+      setPromotionDialog(dialog => ({ ...dialog, saving: false }));
     }
+  };
+
+  const removeAdminPromotion = (ad: AdRow) => {
+    const client = supabase;
+    if (!client) return;
+
+    showConfirm(
+      "Rimuovi dalla Vetrina",
+      `Rimuovere subito la promozione di "${ad.title}"?`,
+      async () => {
+        const now = Date.now();
+        const removal = buildAdminVetrinaRemoval(ad, now);
+        const { data, error } = await client
+          .from("ads")
+          .update(removal)
+          .eq("id", ad.id)
+          .select("id,is_sponsored,vetrina_scheduled_at,vetrina_until")
+          .single();
+        if (error) throw error;
+        if (!data || isVetrinaActive(data, now)) {
+          throw new Error("La Vetrina risulta ancora attiva");
+        }
+
+        toast.success("Sponsorizzazione rimossa");
+        setConfirmDialog(dialog => ({ ...dialog, open: false }));
+        await loadData();
+      },
+    );
   };
 
   const deleteAd = async (adId: string, adTitle: string) => {
@@ -887,8 +957,8 @@ export default function AdminPanel() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium truncate">{ad.title}</p>
-                              {ad.is_sponsored && <Badge variant="default" className="shrink-0 bg-amber-500 hover:bg-amber-600">Sponsor</Badge>}
-                              {!!ad.boosted_until && Date.now() < new Date(ad.boosted_until).getTime() && ad.is_premium && <Badge variant="secondary" className="shrink-0">Premium</Badge>}
+                              {isVetrinaActive(ad) && <Badge variant="default" className="shrink-0 bg-amber-500 hover:bg-amber-600">Vetrina attiva</Badge>}
+                              {isPremiumActive(ad) && <Badge variant="secondary" className="shrink-0">Premium</Badge>}
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
                               {ad.city} · {ad.category} · {ad.views} views
@@ -912,10 +982,16 @@ export default function AdminPanel() {
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button
-                              variant={ad.is_sponsored ? "default" : "outline"}
+                              variant={isVetrinaActive(ad) ? "default" : "outline"}
                               size="sm"
-                              onClick={() => toggleFeatured(ad.id, ad.is_sponsored)}
-                              title={ad.is_sponsored ? "Rimuovi sponsor" : "Sponsorizza"}
+                              onClick={() => {
+                                if (isVetrinaActive(ad)) {
+                                  removeAdminPromotion(ad);
+                                  return;
+                                }
+                                setPromotionDialog({ open: true, ad, durationDays: 7, saving: false });
+                              }}
+                              title={isVetrinaActive(ad) ? "Rimuovi dalla Vetrina" : "Metti in Vetrina"}
                             >
                               <Star className="w-4 h-4" />
                             </Button>
@@ -1119,6 +1195,66 @@ export default function AdminPanel() {
             <Button onClick={addCredits}>
               <Plus className="w-4 h-4 mr-1" />
               Aggiungi {manualCredits} crediti
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={promotionDialog.open}
+        onOpenChange={(open) => {
+          if (promotionDialog.saving) return;
+          setPromotionDialog(dialog => ({ ...dialog, open }));
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Metti annuncio in Vetrina</DialogTitle>
+            <DialogDescription>
+              Scegli la durata reale della promozione per {promotionDialog.ad?.title || "questo annuncio"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <label className="text-sm font-medium" htmlFor="admin-promotion-duration">
+              Durata
+            </label>
+            <Select
+              value={String(promotionDialog.durationDays)}
+              onValueChange={(value) => setPromotionDialog(dialog => ({
+                ...dialog,
+                durationDays: Number(value),
+              }))}
+              disabled={promotionDialog.saving}
+            >
+              <SelectTrigger id="admin-promotion-duration">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 giorno</SelectItem>
+                <SelectItem value="3">3 giorni</SelectItem>
+                <SelectItem value="7">7 giorni</SelectItem>
+                <SelectItem value="30">30 giorni</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              La Vetrina inizierà subito e terminerà automaticamente alla scadenza scelta.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              disabled={promotionDialog.saving}
+              onClick={() => setPromotionDialog({ open: false, ad: null, durationDays: 7, saving: false })}
+            >
+              Annulla
+            </Button>
+            <Button onClick={startAdminPromotion} disabled={promotionDialog.saving}>
+              {promotionDialog.saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Star className="mr-2 h-4 w-4" />
+              )}
+              Attiva Vetrina
             </Button>
           </DialogFooter>
         </DialogContent>
