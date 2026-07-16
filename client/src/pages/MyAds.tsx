@@ -23,7 +23,7 @@ import PageIntro from "@/components/PageIntro";
 import AdPhotoEditor from "@/components/AdPhotoEditor";
 import BoostConfirmDialog, { type PendingBoost } from "@/components/BoostConfirmDialog";
 import {
-  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, CheckCircle2, ImagePlus
+  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, Sparkles, Rocket, CheckCircle2
 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;

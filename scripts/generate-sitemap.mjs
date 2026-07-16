@@ -1,98 +1,97 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const SITE_URL = (
+  process.env.SITE_URL || "https://incontridibakeka.com"
+).replace(/\/$/, "");
+const OUTPUT_DIR = resolve("dist/public");
 
-const SITE_URL = process.env.SITE_URL || "https://incontridibakeka.com";
-const OUTPUT_DIR = resolve(__dirname, "..", "dist", "public");
+function readManifest(filename) {
+  const manifestPath = resolve(OUTPUT_DIR, filename);
+  if (!existsSync(manifestPath)) return [];
+  const parsed = JSON.parse(readFileSync(manifestPath, "utf8"));
+  if (!Array.isArray(parsed))
+    throw new Error(`${filename} deve contenere un array`);
+  return parsed;
+}
 
-async function main() {
-  console.log("Generating sitemap...");
+function xmlEscape(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
 
-  const urls = [];
+function normalizeLastmod(value) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? undefined
+    : date.toISOString().slice(0, 10);
+}
 
-  // Homepage
-  urls.push({ loc: `${SITE_URL}/`, changefreq: "daily", priority: "1.0" });
-
-  // Static pages
-  urls.push({ loc: `${SITE_URL}/shop`, changefreq: "weekly", priority: "0.6" });
-  urls.push({ loc: `${SITE_URL}/pubblica-annuncio/`, changefreq: "weekly", priority: "0.9" });
-  urls.push({ loc: `${SITE_URL}/bacheca-incontri/`, changefreq: "weekly", priority: "0.9" });
-
-  // Blog articles - all from blog-data.ts (static HTML, return HTTP 200)
-  const BLOG_SLUGS = [
-    "incontri-sicuri-italia","profilo-perfetto-incontri","premium-vs-gratuito",
-    "incontri-roma","escort-roma","trans-roma","uomo-cerca-uomo-roma",
-    "incontri-milano","escort-milano","trans-milano","uomo-cerca-uomo-milano",
-    "incontri-napoli","escort-napoli","trans-napoli","uomo-cerca-uomo-napoli",
-    "incontri-torino","escort-torino","trans-torino","uomo-cerca-uomo-torino",
-    "incontri-firenze","escort-firenze","trans-firenze","uomo-cerca-uomo-firenze",
-    "incontri-bologna","escort-bologna","trans-bologna","uomo-cerca-uomo-bologna",
-    "incontri-catania","escort-catania","trans-catania","uomo-cerca-uomo-catania",
-    "incontri-palermo","escort-palermo","trans-palermo","uomo-cerca-uomo-palermo",
-    "incontri-genova","escort-genova","trans-genova","uomo-cerca-uomo-genova",
-    "incontri-bari","escort-bari","trans-bari","uomo-cerca-uomo-bari",
-    "incontri-verona","escort-verona","trans-verona","uomo-cerca-uomo-verona",
-    "incontri-venezia","escort-venezia","trans-venezia","uomo-cerca-uomo-venezia",
-    "incontri-padova","escort-padova","trans-padova","uomo-cerca-uomo-padova",
-    "incontri-trieste","escort-trieste","trans-trieste","uomo-cerca-uomo-trieste",
-    "incontri-parma","escort-parma","trans-parma","uomo-cerca-uomo-parma",
-    "incontri-perugia","escort-perugia","trans-perugia","uomo-cerca-uomo-perugia",
-    "incontri-cagliari","escort-cagliari","trans-cagliari","uomo-cerca-uomo-cagliari",
-    "incontri-lecce","escort-lecce","trans-lecce","uomo-cerca-uomo-lecce",
-    "incontri-bergamo","escort-bergamo","trans-bergamo","uomo-cerca-uomo-bergamo",
-    "incontri-brescia","escort-brescia","trans-brescia","uomo-cerca-uomo-brescia",
-    "incontri-livorno","escort-livorno","trans-livorno","uomo-cerca-uomo-livorno",
-    "incontri-ancona","escort-ancona","trans-ancona","uomo-cerca-uomo-ancona",
-    "incontri-pescara","escort-pescara","trans-pescara","uomo-cerca-uomo-pescara",
-    "incontri-salerno","escort-salerno","trans-salerno","uomo-cerca-uomo-salerno",
-    "incontri-rimini","escort-rimini","trans-rimini","uomo-cerca-uomo-rimini",
-    "incontri-sassari","escort-sassari","trans-sassari","uomo-cerca-uomo-sassari",
-    "incontri-trento","escort-trento","trans-trento","uomo-cerca-uomo-trento",
-  ];
-  for (const slug of BLOG_SLUGS) {
-    urls.push({ loc: `${SITE_URL}/blog/${slug}/`, changefreq: "weekly", priority: "0.8" });
+function validateEntry(entry) {
+  const url = new URL(entry.loc);
+  if (url.origin !== SITE_URL)
+    throw new Error(`URL esterno non consentito nella sitemap: ${entry.loc}`);
+  if (url.search || url.hash)
+    throw new Error(
+      `Query e frammenti non sono consentiti nella sitemap: ${entry.loc}`,
+    );
+  if (url.pathname !== "/" && !url.pathname.endsWith("/")) {
+    throw new Error(`Canonical senza slash finale: ${entry.loc}`);
   }
-  // Blog listing page (single canonical URL with trailing slash)
-  urls.push({ loc: `${SITE_URL}/blog/`, changefreq: "daily", priority: "0.7" });
+  return { loc: url.toString(), lastmod: normalizeLastmod(entry.lastmod) };
+}
 
-  // Only include city/ad routes that were actually prerendered. This avoids
-  // thin, empty city pages and guarantees every dynamic sitemap URL returns 200.
-  const seoUrlsPath = resolve(OUTPUT_DIR, "seo-urls.json");
-  if (existsSync(seoUrlsPath)) {
-    const seoUrls = JSON.parse(readFileSync(seoUrlsPath, "utf8"));
-    for (const entry of seoUrls) {
-      urls.push({ loc: entry.loc, changefreq: "daily", priority: "0.8", lastmod: entry.lastmod });
-    }
+function main() {
+  const entries = [
+    { loc: `${SITE_URL}/` },
+    { loc: `${SITE_URL}/bacheca-incontri/` },
+    { loc: `${SITE_URL}/pubblica-annuncio/` },
+    { loc: `${SITE_URL}/blog/` },
+    ...readManifest("blog-urls.json"),
+    ...readManifest("seo-urls.json"),
+  ].map(validateEntry);
+
+  const unique = new Map();
+  for (const entry of entries) {
+    const previous = unique.get(entry.loc);
+    unique.set(entry.loc, {
+      loc: entry.loc,
+      lastmod: entry.lastmod || previous?.lastmod,
+    });
   }
 
-  // Generate XML
+  const urls = [...unique.values()].sort((a, b) => a.loc.localeCompare(b.loc));
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...urls.map(
-      (u) =>
-        `  <url>\n` +
-        `    <loc>${u.loc}</loc>\n` +
-        (u.lastmod ? `    <lastmod>${new Date(u.lastmod).toISOString().split("T")[0]}</lastmod>\n` : "") +
-        `    <changefreq>${u.changefreq}</changefreq>\n` +
-        `    <priority>${u.priority}</priority>\n` +
-        `  </url>`
+    ...urls.map((entry) =>
+      [
+        "  <url>",
+        `    <loc>${xmlEscape(entry.loc)}</loc>`,
+        ...(entry.lastmod ? [`    <lastmod>${entry.lastmod}</lastmod>`] : []),
+        "  </url>",
+      ].join("\n"),
     ),
     "</urlset>",
+    "",
   ].join("\n");
 
-  // Ensure output directory exists
-  if (!existsSync(OUTPUT_DIR)) {
-    mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
-
-  writeFileSync(resolve(OUTPUT_DIR, "sitemap.xml"), xml, "utf-8");
-  console.log(`Sitemap written to ${resolve(OUTPUT_DIR, "sitemap.xml")} (${urls.length} URLs)`);
+  mkdirSync(OUTPUT_DIR, { recursive: true });
+  writeFileSync(resolve(OUTPUT_DIR, "sitemap.xml"), xml, "utf8");
+  console.log(`Sitemap: ${urls.length} URL canonici e indicizzabili`);
 }
 
-main().catch((err) => {
-  console.error("Sitemap generation failed:", err);
+try {
+  main();
+} catch (error) {
+  console.error(
+    "Generazione sitemap fallita:",
+    error instanceof Error ? error.message : String(error),
+  );
   process.exit(1);
-});
+}

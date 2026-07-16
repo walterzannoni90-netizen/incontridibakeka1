@@ -4,6 +4,10 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  schedule:
+    # Aggiorna ogni giorno pagine città/categoria e sitemap usando soltanto
+    # gli annunci che risultano ancora attivi in Supabase.
+    - cron: "17 4 * * *"
 
 permissions:
   contents: read
@@ -23,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -45,17 +49,10 @@ jobs:
           VITE_BASE_PATH: "/"
         run: pnpm build
 
-      - name: Generate sitemap
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          SITE_URL: "https://incontridibakeka.com"
-        run: node scripts/generate-sitemap.mjs
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist/public'
+          path: "dist/public"
 
   deploy:
     needs: build

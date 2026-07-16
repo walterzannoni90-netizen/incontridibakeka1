@@ -11,8 +11,8 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
-    "build": "node --import tsx scripts/generate-static-blog.ts && vite build && node scripts/generate-static-seo-pages.mjs && tsc -p server/tsconfig.json",
-    "build:client": "vite build && node scripts/generate-static-seo-pages.mjs && node scripts/generate-sitemap.mjs",
+    "build": "vite build && node --import tsx scripts/generate-static-blog.ts && node scripts/generate-static-seo-pages.mjs && node scripts/generate-sitemap.mjs && node scripts/verify-seo-output.mjs && tsc -p server/tsconfig.json",
+    "build:client": "vite build && node --import tsx scripts/generate-static-blog.ts && node scripts/generate-static-seo-pages.mjs && node scripts/generate-sitemap.mjs && node scripts/verify-seo-output.mjs",
     "build:server": "tsc -p server/tsconfig.json",
     "start": "cross-env NODE_ENV=production node dist/server/index.js",
     "preview": "vite preview",
@@ -24,7 +24,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:seo": "node scripts/verify-seo-output.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

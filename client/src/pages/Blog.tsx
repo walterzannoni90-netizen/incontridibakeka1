@@ -4,30 +4,28 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowUpRight, BookOpen, Clock3, MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { blogArticles } from "@/data/blog-data";
 import SitePromoBanner from "@/components/SitePromoBanner";
-
-const CITIES = [
-  "Roma", "Milano", "Napoli", "Torino", "Palermo", "Genova", "Bologna",
-  "Firenze", "Catania", "Bari", "Venezia", "Verona", "Messina", "Padova",
-  "Trieste", "Brescia", "Parma", "Taranto", "Modena", "Reggio Calabria",
-  "Perugia", "Livorno", "Ravenna", "Cagliari", "Foggia", "Rimini",
-  "Salerno", "Ferrara", "Sassari", "Siracusa", "Pescara", "Monza",
-  "Latina", "Bergamo", "Trento", "Vicenza", "Terni", "Novara",
-  "Piacenza", "Ancona", "Andria", "Arezzo", "Udine", "Cesena",
-  "Lecce", "Bolzano", "Cosenza", "Pisa", "Siena", "Aosta",
-  "Crotone", "Como", "Lucca", "Mantova", "Varese",
-];
+import { ITALIAN_CITIES, slugify } from "@shared/data";
+import { useEffect } from "react";
+import { setPageMetadata } from "@/lib/seo";
 
 const CATEGORIES = [
-  { slug: "guide", title: "Guide e Consigli", gradient: "from-blue-600 to-purple-600" },
-  { slug: "incontri", title: "Incontri per Città", gradient: "from-purple-600 to-pink-600" },
-  { slug: "escort", title: "Escort per Città", gradient: "from-pink-600 to-red-600" },
-  { slug: "trans", title: "Trans per Città", gradient: "from-rose-600 to-purple-600" },
-  { slug: "uomo-cerca-uomo", title: "Uomo Cerca Uomo per Città", gradient: "from-indigo-600 to-blue-600" },
+  { slug: "piattaforma", title: "Conoscere la piattaforma", gradient: "from-blue-600 to-purple-600" },
+  { slug: "pubblicare", title: "Pubblicare con chiarezza", gradient: "from-purple-600 to-pink-600" },
+  { slug: "sicurezza", title: "Sicurezza e privacy", gradient: "from-emerald-600 to-cyan-600" },
+  { slug: "visibilita", title: "Visibilità e scadenze", gradient: "from-fuchsia-600 to-rose-600" },
 ];
 
 export default function Blog() {
   const { navigate } = useRouter();
   const featured = blogArticles.slice(0, 3);
+
+  useEffect(() => {
+    setPageMetadata({
+      title: "Blog ufficiale | Incontri di Bakeka",
+      description: "Guide originali sul funzionamento del sito, sulla pubblicazione, sulla sicurezza e sulle scadenze delle promozioni.",
+      path: "/blog/",
+    });
+  }, []);
 
   const articlesByCategory = (slug: string) =>
     blogArticles.filter(a => a.category === slug);
@@ -43,14 +41,14 @@ export default function Blog() {
             <ArrowLeft className="w-4 h-4" /> Torna agli annunci
           </Button>
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[.16em] text-cyan-200"><BookOpen className="h-4 w-4" /> Magazine</div>
-          <h1 className="max-w-3xl text-4xl md:text-6xl font-bold font-poppins mb-4">Guide per connessioni più consapevoli</h1>
+          <h1 className="max-w-3xl text-4xl md:text-6xl font-bold font-poppins mb-4">Il blog ufficiale di Incontri di Bakeka</h1>
           <p className="text-lg text-white/70 max-w-2xl">
-            Oltre 100 guide per orientarsi tra annunci, privacy e incontri nelle città italiane.
+            Guide originali sul funzionamento del sito, sulla pubblicazione e sulla sicurezza degli utenti.
           </p>
           <div className="mt-7 flex flex-wrap gap-3 text-xs text-white/70">
             <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-2"><ShieldCheck className="h-4 w-4 text-emerald-300" /> Sicurezza pratica</span>
-            <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-2"><MapPin className="h-4 w-4 text-pink-300" /> Guide locali</span>
-            <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-2"><Sparkles className="h-4 w-4 text-amber-300" /> Consigli utili</span>
+            <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-2"><BookOpen className="h-4 w-4 text-pink-300" /> Funzioni spiegate</span>
+            <span className="flex items-center gap-2 rounded-full bg-black/20 px-3 py-2"><Sparkles className="h-4 w-4 text-amber-300" /> Scadenze trasparenti</span>
           </div>
         </div>
       </section>
@@ -61,9 +59,11 @@ export default function Blog() {
           <h2 className="mb-6 font-poppins text-3xl font-bold">Da leggere oggi</h2>
           <div className="grid gap-5 md:grid-cols-3">
             {featured.map((article, index) => (
-              <Card key={article.slug} onClick={() => navigate(`/blog/${article.slug}`)} className={`group cursor-pointer overflow-hidden rounded-3xl border-0 text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${index === 0 ? "bg-gradient-to-br from-violet-700 to-purple-950" : index === 1 ? "bg-gradient-to-br from-cyan-700 to-slate-950" : "bg-gradient-to-br from-fuchsia-700 to-rose-950"}`}>
+              <a key={article.slug} href={`/blog/${article.slug}/`} onClick={(event) => { event.preventDefault(); navigate(`/blog/${article.slug}`); }}>
+              <Card className={`group h-full cursor-pointer overflow-hidden rounded-3xl border-0 text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${index === 0 ? "bg-gradient-to-br from-violet-700 to-purple-950" : index === 1 ? "bg-gradient-to-br from-cyan-700 to-slate-950" : "bg-gradient-to-br from-fuchsia-700 to-rose-950"}`}>
                 <div className="flex min-h-64 flex-col p-6"><span className="text-xs font-bold uppercase tracking-wider text-white/60">{article.categoryTitle}</span><h3 className="mt-4 font-poppins text-xl font-bold leading-snug">{article.title}</h3><p className="mt-3 line-clamp-3 text-sm leading-relaxed text-white/65">{article.excerpt}</p><div className="mt-auto flex items-center justify-between pt-6 text-xs font-semibold"><span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> 5 min</span><ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" /></div></div>
               </Card>
+              </a>
             ))}
           </div>
         </section>
@@ -80,11 +80,8 @@ export default function Blog() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {articles.map(article => (
-                  <Card
-                    key={article.slug}
-                    className="group cursor-pointer overflow-hidden rounded-2xl border-border/60 bg-card/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl"
-                    onClick={() => navigate(`/blog/${article.slug}`)}
-                  >
+                  <a key={article.slug} href={`/blog/${article.slug}/`} onClick={(event) => { event.preventDefault(); navigate(`/blog/${article.slug}`); }}>
+                  <Card className="group h-full cursor-pointer overflow-hidden rounded-2xl border-border/60 bg-card/80 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl">
                     <div className="flex min-h-52 flex-col p-5">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">{article.categoryTitle}</span>
@@ -97,6 +94,7 @@ export default function Blog() {
                       <span className="mt-auto flex items-center gap-1 pt-4 text-xs font-bold text-primary">Leggi la guida <ArrowUpRight className="h-3.5 w-3.5" /></span>
                     </div>
                   </Card>
+                  </a>
                 ))}
               </div>
             </section>
@@ -107,20 +105,18 @@ export default function Blog() {
         <section className="mb-16">
           <h2 className="text-2xl font-bold font-poppins mb-6 flex items-center gap-3">
             <span className="w-1 h-6 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
-            Annunci per Città
+            Esplora gli annunci per città
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-            {CITIES.map(city => (
-              <Card
-                key={city}
-                className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer overflow-hidden"
-                onClick={() => navigate(`/incontri/${city.toLowerCase()}`)}
-              >
+            {ITALIAN_CITIES.slice(0, 40).map(city => (
+              <a key={city} href={`/incontri/${slugify(city)}/`}>
+              <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 cursor-pointer overflow-hidden">
                 <div className="p-3 flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span className="text-xs font-medium truncate">{city}</span>
                 </div>
               </Card>
+              </a>
             ))}
           </div>
         </section>
@@ -130,16 +126,16 @@ export default function Blog() {
           <h2 className="text-xl font-bold font-poppins mb-4">Perché scegliere Incontri di Bakeka</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-muted-foreground">
             <div>
-              <h3 className="font-semibold text-foreground mb-2">✅ Controlli e segnalazioni</h3>
-              <p>Ogni annuncio può essere segnalato e gestito dal pannello di moderazione.</p>
+              <h3 className="font-semibold text-foreground mb-2">Controlli e segnalazioni</h3>
+              <p>Gli utenti possono segnalare gli annunci indicando il motivo agli amministratori.</p>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground mb-2">🛡️ Privacy garantita</h3>
-              <p>Messaggi riservati e strumenti pensati per limitare la diffusione dei dati personali.</p>
+              <h3 className="font-semibold text-foreground mb-2">Privacy consapevole</h3>
+              <p>Le guide spiegano come limitare i dati condivisi nei profili e nelle conversazioni.</p>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground mb-2">🇮🇹 Made in Italy</h3>
-              <p>Guide dedicate alle principali città italiane, da Nord a Sud.</p>
+              <h3 className="font-semibold text-foreground mb-2">Informazioni verificabili</h3>
+              <p>Funzioni, promozioni e scadenze sono descritte senza risultati o percentuali inventate.</p>
             </div>
           </div>
         </section>

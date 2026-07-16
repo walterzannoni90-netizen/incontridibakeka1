@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "@/hooks/useRouter";
 import SitePromoBanner from "@/components/SitePromoBanner";
 import { trackEvent } from "@/lib/analytics";
+import { canonicalUrl, replaceJsonLd, setPageMetadata } from "@/lib/seo";
 import {
   ArrowLeft,
   MapPin,
@@ -69,26 +70,6 @@ interface Ad {
   user_id: string;
 }
 
-function setMetaProperty(property: string, content: string) {
-  let meta = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
-  if (!meta) {
-    meta = document.createElement("meta");
-    meta.setAttribute("property", property);
-    document.head.appendChild(meta);
-  }
-  meta.content = content;
-}
-
-function setMetaName(name: string, content: string) {
-  let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
-  if (!meta) {
-    meta = document.createElement("meta");
-    meta.name = name;
-    document.head.appendChild(meta);
-  }
-  meta.content = content;
-}
-
 export default function AdDetail() {
   const { user } = useAuth();
   const { navigate, currentPath } = useRouter();
@@ -114,6 +95,7 @@ export default function AdDetail() {
         .from("ads")
         .select("*")
         .eq("id", adId)
+        .eq("is_active", true)
         .single();
       if (error) throw error;
       setAd(data as unknown as Ad | null);
@@ -145,48 +127,38 @@ export default function AdDetail() {
 
   useEffect(() => {
     if (!ad) return;
-    document.title = `${ad.title} — Incontri a ${ad.city} | Incontri di Bakeka`;
     const desc = `Annuncio: ${ad.title}. ${ad.city}, ${ad.category}. ${ad.description?.slice(0, 150)}`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute("content", desc);
-    else {
-      const meta = document.createElement("meta");
-      meta.name = "description";
-      meta.content = desc;
-      document.head.appendChild(meta);
-    }
-    const metaOg = document.querySelector('meta[property="og:title"]');
-    if (metaOg) metaOg.setAttribute("content", `${ad.title} — Incontri di Bakeka`);
-    const metaOgDesc = document.querySelector('meta[property="og:description"]');
-    if (metaOgDesc) metaOgDesc.setAttribute("content", desc);
-    let linkCanonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    if (!linkCanonical) {
-      linkCanonical = document.createElement("link");
-      linkCanonical.rel = "canonical";
-      document.head.appendChild(linkCanonical);
-    }
-    linkCanonical.setAttribute("href", window.location.href.split("?")[0]);
     const shareImage = ad.images?.[0] || ad.image || "https://incontridibakeka.com/images/site-promo-banner.png";
-    setMetaProperty("og:image", shareImage);
-    setMetaProperty("og:url", window.location.href.split("?")[0]);
-    setMetaName("twitter:image", shareImage);
-
-    const oldBreadcrumb = document.getElementById("ld-breadcrumb");
-    if (oldBreadcrumb) oldBreadcrumb.remove();
-    const breadScript = document.createElement("script");
-    breadScript.id = "ld-breadcrumb";
-    breadScript.type = "application/ld+json";
-    breadScript.textContent = JSON.stringify({
+    const path = `${currentPath.split(/[?#]/)[0].replace(/\/$/, "")}/`;
+    setPageMetadata({
+      title: `${ad.title} — Incontri a ${ad.city} | Incontri di Bakeka`,
+      description: desc,
+      path,
+      image: shareImage,
+      robots: "index,follow,max-image-preview:large",
+    });
+    replaceJsonLd("ld-breadcrumb", {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://incontridibakeka.com/" },
-        { "@type": "ListItem", "position": 2, "name": ad.city ? `Incontri a ${ad.city}` : "Annunci", "item": ad.city ? `https://incontridibakeka.com/incontri/${ad.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')}` : "https://incontridibakeka.com/" },
-        { "@type": "ListItem", "position": 3, "name": ad.title.slice(0, 60), "item": window.location.href.split("?")[0] },
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": canonicalUrl("/") },
+        { "@type": "ListItem", "position": 2, "name": ad.city ? `Incontri a ${ad.city}` : "Annunci", "item": ad.city ? canonicalUrl(`/incontri/${ad.city.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')}/`) : canonicalUrl("/") },
+        { "@type": "ListItem", "position": 3, "name": ad.title.slice(0, 60), "item": canonicalUrl(path) },
       ],
     });
-    document.head.appendChild(breadScript);
-  }, [ad]);
+
+    return () => document.getElementById("ld-breadcrumb")?.remove();
+  }, [ad, currentPath]);
+
+  useEffect(() => {
+    if (loading || ad) return;
+    setPageMetadata({
+      title: "Annuncio non disponibile — Incontri di Bakeka",
+      description: "Questo annuncio non è attivo o non è più disponibile.",
+      path: currentPath,
+      robots: "noindex,nofollow",
+    });
+  }, [ad, currentPath, loading]);
 
   const handleReport = async () => {
     if (!reportReason.trim()) {

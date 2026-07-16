@@ -23,7 +23,7 @@ import AdPhotoEditor from "@/components/AdPhotoEditor";
 import { purchaseBoost } from "@/lib/boost";
 import BoostConfirmDialog, { type PendingBoost } from "@/components/BoostConfirmDialog";
 import {
-  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, User, Phone, Save, X, LogOut, Sparkles, Package, Rocket, ImagePlus
+  ArrowLeft, Eye, Crown, Store, Pencil, Trash2, Plus, Loader2, Zap, Coins, Clock, User, Phone, Save, X, LogOut, Sparkles, Package, Rocket
 } from "lucide-react";
 
 interface Ad {

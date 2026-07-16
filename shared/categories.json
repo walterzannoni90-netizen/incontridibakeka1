@@ -1,0 +1,62 @@
+[
+  {
+    "id": "donna-cerca-uomo",
+    "name": "Donna cerca uomo",
+    "description": "Annunci personali pubblicati da donne interessate a conoscere uomini adulti.",
+    "image": "https://unsplash.com/photos/MuY9_BzPX98/download?force=true&w=900"
+  },
+  {
+    "id": "uomo-cerca-donna",
+    "name": "Uomo cerca donna",
+    "description": "Annunci personali pubblicati da uomini interessati a conoscere donne adulte.",
+    "image": "https://unsplash.com/photos/NH7zbSHsbP8/download?force=true&w=900"
+  },
+  {
+    "id": "trans",
+    "name": "Trans",
+    "description": "Annunci personali della community trans, organizzati per città e aggiornati dagli autori.",
+    "image": "https://unsplash.com/photos/f626lgQvTQo/download?force=true&w=900"
+  },
+  {
+    "id": "donna-cerca-donna",
+    "name": "Donna cerca donna",
+    "description": "Annunci di donne adulte interessate a nuove conoscenze con altre donne.",
+    "image": "https://unsplash.com/photos/XPkd47xw4jc/download?force=true&w=900"
+  },
+  {
+    "id": "uomo-cerca-uomo",
+    "name": "Uomo cerca uomo",
+    "description": "Annunci di uomini adulti interessati a nuove conoscenze con altri uomini.",
+    "image": "https://unsplash.com/photos/rxawtWogcjQ/download?force=true&w=900"
+  },
+  {
+    "id": "coppie",
+    "name": "Coppie",
+    "description": "Annunci pubblicati da coppie adulte, con preferenze e modalità di contatto dichiarate nel profilo.",
+    "image": "https://unsplash.com/photos/xgK6o8h1L6M/download?force=true&w=900"
+  },
+  {
+    "id": "massaggi",
+    "name": "Massaggi",
+    "description": "Annunci dedicati ai massaggi pubblicati dagli utenti nelle città disponibili.",
+    "image": "https://unsplash.com/photos/-AakIaAPV0w/download?force=true&w=900"
+  },
+  {
+    "id": "accompagnatrici",
+    "name": "Accompagnatrici",
+    "description": "Annunci personali di accompagnatrici adulte, consultabili per città e disponibilità dichiarata.",
+    "image": "https://unsplash.com/photos/t29xtYbNvLQ/download?force=true&w=900"
+  },
+  {
+    "id": "evento-festa",
+    "name": "Eventi e feste",
+    "description": "Proposte pubblicate dagli utenti per eventi, serate e occasioni di socialità tra adulti.",
+    "image": "https://unsplash.com/photos/cn1WbzOMO2I/download?force=true&w=900"
+  },
+  {
+    "id": "amicizia",
+    "name": "Amicizia",
+    "description": "Annunci per nuove amicizie e conoscenze, con ricerca locale nelle città italiane.",
+    "image": "https://unsplash.com/photos/ijn7NJsjoMM/download?force=true&w=900"
+  }
+]
