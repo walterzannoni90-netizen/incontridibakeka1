@@ -10,6 +10,12 @@ import SitePromoBanner from "@/components/SitePromoBanner";
 import { trackEvent } from "@/lib/analytics";
 import { canonicalUrl, replaceJsonLd, setPageMetadata } from "@/lib/seo";
 import {
+  getPublicAdImages,
+  isAdPromoted,
+  isPremiumActive,
+  isVetrinaActive,
+} from "@/lib/ad-visibility";
+import {
   ArrowLeft,
   MapPin,
   Phone,
@@ -248,13 +254,10 @@ export default function AdDetail() {
   }
 
   const now = Date.now();
-  const premiumActive = !!ad.premium_until && now < new Date(ad.premium_until).getTime();
-  const vetrinaActive = !!ad.vetrina_until
-    && now >= (ad.vetrina_scheduled_at ? new Date(ad.vetrina_scheduled_at).getTime() : 0)
-    && now < new Date(ad.vetrina_until).getTime();
-  const boostActive = premiumActive || vetrinaActive;
-  const storedImages = ad.images?.length ? ad.images : ad.image ? [ad.image] : [];
-  const allImages = boostActive ? storedImages : storedImages.slice(0, 1);
+  const premiumActive = isPremiumActive(ad, now);
+  const vetrinaActive = isVetrinaActive(ad, now);
+  const boostActive = isAdPromoted(ad, now);
+  const allImages = getPublicAdImages(ad, now);
 
   return (
     <div className="min-h-screen bg-background">
@@ -280,7 +283,7 @@ export default function AdDetail() {
                   {boostActive && <button type="button" onClick={() => setLightboxOpen(true)} className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur transition hover:scale-105 hover:bg-black/80" aria-label="Ingrandisci foto">
                     <Maximize2 className="h-5 w-5" />
                   </button>}
-                  {!boostActive && <div className="absolute inset-0 flex items-center justify-center bg-black/30"><span className="rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white">Foto oscurata · annuncio non promosso</span></div>}
+                  {!boostActive && <div className="absolute inset-0 flex items-center justify-center bg-black/30"><span className="rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-white">Foto oscurata · visibile con una promozione attiva</span></div>}
                   {allImages.length > 1 && (
                     <>
                       <button
