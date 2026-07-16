@@ -64,6 +64,26 @@ interface Stats {
   premiumUsers: number;
 }
 
+interface ConversionStats {
+  pageViews: number;
+  uniqueVisitors: number;
+  signUps: number;
+  publishedAds: number;
+  contacts: number;
+  checkouts: number;
+  payments: number;
+}
+
+const EMPTY_CONVERSIONS: ConversionStats = {
+  pageViews: 0,
+  uniqueVisitors: 0,
+  signUps: 0,
+  publishedAds: 0,
+  contacts: 0,
+  checkouts: 0,
+  payments: 0,
+};
+
 interface UserRow {
   id: string;
   name: string;
@@ -176,7 +196,7 @@ export default function AdminPanel() {
   const [manualCredits, setManualCredits] = useState(10);
   const [cityViews, setCityViews] = useState<{city:string;views:number}[]>([]);
   const [topAds, setTopAds] = useState<{title:string;phone:string;city:string;views:number}[]>([]);
-  const [conversionEvents, setConversionEvents] = useState<Record<string, number>>({});
+  const [conversionStats, setConversionStats] = useState<ConversionStats>(EMPTY_CONVERSIONS);
 
   useEffect(() => {
     if (!supabase || !isAdmin) return;
@@ -193,15 +213,29 @@ export default function AdminPanel() {
       const { data: top } = await supabase.from("ads").select("title,phone,views").order("views", { ascending: false }).limit(5);
       if (top) setTopAds(top as any);
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: events } = await supabase
+      const [{ data: events }, { data: admins }] = await Promise.all([
+        supabase
         .from("analytics_events")
-        .select("event_name")
-        .gte("created_at", since);
+        .select("event_name,visitor_id,user_id,path")
+        .gte("created_at", since),
+        supabase.from("profiles").select("id").eq("is_admin", true),
+      ]);
       if (events) {
-        setConversionEvents(events.reduce<Record<string, number>>((result, event) => {
-          result[event.event_name] = (result[event.event_name] ?? 0) + 1;
-          return result;
-        }, {}));
+        const adminIds = new Set((admins ?? []).map((admin) => admin.id));
+        const externalEvents = events.filter((event) =>
+          event.path !== "/admin" && (!event.user_id || !adminIds.has(event.user_id))
+        );
+        const countEvent = (name: string) => externalEvents.filter((event) => event.event_name === name).length;
+        const pageViews = externalEvents.filter((event) => event.event_name === "page_view");
+        setConversionStats({
+          pageViews: pageViews.length,
+          uniqueVisitors: new Set(pageViews.map((event) => event.visitor_id)).size,
+          signUps: countEvent("sign_up"),
+          publishedAds: countEvent("ad_publish"),
+          contacts: countEvent("contact_open"),
+          checkouts: countEvent("checkout_created"),
+          payments: countEvent("payment_completed"),
+        });
       }
     })();
   }, [isAdmin]);
@@ -671,21 +705,36 @@ export default function AdminPanel() {
               <Card className="mt-6 p-6">
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold">Conversioni ultimi 30 giorni</h3>
-                    <p className="text-xs text-muted-foreground">Dati proprietari, senza IP o user-agent</p>
+                    <h3 className="font-semibold">Funnel ultimi 30 giorni</h3>
+                    <p className="text-xs text-muted-foreground">Visitatori unici e azioni reali; accessi admin autenticati esclusi</p>
                   </div>
                   <Badge variant="secondary">Live</Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
                   {[
-                    ["page_view", "Visite"],
-                    ["sign_up", "Registrazioni"],
-                    ["ad_publish", "Annunci pubblicati"],
-                    ["checkout_created", "Checkout creati"],
-                  ].map(([event, label]) => (
-                    <div key={event} className="rounded-xl border border-border bg-muted/30 p-4">
+                    ["Pagine viste", conversionStats.pageViews],
+                    ["Visitatori", conversionStats.uniqueVisitors],
+                    ["Registrazioni", conversionStats.signUps],
+                    ["Annunci", conversionStats.publishedAds],
+                    ["Contatti", conversionStats.contacts],
+                    ["Checkout", conversionStats.checkouts],
+                    ["Pagamenti", conversionStats.payments],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-xl border border-border bg-muted/30 p-4">
                       <p className="text-xs text-muted-foreground">{label}</p>
-                      <p className="mt-1 text-2xl font-bold">{conversionEvents[event] ?? 0}</p>
+                      <p className="mt-1 text-2xl font-bold">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  {[
+                    ["Visita → contatto", conversionStats.uniqueVisitors ? conversionStats.contacts / conversionStats.uniqueVisitors : 0],
+                    ["Visita → checkout", conversionStats.uniqueVisitors ? conversionStats.checkouts / conversionStats.uniqueVisitors : 0],
+                    ["Checkout → pagamento", conversionStats.checkouts ? conversionStats.payments / conversionStats.checkouts : 0],
+                  ].map(([label, rate]) => (
+                    <div key={String(label)} className="flex items-center justify-between rounded-xl bg-primary/5 px-4 py-3">
+                      <span className="text-sm text-muted-foreground">{label}</span>
+                      <span className="font-bold text-primary">{(Number(rate) * 100).toFixed(1)}%</span>
                     </div>
                   ))}
                 </div>
