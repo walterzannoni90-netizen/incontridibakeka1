@@ -226,6 +226,14 @@ export default function AdDetail() {
     }
   };
 
+  const trackContact = (contactType: "whatsapp" | "phone" | "message") => {
+    void trackEvent("contact_open", {
+      ad_id: ad?.id,
+      city: ad?.city,
+      contact_type: contactType,
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -490,6 +498,7 @@ export default function AdDetail() {
                   <a
                     href={`https://wa.me/${ad.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Ciao :) Ho visto il tuo profilo su incontridibakeka.com e mi hai incuriosito/a. Mi presento, sono una persona genuina in cerca di bei momenti. Se ti va, possiamo scambiare due chiacchiere e vedere se c'è feeling. Ti aspetto!`)}`}
                     target="_blank" rel="noopener noreferrer"
+                    onClick={() => trackContact("whatsapp")}
                   >
                     <MessageCircle className="w-4 h-4" />
                     {ad.calls_only ? "Scrivi (non preferito)" : "WhatsApp"}
@@ -498,7 +507,7 @@ export default function AdDetail() {
               )}
               {(ad.phone || ad.whatsapp) && (
                 <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all duration-200 hover:scale-[1.02]" asChild>
-                  <a href={`tel:${ad.phone || ad.whatsapp}`}>
+                  <a href={`tel:${ad.phone || ad.whatsapp}`} onClick={() => trackContact("phone")}>
                     <Phone className="w-4 h-4" />
                     Chiama
                   </a>
@@ -519,6 +528,7 @@ export default function AdDetail() {
                       );
                       const existing = await checkRes.json();
                       if (Array.isArray(existing) && existing.length > 0) {
+                        trackContact("message");
                         navigate(`/messages/${existing[0].id}`);
                         return;
                       }
@@ -538,6 +548,7 @@ export default function AdDetail() {
                       );
                       if (!createRes.ok) throw new Error("Conversazione non creata");
                       const created = await createRes.json();
+                      trackContact("message");
                       navigate(`/messages/${created[0]?.id || created.id}`);
                     } catch { toast.error("Errore creazione conversazione"); }
                   }}
